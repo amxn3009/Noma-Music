@@ -65,15 +65,36 @@ input:focus {
 }
 
 button {
-    border: none;
-    background: white;
-    color: #111;
-    font-weight: bold;
-    cursor: pointer;
+border: none;
+background: white;
+color: #111;
+font-weight: bold;
+cursor: pointer;
+
+/* Smooth animations */
+transition:
+    background 0.2s ease,
+    transform 0.15s ease,
+    box-shadow 0.25s ease;
 }
 
 button:hover {
-    background: #ddd;
+background: #ddd;
+
+
+/* Glow */
+box-shadow:
+    0 0 8px rgba(255, 255, 255, 0.5),
+    0 0 20px rgba(255, 255, 255, 0.25);
+
+transform: translateY(-1px);
+}
+
+button:active {
+/* Smooth click/press effect */
+transform: scale(0.96);
+box-shadow:
+0 0 5px rgba(255, 255, 255, 0.3);
 }
 
 .error {
