@@ -27,6 +27,8 @@ const state = {
   currentTime: 0,
 };
 
+const PLACEHOLDER = "Assets/MusicPlayer/PlaceholderImage.jpg"
+
 const $ = (sel) => document.querySelector(sel);
 const gamesGrid = $("#games-grid");
 const gameDetail = $("#game-detail");
@@ -46,6 +48,9 @@ function init() {
   bindFullscreen();
   bindContextMenu();
   updatePlayerUI();
+  $("#now-cover").src = PLACEHOLDER;
+  $("#fs-cover").src = PLACEHOLDER;
+  bgLayer.style.backgroundImage = `url("${PLACEHOLDER}")`;
 }
 
 function renderGames() {
@@ -221,8 +226,12 @@ function toggleShuffle() {
 
 function updatePlayerUI() {
   const playing = state.playing;
-  $("#btn-play").textContent = playing ? "⏸" : "▶";
-  $("#fs-play").textContent = playing ? "⏸" : "▶";
+  const playIcon = $("#icon-play");
+  const pauseIcon = $("#icon-pause");
+  if (playIcon && pauseIcon) {
+    playIcon.classList.toggle("hidden", playing);
+    pauseIcon.classList.toggle("hidden", !playing);
+  }
   $("#btn-loop").classList.toggle("active", state.loopMode !== "off");
   $("#btn-shuffle").classList.toggle("active", state.shuffle);
 }

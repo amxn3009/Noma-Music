@@ -349,6 +349,11 @@ body.fs-open .player-right {
 }
 .ctrl-btn.active { color: var(--accent); }
 
+.ctrl-btn .icon {
+  display: block;
+  pointer-events: none;
+}
+
 .play-btn {
   width: 54px;
   height: 54px;
@@ -356,6 +361,8 @@ body.fs-open .player-right {
   color: #111;
   border-radius: 50%;
   font-size: 1.4rem;
+  display: grid;
+  place-items: center;
 }
 .play-btn:hover {
   background: #eee;
@@ -475,22 +482,61 @@ body.fs-open .player-right {
   position: fixed;
   z-index: 200;
   width: 240px;
-  padding: 6px 0;
+  padding: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  background-color: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 16px 50px rgba(0,0,0,0.45);
+  overflow: hidden; /* stops hover from spilling out */
 }
+
 .context-menu button {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 12px;
   width: 100%;
   text-align: left;
   background: transparent;
   border: none;
   color: var(--text);
-  padding: 12px 18px;
+  padding: 11px 14px;
   cursor: pointer;
   font-size: 0.9rem;
-  border-radius: 0;
+  border-radius: 14px; /* rounded hover inside the box */
+  transition: background 0.15s, transform 0.12s;
 }
+
 .context-menu button:hover {
-  background: rgba(255,255,255,0.08);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.context-menu button:active {
+  transform: scale(0.97);
+}
+
+.context-menu .menu-icon {
+  width: 18px;
+  height: 18px;
+  opacity: 0.9;
+  flex-shrink: 0;
+}
+
+.ctrl-btn,
+.play-btn,
+.primary-btn,
+.tab,
+.back-btn {
+  transition: transform 0.12s ease, background 0.15s, color 0.15s, box-shadow 0.15s;
+}
+
+.ctrl-btn:active,
+.play-btn:active,
+.primary-btn:active,
+.tab:active,
+.back-btn:active {
+  transform: scale(0.92);
 }
 
 @media (max-width: 720px) {
@@ -509,4 +555,19 @@ body.fs-open .player-right {
   body.fs-open .player-center { grid-column: 1; }
   .game-header { flex-direction: column; align-items: flex-start; }
   .game-cover-lg { width: 140px; height: 140px; }
+}
+
+/* Hide homepage UI in fullscreen */
+body.fs-open .topbar,
+body.fs-open .content {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* Progress bar same width as minimized */
+.progress-row {
+  max-width: 520px; /* same as normal mode */
+}
+body.fs-open .progress-row {
+  max-width: 520px;
 }
