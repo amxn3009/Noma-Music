@@ -3,30 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Willkommen</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Startseite</title>
+    <style>
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            font-family: Arial, sans-serif;
+            background: #111;
+            color: white;
+        }
+        h1 { font-size: 42px; }
+    </style>
 </head>
 <body>
-    <main class="container">
-        <div class="card">
-            <h1>Willkommen👋</h1>
-            <p>Bitte gib das Passwort ein, um fortzufahren.</p>
-
-            <form id="passwordForm">
-                <input
-                    id="password"
-                    type="password"
-                    placeholder="Passwort"
-                    autocomplete="off"
-                    required
-                >
-                <button type="submit">Weiter</button>
-            </form>
-
-            <p id="error" class="error">Falsches Passwort.</p>
-        </div>
-    </main>
-
-    <script src="script.js"></script>
+    <h1>Du bist drin! 🎉</h1>
 </body>
 </html>
