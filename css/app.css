@@ -648,6 +648,18 @@ body.fs-open .progress-row {
   max-width: none;
 }
 
+.game-meta #game-track-count,
+.game-meta .composer {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+  margin: 0;
+}
+
+.game-meta #game-track-count {
+  margin-right: 18px;
+}
+
 .composer {
   display: inline-flex;
   align-items: center;
