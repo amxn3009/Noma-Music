@@ -157,6 +157,8 @@ function playCurrent() {
   $("#fs-game").textContent = game?.short || "";
   bgLayer.style.backgroundImage = game?.cover ? `url("${game.cover}")` : "none";
 
+  document.body.classList.add("is-playing");
+
   markPlayingTrack(track.id);
 
   console.log("[Noma] Would play:", track.file);
@@ -169,6 +171,7 @@ function playCurrent() {
     `Player-UI ist bereit.\n\nNächster Schritt: BFSTM-Decoder.\n\nDatei:\n${track.file}`
   );
   state.playing = false;
+  document.body.classList.remove("is-playing");
   updatePlayerUI();
 }
 
@@ -181,6 +184,7 @@ function markPlayingTrack(trackId) {
 function togglePlay() {
   if (state.queueIndex < 0 && state.queue.length === 0) return;
   state.playing = !state.playing;
+  document.body.classList.toggle("is-playing", state.playing);
   updatePlayerUI();
 }
 
@@ -272,9 +276,11 @@ function bindQueuePanel() {
 function bindFullscreen() {
   $("#btn-fullscreen").addEventListener("click", () => {
     $("#fullscreen-player").classList.remove("hidden");
+    document.body.classList.add("fs-open");
   });
   $("#fs-close").addEventListener("click", () => {
     $("#fullscreen-player").classList.add("hidden");
+    document.body.classList.remove("fs-open");
   });
   $("#fs-play").addEventListener("click", togglePlay);
   $("#fs-prev").addEventListener("click", prevTrack);

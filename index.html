@@ -1,23 +1,116 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Startseite</title>
-    <style>
-        body {
-            margin: 0;
-            min-height: 100vh;
-            display: grid;
-            place-items: center;
-            font-family: Arial, sans-serif;
-            background: #111;
-            color: white;
-        }
-        h1 { font-size: 42px; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Noma Music</title>
+  <link rel="stylesheet" href="css/app.css">
 </head>
 <body>
-    <h1>Du bist drin! 🎉</h1>
+  <div id="bg-layer" class="bg-layer" aria-hidden="true"></div>
+  <div class="bg-overlay" aria-hidden="true"></div>
+
+  <div class="app">
+    <header class="topbar">
+      <div class="logo">Noma Music</div>
+      <nav class="tabs">
+        <button class="tab active" data-tab="games">Spiele</button>
+        <button class="tab" data-tab="playlists">Playlists</button>
+      </nav>
+    </header>
+
+    <main class="content">
+      <section id="tab-games" class="tab-panel active">
+        <h1 class="page-title">Deine Spiele</h1>
+        <div id="games-grid" class="games-grid"></div>
+      </section>
+
+      <section id="tab-playlists" class="tab-panel">
+        <h1 class="page-title">Playlists</h1>
+        <p class="muted">Eigene Playlists kommen als Nächstes.</p>
+        <div id="playlists-list" class="playlists-list"></div>
+      </section>
+
+      <section id="game-detail" class="tab-panel hidden">
+        <button id="back-to-games" class="back-btn">← Zurück</button>
+        <div class="game-header">
+          <img id="game-cover" class="game-cover-lg" src="" alt="">
+          <div class="game-meta">
+            <p class="label">Spiel</p>
+            <h1 id="game-title"></h1>
+            <p id="game-track-count" class="muted"></p>
+            <button id="play-all-btn" class="primary-btn">Alles abspielen</button>
+          </div>
+        </div>
+        <div id="track-list" class="track-list"></div>
+      </section>
+    </main>
+
+    <footer id="player-bar" class="player-bar">
+      <div class="player-left">
+        <img id="now-cover" class="now-cover" src="" alt="">
+        <div class="now-text">
+          <div id="now-title" class="now-title">Nichts läuft</div>
+          <div id="now-game" class="now-game">—</div>
+        </div>
+      </div>
+
+      <div class="player-center">
+        <div class="controls">
+          <button id="btn-shuffle" class="ctrl-btn" title="Shuffle">🔀</button>
+          <button id="btn-prev" class="ctrl-btn" title="Vorheriger">⏮</button>
+          <button id="btn-play" class="ctrl-btn play-btn" title="Play/Pause">▶</button>
+          <button id="btn-next" class="ctrl-btn" title="Nächster">⏭</button>
+          <button id="btn-loop" class="ctrl-btn" title="Loop">🔁</button>
+        </div>
+        <div class="progress-row">
+          <span id="time-current" class="time">0:00</span>
+          <div id="progress-bar" class="progress-bar">
+            <div id="progress-fill" class="progress-fill"></div>
+          </div>
+          <span id="time-total" class="time">0:00</span>
+        </div>
+      </div>
+
+      <div class="player-right">
+        <button id="btn-queue" class="ctrl-btn" title="Warteschlange">☰</button>
+        <button id="btn-fullscreen" class="ctrl-btn" title="Vollbild">⛶</button>
+      </div>
+    </footer>
+  </div>
+
+  <aside id="queue-panel" class="queue-panel hidden">
+    <div class="queue-header">
+      <h2>Warteschlange</h2>
+      <button id="queue-close" class="ctrl-btn">✕</button>
+    </div>
+    <ul id="queue-list" class="queue-list"></ul>
+  </aside>
+
+  <div id="fullscreen-player" class="fullscreen-player hidden">
+    <button id="fs-close" class="fs-close">✕</button>
+    <img id="fs-cover" class="fs-cover" src="" alt="">
+    <h2 id="fs-title" class="fs-title"></h2>
+    <p id="fs-game" class="fs-game muted"></p>
+    <div class="fs-progress progress-row">
+      <span id="fs-time-current" class="time">0:00</span>
+      <div id="fs-progress-bar" class="progress-bar">
+        <div id="fs-progress-fill" class="progress-fill"></div>
+      </div>
+      <span id="fs-time-total" class="time">0:00</span>
+    </div>
+    <div class="fs-controls controls">
+      <button id="fs-prev" class="ctrl-btn">⏮</button>
+      <button id="fs-play" class="ctrl-btn play-btn">▶</button>
+      <button id="fs-next" class="ctrl-btn">⏭</button>
+    </div>
+  </div>
+
+  <div id="context-menu" class="context-menu hidden">
+    <button data-action="play-next">Als Nächstes spielen</button>
+    <button data-action="add-end">Ans Ende der Queue</button>
+  </div>
+
+  <script type="module" src="js/app.js"></script>
 </body>
 </html>
