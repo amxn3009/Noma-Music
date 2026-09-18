@@ -3,6 +3,7 @@ const LIBRARY = [
     id: "oot",
     title: "The Legend of Zelda: Ocarina of Time",
     short: "Ocarina of Time",
+    composer: "Koji Kondo",
     cover: "Assets/Games/OOT/AlbumCover/AlbumCover_OOT.jpg",
     tracks: [
       {
@@ -83,13 +84,22 @@ function openGame(id) {
 
   $("#game-cover").src = game.cover;
   $("#game-title").textContent = game.title;
+  $("#game-composer-name").textContent = game.composer || "Unbekannt";
   $("#game-track-count").textContent = `${game.tracks.length} Titel`;
 
   trackListEl.innerHTML = game.tracks
     .map(
       (t, i) => `
     <div class="track-row" data-track-id="${t.id}" data-index="${i}">
-      <span class="track-num">${i + 1}</span>
+      <span class="track-num">
+        <span class="num">${i + 1}</span>
+        <span class="eq" aria-hidden="true">
+          <i></i><i></i><i></i><i></i><i></i>
+        </span>
+        <span class="hover-play" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+        </span>
+      </span>
       <span class="track-name">${escapeHtml(t.title)}</span>
       <span class="track-actions">⋮</span>
     </div>
@@ -98,16 +108,28 @@ function openGame(id) {
     .join("");
 
   trackListEl.querySelectorAll(".track-row").forEach((row) => {
+    const track = game.tracks[+row.dataset.index];
+
     row.addEventListener("click", (e) => {
-      if (e.target.classList.contains("track-actions")) return;
-      const track = game.tracks[+row.dataset.index];
+      if (e.target.closest(".track-actions")) return;
       playFromGame(game, track);
     });
+
     row.addEventListener("contextmenu", (e) => {
       e.preventDefault();
-      const track = game.tracks[+row.dataset.index];
       showContextMenu(e.clientX, e.clientY, { game, track, fromQueue: false });
     });
+
+    // 3-dots click
+    const dots = row.querySelector(".track-actions");
+    if (dots) {
+      dots.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const rect = dots.getBoundingClientRect();
+        showContextMenu(rect.left, rect.bottom + 4, { game, track, fromQueue: false });
+      });
+    }
   });
 
   $("#play-all-btn").onclick = () => {
@@ -320,7 +342,11 @@ function bindContextMenu() {
       contextMenu.classList.add("hidden");
     });
   });
-  document.addEventListener("click", () => contextMenu.classList.add("hidden"));
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest("#context-menu") && !e.target.closest(".track-actions")) {
+      contextMenu.classList.add("hidden");
+    }
+  });
 }
 
 function bindPlayerChrome() {

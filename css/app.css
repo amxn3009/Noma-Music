@@ -133,6 +133,9 @@ body.fs-open.is-playing .bg-layer {
   cursor: pointer;
   font-size: 0.95rem;
   transition: color 0.2s, background 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 .tab:hover { color: var(--text); }
 .tab.active { background: var(--surface-2); color: var(--text); }
@@ -236,6 +239,9 @@ body.fs-open.is-playing .bg-layer {
   font-weight: 700;
   cursor: pointer;
   transition: transform 0.15s, box-shadow 0.25s, background 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 .primary-btn:hover {
   background: #eee;
@@ -244,6 +250,7 @@ body.fs-open.is-playing .bg-layer {
 }
 
 .track-list { display: flex; flex-direction: column; gap: 2px; }
+
 .track-row {
   display: grid;
   grid-template-columns: 40px 1fr auto;
@@ -254,10 +261,76 @@ body.fs-open.is-playing .bg-layer {
   cursor: pointer;
   transition: background 0.15s;
 }
+
 .track-row:hover { background: var(--surface); }
 .track-row.playing { background: var(--accent-soft); color: var(--accent); }
-.track-num { color: var(--muted); font-size: 0.85rem; text-align: center; }
+
+.track-num { 
+  color: var(--muted); 
+  font-size: 0.85rem; 
+  text-align: 
+  center; 
+  position: relative;
+  width: 40px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+}
+
 .track-name { font-weight: 500; }
+
+.track-num .num { transition: opacity 0.15s; }
+.track-num .eq,
+.track-num .hover-play {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+/* Equalizer bars */
+.track-num .eq { gap: 2px; }
+.track-num .eq i {
+  display: block;
+  width: 3px;
+  height: 12px;
+  border-radius: 2px;
+  background: var(--accent);
+  animation: eq 0.8s ease-in-out infinite alternate;
+}
+.track-num .eq i:nth-child(1) { animation-delay: 0.0s; height: 6px; }
+.track-num .eq i:nth-child(2) { animation-delay: 0.15s; height: 12px; }
+.track-num .eq i:nth-child(3) { animation-delay: 0.3s; height: 18px; }
+.track-num .eq i:nth-child(4) { animation-delay: 0.15s; height: 12px; }
+.track-num .eq i:nth-child(5) { animation-delay: 0.0s; height: 8px; }
+
+@keyframes eq {
+  from { transform: scaleY(0.35); }
+  to   { transform: scaleY(1); }
+}
+
+/* Playing: show wave, hide number */
+.track-row.playing .track-num .num { opacity: 0; }
+.track-row.playing .track-num .eq { opacity: 1; }
+
+/* Hover (not playing): show play icon */
+.track-row:not(.playing):hover .track-num .num { opacity: 0; }
+.track-row:not(.playing):hover .track-num .hover-play { opacity: 1; }
+
+.track-row:not(.playing):hover .hover-play {
+  transform: scale(1);
+}
+.track-num .hover-play {
+  transform: scale(0.7);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.track-row:not(.playing):hover .track-num .hover-play {
+  transform: scale(1);
+}
 
 /* ===== Bottom player ===== */
 .player-bar {
@@ -291,6 +364,8 @@ body.fs-open .player-left {
 }
 body.fs-open .player-center {
   grid-column: 2;
+  width: 520px;
+  max-width: min(520px, 90vw);
 }
 body.fs-open .player-right {
   justify-content: flex-end;
@@ -374,8 +449,8 @@ body.fs-open .player-right {
   display: flex;
   align-items: center;
   gap: 12px;
-  width: 100%;
-  max-width: 680px;
+  width: 520px;
+  max-width: min(520px, 90vw);
 }
 .time {
   font-size: 0.75rem;
@@ -569,5 +644,16 @@ body.fs-open .content {
   max-width: 520px; /* same as normal mode */
 }
 body.fs-open .progress-row {
-  max-width: 520px;
+  width: 100%;
+  max-width: none;
 }
+
+.composer {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin-top: 4px;
+}
+.composer svg { opacity: 0.85; }
