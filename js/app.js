@@ -157,6 +157,7 @@ function playCurrent() {
   $("#fs-game").textContent = game?.short || "";
   bgLayer.style.backgroundImage = game?.cover ? `url("${game.cover}")` : "none";
 
+  bgLayer.style.backgroundImage = game?.cover ? `url("${game.cover}")` : "none";
   document.body.classList.add("is-playing");
 
   markPlayingTrack(track.id);
@@ -274,17 +275,22 @@ function bindQueuePanel() {
 }
 
 function bindFullscreen() {
-  $("#btn-fullscreen").addEventListener("click", () => {
+  const btnFs = $("#btn-fullscreen");
+  const btnMin = $("#btn-minimize");
+
+  btnFs.addEventListener("click", () => {
     $("#fullscreen-player").classList.remove("hidden");
     document.body.classList.add("fs-open");
+    btnFs.classList.add("hidden");
+    btnMin.classList.remove("hidden");
   });
-  $("#fs-close").addEventListener("click", () => {
+
+  btnMin.addEventListener("click", () => {
     $("#fullscreen-player").classList.add("hidden");
     document.body.classList.remove("fs-open");
+    btnMin.classList.add("hidden");
+    btnFs.classList.remove("hidden");
   });
-  $("#fs-play").addEventListener("click", togglePlay);
-  $("#fs-prev").addEventListener("click", prevTrack);
-  $("#fs-next").addEventListener("click", nextTrack);
 }
 
 function showContextMenu(x, y, payload) {

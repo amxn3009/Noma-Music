@@ -46,8 +46,9 @@
       </section>
     </main>
 
+    <!-- Always-visible bottom player -->
     <footer id="player-bar" class="player-bar">
-      <div class="player-left">
+      <div class="player-left" id="player-left">
         <img id="now-cover" class="now-cover" src="" alt="">
         <div class="now-text">
           <div id="now-title" class="now-title">Nichts läuft</div>
@@ -75,8 +76,32 @@
       <div class="player-right">
         <button id="btn-queue" class="ctrl-btn" title="Warteschlange">☰</button>
         <button id="btn-fullscreen" class="ctrl-btn" title="Vollbild">⛶</button>
+        <button id="btn-minimize" class="ctrl-btn hidden" title="Verkleinern">🗗</button>
       </div>
     </footer>
+  </div>
+
+  <!-- Queue panel -->
+  <aside id="queue-panel" class="queue-panel hidden">
+    <div class="queue-header">
+      <h2>Warteschlange</h2>
+      <button id="queue-close" class="ctrl-btn">✕</button>
+    </div>
+    <ul id="queue-list" class="queue-list"></ul>
+  </aside>
+
+  <!-- Fullscreen stage (cover only – controls stay in bottom bar) -->
+  <div id="fullscreen-player" class="fullscreen-player hidden">
+    <img id="fs-cover" class="fs-cover" src="" alt="">
+    <h2 id="fs-title" class="fs-title"></h2>
+    <p id="fs-game" class="fs-game muted"></p>
+  </div>
+
+  <!-- Context menu -->
+  <div id="context-menu" class="context-menu hidden">
+    <button data-action="play-next">Als Nächstes spielen</button>
+    <button data-action="add-end">Ans Ende der Queue</button>
+  </div>
   </div>
 
   <aside id="queue-panel" class="queue-panel hidden">
