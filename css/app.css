@@ -323,6 +323,12 @@ body.fs-open.is-playing .bg-layer {
 .track-row.playing .track-num .num { opacity: 0; }
 .track-row.playing .track-num .eq { opacity: 1; }
 
+/* Current track but paused: show static low bars, no animation */
+.track-row.playing:not(.audio-on) .track-num .eq i {
+  animation: none;
+  transform: scaleY(0.35);
+}
+
 /* Hover (not playing): show play icon */
 .track-row:not(.playing):hover .track-num .num { opacity: 0; }
 .track-row:not(.playing):hover .track-num .hover-play { opacity: 1; }
