@@ -53,6 +53,7 @@ let animFrame = null;
 let decodedBuffer = null;
 let loopStartSample = 0;
 let sampleRate = 44100;
+let masterVolume = 1; // 0–1
 
 function ensureAudioContext() {
   if (!audioCtx) {
@@ -62,6 +63,24 @@ function ensureAudioContext() {
     audioCtx.resume();
   }
   return audioCtx;
+}
+
+const durationCache = new Map(); // url → seconds
+
+async function getTrackDuration(url) {
+  if (durationCache.has(url)) return durationCache.get(url);
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(res.status);
+    const buf = await res.arrayBuffer();
+    const bfstm = new Bfstm(buf);
+    const sec = bfstm.metadata.totalSamples / bfstm.metadata.sampleRate;
+    durationCache.set(url, sec);
+    return sec;
+  } catch (err) {
+    console.warn("[Noma] duration failed:", url, err);
+    return null;
+  }
 }
 
 function stopSource() {
@@ -159,6 +178,7 @@ function playBuffer(audioBuffer, offsetSeconds = 0) {
   currentSource = ctx.createBufferSource();
   currentSource.buffer = audioBuffer;
   currentGain = ctx.createGain();
+  currentGain.gain.value = masterVolume;
   currentSource.connect(currentGain);
   currentGain.connect(ctx.destination);
 
@@ -168,7 +188,6 @@ function playBuffer(audioBuffer, offsetSeconds = 0) {
       currentSource.loopStart = loopStart;
       currentSource.loopEnd = duration;
     }
-    // If offset is past duration, map into loop region
     if (offset >= duration && loopStart > 0) {
       const loopLen = duration - loopStart;
       offset = loopStart + ((offset - duration) % loopLen);
@@ -192,6 +211,101 @@ function playBuffer(audioBuffer, offsetSeconds = 0) {
   updatePlayerUI();
   markPlayingTrack(getCurrentTrackId());
   updateProgressUI();
+}
+
+function setVolume(value) {
+  masterVolume = Math.min(1, Math.max(0, value));
+  if (currentGain) {
+    currentGain.gain.value = masterVolume;
+  }
+  const slider = $("#volume-slider");
+  if (slider && Number(slider.value) !== masterVolume) {
+    slider.value = masterVolume;
+  }
+}
+
+function bindVolume() {
+  const wrap = $("#volume-wrap");
+  const slider = $("#volume-slider");
+  if (!wrap || !slider) return;
+
+  slider.value = masterVolume;
+
+  slider.addEventListener("input", () => {
+    setVolume(Number(slider.value));
+  });
+
+  wrap.addEventListener(
+    "wheel",
+    (e) => {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -0.05 : 0.05;
+      setVolume(masterVolume + delta);
+    },
+    { passive: false }
+  );
+}
+
+function bindHotkeys() {
+  document.addEventListener("keydown", (e) => {
+    if (e.repeat) return; // holding key → don't spam
+
+    const tag = (e.target && e.target.tagName) || "";
+    if (tag === "INPUT" || tag === "TEXTAREA" || e.target.isContentEditable) {
+      return;
+    }
+
+    let handled = false;
+
+    switch (e.code) {
+      case "Space":
+        e.preventDefault();
+        togglePlay();
+        handled = true;
+        break;
+      case "KeyF":
+        e.preventDefault();
+        toggleFullscreen();
+        handled = true;
+        break;
+      case "ArrowLeft":
+        e.preventDefault();
+        nextTrack();
+        handled = true;
+        break;
+      case "ArrowRight":
+        e.preventDefault();
+        prevTrack();
+        handled = true;
+        break;
+      default:
+        break;
+    }
+
+    if (handled && document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+  });
+}
+
+function toggleFullscreen() {
+  const fs = $("#fullscreen-player");
+  const btnFs = $("#btn-fullscreen");
+  const btnMin = $("#btn-minimize");
+  if (!fs) return;
+
+  const open = fs.classList.contains("hidden");
+  if (open) {
+    fs.classList.remove("hidden");
+    document.body.classList.add("fs-open");
+    btnFs?.classList.add("hidden");
+    btnMin?.classList.remove("hidden");
+  } else {
+    fs.classList.add("hidden");
+    document.body.classList.remove("fs-open");
+    btnMin?.classList.add("hidden");
+    btnFs?.classList.remove("hidden");
+  }
 }
 
 async function decodeBfstm(url) {
@@ -235,9 +349,16 @@ function init() {
   bindFullscreen();
   bindContextMenu();
   updatePlayerUI();
+  bindVolume();
+  bindHotkeys();
   $("#now-cover").src = PLACEHOLDER;
   $("#fs-cover").src = PLACEHOLDER;
   bgLayer.style.backgroundImage = `url("${PLACEHOLDER}")`;
+  document.addEventListener("dragstart", (e) => {
+  if (e.target instanceof HTMLImageElement) {
+    e.preventDefault();
+  }
+});
 }
 
 function renderGames() {
@@ -294,11 +415,22 @@ function openGame(id) {
         </span>
       </span>
       <span class="track-name">${escapeHtml(t.title)}</span>
+      <span class="track-duration" data-file="${escapeHtml(t.file)}">–:––</span>
       <span class="track-actions" data-action="menu">⋮</span>
     </div>
   `
     )
     .join("");
+
+  // Load durations in the background
+  game.tracks.forEach(async (t) => {
+    const sec = await getTrackDuration(t.file);
+    if (sec == null) return;
+    const el = trackListEl.querySelector(
+      `.track-duration[data-file="${CSS.escape(t.file)}"]`
+    );
+    if (el) el.textContent = formatTime(sec);
+  });
 
     trackListEl.querySelectorAll(".track-row").forEach((row) => {
     row.addEventListener("click", (e) => {
@@ -417,8 +549,44 @@ function getCurrentTrackId() {
 function markPlayingTrack(trackId) {
   document.querySelectorAll(".track-row").forEach((row) => {
     const isCurrent = trackId && row.dataset.trackId === trackId;
-    row.classList.toggle("playing", isCurrent);
-    row.classList.toggle("audio-on", isCurrent && state.playing);
+    row.classList.toggle("playing", !!isCurrent);
+
+    if (!isCurrent) {
+      row.classList.remove("audio-on");
+      clearEqInline(row);
+      return;
+    }
+
+    if (state.playing) {
+      // Resume / start: clear inline styles, then enable bounce
+      clearEqInline(row);
+      row.classList.add("audio-on");
+    } else {
+      // Pause: freeze at current height, then ease down to 0.35
+      smoothPauseEq(row);
+      row.classList.remove("audio-on");
+    }
+  });
+}
+
+function clearEqInline(row) {
+  row.querySelectorAll(".eq i").forEach((bar) => {
+    bar.style.transition = "";
+    bar.style.transform = "";
+    bar.style.animation = "";
+  });
+}
+
+function smoothPauseEq(row) {
+  row.querySelectorAll(".eq i").forEach((bar) => {
+    const current = getComputedStyle(bar).transform;
+    bar.style.animation = "none";
+    bar.style.transform = current === "none" ? "scaleY(0.35)" : current;
+    // next frame → transition to resting size
+    requestAnimationFrame(() => {
+      bar.style.transition = "transform 0.35s cubic-bezier(0.22, 1, 0.36, 1)";
+      bar.style.transform = "scaleY(0.35)";
+    });
   });
 }
 
@@ -465,6 +633,16 @@ function toggleLoop() {
   const i = modes.indexOf(state.loopMode);
   state.loopMode = modes[(i + 1) % modes.length];
   updatePlayerUI();
+
+  // Apply immediately to the current source
+  if (decodedBuffer) {
+    const pos = getPlaybackPosition();
+    if (state.playing) {
+      // Recreate source from current position with new loop mode
+      playBuffer(decodedBuffer, pos);
+    }
+    // If paused, next resume will already use the new state.loopMode
+  }
 }
 
 function toggleShuffle() {

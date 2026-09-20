@@ -26,9 +26,29 @@ html, body {
   color: var(--text);
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
   overflow: hidden;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+input,
+textarea {
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 .hidden { display: none !important; }
+
+.ctrl-btn:focus,
+.play-btn:focus,
+.volume-slider:focus {
+  outline: none;
+}
+
+.ctrl-btn:focus-visible,
+.play-btn:focus-visible {
+  outline: 2px solid rgba(124, 156, 255, 0.5);
+  outline-offset: 2px;
+}
 
 /* ===== Adaptive background ===== */
 .bg-layer {
@@ -122,29 +142,62 @@ body.fs-open.is-playing .bg-layer {
 .topbar {
   display: flex;
   align-items: center;
-  gap: 24px;
-  padding: 16px 28px;
+  gap: 20px;
+  padding: 14px 28px;
   border-bottom: 1px solid var(--border);
   background: rgba(10,10,10,0.6);
   backdrop-filter: blur(12px);
 }
-.logo { font-weight: 700; font-size: 1.15rem; }
-.tabs { display: flex; gap: 6px; }
+
+.logo {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.logo-img {
+  height: 60px;   /* was ~28px — raise further if you want */
+  width: auto;
+  display: block;
+}
+
+.tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 4px;
+  padding: 3px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 999px;
+}
+
 .tab {
   background: transparent;
   border: none;
   color: var(--muted);
-  padding: 8px 14px;
+  padding: 8px 16px;
   border-radius: 999px;
   cursor: pointer;
-  font-size: 0.95rem;
-  transition: color 0.2s, background 0.2s;
+  font-size: 0.9rem;
+  font-weight: 500;
+  font-family: inherit;
+  transition: color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
   display: inline-flex;
   align-items: center;
   gap: 8px;
 }
-.tab:hover { color: var(--text); }
-.tab.active { background: var(--surface-2); color: var(--text); }
+
+.tab:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.tab.active {
+  color: var(--text);
+  background: var(--surface-2);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
 
 .content {
   flex: 1;
@@ -206,15 +259,53 @@ body.fs-open.is-playing .bg-layer {
 }
 .game-card p { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
 
+.back-icon {
+  width: 18px;
+  height: 18px;
+  display: block;
+  object-fit: contain;
+  pointer-events: none;
+  opacity: 0.45;
+  filter: none;
+  transition: opacity 0.15s ease;
+}
+
+.ctrl-img {
+  width: 18px;
+  height: 18px;
+  display: block;
+  object-fit: contain;
+  pointer-events: none;
+  /* white PNG → soft gray like muted text */
+  opacity: 0.65;
+  filter: none;
+  transition: opacity 0.15s ease;
+}
+
+.back-btn:hover .back-icon,
+.ctrl-btn:hover .ctrl-img {
+  opacity: 1;
+}
+
 .back-btn {
-  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+  padding: 0;
+  background: transparent;   /* kills white button background */
   border: none;
   color: var(--muted);
-  cursor: pointer;
-  margin-bottom: 18px;
   font-size: 0.95rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: color 0.15s ease, transform 0.12s ease;
 }
-.back-btn:hover { color: var(--text); }
+
+.back-btn:hover {
+  color: var(--text);
+  background: transparent;
+}
 
 .game-header {
   display: flex;
@@ -259,33 +350,72 @@ body.fs-open.is-playing .bg-layer {
 
 .track-row {
   display: grid;
-  grid-template-columns: 40px 1fr auto;
+  grid-template-columns: 40px minmax(0, 1fr) 48px 28px;
   align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
+  gap: 8px;
+  padding: 8px 12px;          /* was 10px — keeps row height down */
   border-radius: 8px;
   cursor: pointer;
   transition: background 0.15s;
+  min-height: 0;
+}
+
+.track-duration {
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
 }
 
 .track-row:hover { background: var(--surface); }
 .track-row.playing { background: var(--accent-soft); color: var(--accent); }
+.track-row.playing .track-duration {
+  color: var(--accent);
+}
 
-.track-num { 
-  color: var(--muted); 
-  font-size: 0.85rem; 
-  text-align: 
-  center; 
+.track-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  user-select: none;
+}
+
+.track-actions:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* keep number cell from stretching the row */
+.track-num {
+  color: var(--muted);
+  font-size: 0.85rem;
+  text-align: center;
   position: relative;
   width: 40px;
   height: 24px;
   display: grid;
   place-items: center;
+  align-self: center;
 }
 
-.track-name { font-weight: 500; }
+.track-name {
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
 
 .track-num .num { transition: opacity 0.15s; }
+
 .track-num .eq,
 .track-num .hover-play {
   position: absolute;
@@ -298,21 +428,24 @@ body.fs-open.is-playing .bg-layer {
   transition: opacity 0.2s ease;
 }
 
-/* Equalizer bars */
 .track-num .eq { gap: 2px; }
+
 .track-num .eq i {
   display: block;
   width: 3px;
   height: 12px;
   border-radius: 2px;
   background: var(--accent);
-  animation: eq 0.8s ease-in-out infinite alternate;
+  transform-origin: center center;
+  transform: scaleY(0.35); /* resting / paused size */
+  /* animation only while .audio-on — see below */
 }
-.track-num .eq i:nth-child(1) { animation-delay: 0.0s; height: 6px; }
-.track-num .eq i:nth-child(2) { animation-delay: 0.15s; height: 12px; }
-.track-num .eq i:nth-child(3) { animation-delay: 0.3s; height: 18px; }
-.track-num .eq i:nth-child(4) { animation-delay: 0.15s; height: 12px; }
-.track-num .eq i:nth-child(5) { animation-delay: 0.0s; height: 8px; }
+
+.track-num .eq i:nth-child(1) { height: 6px; }
+.track-num .eq i:nth-child(2) { height: 12px; }
+.track-num .eq i:nth-child(3) { height: 18px; }
+.track-num .eq i:nth-child(4) { height: 12px; }
+.track-num .eq i:nth-child(5) { height: 8px; }
 
 @keyframes eq {
   from { transform: scaleY(0.35); }
@@ -323,26 +456,31 @@ body.fs-open.is-playing .bg-layer {
 .track-row.playing .track-num .num { opacity: 0; }
 .track-row.playing .track-num .eq { opacity: 1; }
 
-/* Current track but paused: show static low bars, no animation */
+/* Bounce only while audio is on — starts at 0.35 so resume isn't a jump */
+.track-row.playing.audio-on .track-num .eq i {
+  animation: eq 0.8s ease-in-out infinite alternate;
+}
+.track-row.playing.audio-on .track-num .eq i:nth-child(1) { animation-delay: 0.0s; }
+.track-row.playing.audio-on .track-num .eq i:nth-child(2) { animation-delay: 0.15s; }
+.track-row.playing.audio-on .track-num .eq i:nth-child(3) { animation-delay: 0.3s; }
+.track-row.playing.audio-on .track-num .eq i:nth-child(4) { animation-delay: 0.15s; }
+.track-row.playing.audio-on .track-num .eq i:nth-child(5) { animation-delay: 0.0s; }
+
+/* Paused: fixed low bars (same size every time) */
 .track-row.playing:not(.audio-on) .track-num .eq i {
   animation: none;
   transform: scaleY(0.35);
 }
 
-/* Hover (not playing): show play icon */
+/* Hover play */
 .track-row:not(.playing):hover .track-num .num { opacity: 0; }
 .track-row:not(.playing):hover .track-num .hover-play { opacity: 1; }
-
-.track-row:not(.playing):hover .hover-play {
-  transform: scale(1);
-}
+.track-row:not(.playing):hover .hover-play { transform: scale(1); }
 .track-num .hover-play {
   transform: scale(0.7);
   transition: opacity 0.2s ease, transform 0.2s ease;
 }
-.track-row:not(.playing):hover .track-num .hover-play {
-  transform: scale(1);
-}
+.track-row:not(.playing):hover .track-num .hover-play { transform: scale(1); }
 
 /* ===== Bottom player ===== */
 .player-bar {
@@ -351,7 +489,7 @@ body.fs-open.is-playing .bg-layer {
   right: 0;
   bottom: 0;
   height: var(--player-h);
-  background: rgba(18,18,18,0.92);
+  background: rgba(18, 18, 18, 0.92);
   border-top: 1px solid var(--border);
   backdrop-filter: blur(16px);
   display: grid;
@@ -360,27 +498,57 @@ body.fs-open.is-playing .bg-layer {
   padding: 0 20px;
   gap: 16px;
   z-index: 50;
+  box-sizing: border-box;
   transition: background 0.3s ease, border-color 0.3s ease;
 }
 
-/* Fullscreen: transparent bar, no left info */
+.player-center,
+.player-right,
+.player-left {
+  display: flex;
+  align-items: center;
+}
+
+.player-center {
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* Fullscreen: keep the same 1px border space so nothing jumps */
 body.fs-open .player-bar {
   background: transparent;
-  border-top: none;
+  border-top-color: transparent; /* was: border-top: none */
   backdrop-filter: none;
-  grid-template-columns: 1fr auto 1fr;
+  /* keep the SAME grid as normal mode */
+  grid-template-columns: 1fr 1.6fr 1fr;
+  height: var(--player-h);
+  padding: 0 20px;
 }
+
 body.fs-open .player-left {
   visibility: hidden;
   pointer-events: none;
 }
+
 body.fs-open .player-center {
   grid-column: 2;
   width: 520px;
   max-width: min(520px, 90vw);
+  /* don’t add extra margin/padding here */
+  margin: 0;
+  transform: none;
 }
 body.fs-open .player-right {
   justify-content: flex-end;
+  align-items: center;
+}
+
+/* keep right-side buttons on the same vertical line */
+body.fs-open .player-right .ctrl-btn,
+body.fs-open .volume-wrap {
+  transform: none;
+  margin-top: 0;
 }
 
 .player-left {
@@ -415,11 +583,18 @@ body.fs-open .player-right {
   align-items: center;
   gap: 8px;
 }
+
 .controls {
   display: flex;
   align-items: center;
   gap: 14px;
 }
+
+#btn-minimize .ctrl-img {
+  width: 18px;
+  height: 18px;
+}
+
 .ctrl-btn {
   background: transparent;
   border: none;
@@ -429,6 +604,7 @@ body.fs-open .player-right {
   border-radius: 50%;
   font-size: 1.3rem;
   transition: color 0.15s, background 0.15s, transform 0.15s;
+  color: var(--muted);
 }
 .ctrl-btn:hover {
   color: var(--text);
@@ -439,6 +615,11 @@ body.fs-open .player-right {
 .ctrl-btn .icon {
   display: block;
   pointer-events: none;
+}
+
+#btn-minimize .icon-mask {
+  width: 18px;
+  height: 18px;
 }
 
 .play-btn {
@@ -457,6 +638,7 @@ body.fs-open .player-right {
   transform: scale(1.06);
 }
 
+/* Don’t resize the progress row in fullscreen either */
 .progress-row {
   display: flex;
   align-items: center;
@@ -464,6 +646,7 @@ body.fs-open .player-right {
   width: 520px;
   max-width: min(520px, 90vw);
 }
+
 .time {
   font-size: 0.75rem;
   color: var(--muted);
@@ -488,6 +671,43 @@ body.fs-open .player-right {
   display: flex;
   justify-content: flex-end;
   gap: 4px;
+}
+
+.volume-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  padding: 4px 8px;
+  border-radius: 999px;
+  transition: color 0.15s, background 0.15s;
+}
+
+.volume-wrap:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.volume-icon {
+  flex-shrink: 0;
+  opacity: 0.9;
+}
+
+.volume-slider {
+  width: 0;
+  opacity: 0;
+  pointer-events: none;
+  accent-color: var(--text);
+  height: 4px;
+  cursor: pointer;
+  transition: width 0.2s ease, opacity 0.2s ease;
+}
+
+.volume-wrap:hover .volume-slider,
+.volume-wrap:focus-within .volume-slider {
+  width: 80px;
+  opacity: 1;
+  pointer-events: auto;
 }
 
 /* ===== Fullscreen stage (cover only) ===== */
@@ -655,9 +875,10 @@ body.fs-open .content {
 .progress-row {
   max-width: 520px; /* same as normal mode */
 }
+
 body.fs-open .progress-row {
-  width: 100%;
-  max-width: none;
+  width: 520px;
+  max-width: min(520px, 90vw);
 }
 
 .game-meta #game-track-count,

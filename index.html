@@ -5,7 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Noma Music</title>
   <link rel="stylesheet" href="css/app.css">
-  <link rel="icon" type="image/x-icon" href="/Assets/Logo/NomaMusicLogoSquircle.png">
+  <link rel="icon" type="image/png" href="/Assets/Logo/Favicon/favicon-96x96.png?v=20260920" sizes="96x96" />
+  <link rel="icon" type="image/svg+xml" href="/Assets/Logo/Favicon/favicon.svg?v=20260920" />
+  <link rel="shortcut icon" href="/Assets/Logo/Favicon/favicon.ico?v=20260920" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/Assets/Logo/Favicon/apple-touch-icon.png?v=20260920" />
+  <meta name="apple-mobile-web-app-title" content="Noma Music" />
+  <link rel="manifest" href="/Assets/Logo/Favicon/site.webmanifest?v=20260920" />
 </head>
 <body>
   <div id="bg-layer" class="bg-layer" aria-hidden="true"></div>
@@ -13,7 +18,9 @@
 
   <div class="app">
     <header class="topbar">
-      <div class="logo">Noma Music</div>
+      <div class="logo">
+        <img src="Assets/Logo/NomaMusicLogoText.png" alt="Noma Music" class="logo-img">
+      </div>
       <nav class="tabs">
        <button class="tab active" data-tab="games">
         <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M21 6H3c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-10 7H8v3H6v-3H3v-2h3V8h2v3h3v2zm4.5 2c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm4-3c-.83 0-1.5-.67-1.5-1.5S18.67 9 19.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>
@@ -39,7 +46,10 @@
       </section>
 
       <section id="game-detail" class="tab-panel hidden">
-        <button id="back-to-games" class="back-btn">↩  Zurück</button>
+       <button id="back-to-games" class="back-btn">
+          <img src="Assets/Common/Back1.png" alt="" class="back-icon">
+            Zurück
+        </button>
         <div class="game-header">
           <img id="game-cover" class="game-cover-lg" src="" alt="">
           <div class="game-meta">
@@ -104,9 +114,17 @@
       </div>
 
       <div class="player-right">
+        <div class="volume-wrap" id="volume-wrap" title="Lautstärke">
+          <svg class="volume-icon" viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+            <path d="M3 10v4h4l5 5V5L7 10H3zm13.5 2c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+        </svg>
+          <input id="volume-slider" class="volume-slider" type="range" min="0" max="1" step="0.01" value="1">
+      </div>
         <button id="btn-queue" class="ctrl-btn" title="Warteschlange">☰</button>
         <button id="btn-fullscreen" class="ctrl-btn" title="Vollbild">⛶</button>
-        <button id="btn-minimize" class="ctrl-btn hidden" title="Verkleinern">🗗</button>
+        <button id="btn-minimize" class="ctrl-btn hidden" title="Verkleinern">
+          <img src="Assets/MusicPlayer/Minimize.png" alt="" class="ctrl-img">
+        </button>
       </div>
     </footer>
   </div>
