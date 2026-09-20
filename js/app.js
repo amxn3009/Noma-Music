@@ -21,6 +21,7 @@ const RESTART_THRESHOLD = 10; // seconds
 let transitioning = false;
 let transitionStartedAt = 0; // audioCtx.currentTime
 let awaitingLoopWrap = false; // true after first full play when loop is off
+let scrubbing = false;
 
 const PLACEHOLDER = "Assets/MusicPlayer/PlaceholderImage.jpg";
 
@@ -46,6 +47,43 @@ let decodedBuffer = null;
 let loopStartSample = 0;
 let sampleRate = 44100;
 let masterVolume = 1; // 0–1
+
+function resetPlayerToIdle() {
+  stopSource();
+  cancelTransition?.(false);
+  transitioning = false;
+  awaitingLoopWrap = false;
+  decodedBuffer = null;
+  pauseOffset = 0;
+  loopStartSample = 0;
+  state.playing = false;
+  state.queueIndex = -1;
+  state.currentTime = 0;
+  state.duration = 0;
+
+  document.body.classList.remove("is-playing", "is-transitioning");
+
+  $("#now-cover").src = PLACEHOLDER;
+  $("#now-title").textContent = "Nichts läuft";
+  $("#now-game").textContent = "Keinen Song ausgewählt";
+
+  $("#fs-cover").src = PLACEHOLDER;
+  $("#fs-title").textContent = "Nichts läuft";
+  $("#fs-game").textContent = "Keinen Song ausgewählt";
+
+  if (bgLayer) bgLayer.style.backgroundImage = `url("${PLACEHOLDER}")`;
+
+  const fill = $("#progress-fill");
+  if (fill) fill.style.width = "0%";
+  const tCur = $("#time-current");
+  if (tCur) tCur.textContent = "0:00";
+  const tTot = $("#time-total");
+  if (tTot) tTot.textContent = "0:00";
+
+  markPlayingTrack(null);
+  updatePlayerUI();
+  renderQueue();
+}
 
 function ensureAudioContext() {
   if (!audioCtx) {
@@ -131,6 +169,12 @@ function getPlaybackPosition() {
 
 function updateProgressUI() {
   if (!decodedBuffer) return;
+
+  if (scrubbing) {
+    // keep the loop alive so we can resume after scrub, but don't overwrite the fill
+    if (state.playing) animFrame = requestAnimationFrame(updateProgressUI);
+    return;
+  }
 
   const duration = decodedBuffer.duration;
   const loopStart = getLoopStartSec();
@@ -287,12 +331,29 @@ function finishTransition() {
 
 function setVolume(value) {
   masterVolume = Math.min(1, Math.max(0, value));
-  if (currentGain) {
-    currentGain.gain.value = masterVolume;
-  }
+
   const slider = $("#volume-slider");
   if (slider && Number(slider.value) !== masterVolume) {
     slider.value = masterVolume;
+  }
+
+  if (!currentGain || !audioCtx) return;
+
+  const now = audioCtx.currentTime;
+
+  if (transitioning) {
+    // Keep the fade to 0, but scale it to the new volume
+    const elapsed = Math.max(0, now - transitionStartedAt);
+    const progress = Math.min(1, elapsed / TRANSITION_SEC);
+    const remaining = Math.max(0.05, TRANSITION_SEC - elapsed);
+    const levelNow = masterVolume * (1 - progress);
+
+    currentGain.gain.cancelScheduledValues(now);
+    currentGain.gain.setValueAtTime(levelNow, now);
+    currentGain.gain.linearRampToValueAtTime(0, now + remaining);
+  } else {
+    currentGain.gain.cancelScheduledValues(now);
+    currentGain.gain.setValueAtTime(masterVolume, now);
   }
 }
 
@@ -311,7 +372,7 @@ function bindVolume() {
     "wheel",
     (e) => {
       e.preventDefault();
-      const delta = e.deltaY > 0 ? -0.05 : 0.05;
+      const delta = e.deltaY > 0 ? -0.1 : 0.1;
       setVolume(masterVolume + delta);
     },
     { passive: false }
@@ -320,15 +381,20 @@ function bindVolume() {
 
 function bindHotkeys() {
   document.addEventListener("keydown", (e) => {
-    if (e.repeat) return; // holding key → don't spam
-
     const tag = (e.target && e.target.tagName) || "";
-    if (tag === "INPUT" || tag === "TEXTAREA" || e.target.isContentEditable) {
+    if (tag === "INPUT" || tag === "TEXTAREA" || e.target.isContentEditable) return;
+
+    // Volume: allow hold-to-repeat
+    if (e.code === "ArrowUp" || e.code === "ArrowDown") {
+      e.preventDefault();
+      setVolume(masterVolume + (e.code === "ArrowUp" ? 0.05 : -0.05));
+      showVolumeSlider();
       return;
     }
 
-    let handled = false;
+    if (e.repeat) return;
 
+    let handled = false;
     switch (e.code) {
       case "Space":
         e.preventDefault();
@@ -338,6 +404,30 @@ function bindHotkeys() {
       case "KeyF":
         e.preventDefault();
         toggleFullscreen();
+        handled = true;
+        break;
+      case "Escape":
+        e.preventDefault();
+        if (!$("#fullscreen-player")?.classList.contains("hidden")) {
+          toggleFullscreen();
+        } else if (state.currentGame && gameDetail.classList.contains("active")) {
+          $("#back-to-games")?.click();
+        }
+        handled = true;
+        break;
+      case "KeyQ":
+        e.preventDefault();
+        $("#btn-queue")?.click();
+        handled = true;
+        break;
+      case "KeyL":
+        e.preventDefault();
+        toggleLoop();
+        handled = true;
+        break;
+      case "KeyS":
+        e.preventDefault();
+        toggleShuffle();
         handled = true;
         break;
       case "ArrowLeft":
@@ -358,6 +448,18 @@ function bindHotkeys() {
       document.activeElement.blur();
     }
   });
+}
+
+let volumeHideTimer = null;
+
+function showVolumeSlider() {
+  const wrap = $("#volume-wrap");
+  if (!wrap) return;
+  wrap.classList.add("force-open");
+  clearTimeout(volumeHideTimer);
+  volumeHideTimer = setTimeout(() => {
+    wrap.classList.remove("force-open");
+  }, 1200);
 }
 
 function toggleFullscreen() {
@@ -434,6 +536,8 @@ async function init() {
   bindHotkeys();
   $("#now-cover").src = PLACEHOLDER;
   $("#fs-cover").src = PLACEHOLDER;
+  $("#now-title").textContent = "Nichts läuft";
+  $("#now-game").textContent = "Keinen Song ausgewählt";
   bgLayer.style.backgroundImage = `url("${PLACEHOLDER}")`;
   document.addEventListener("dragstart", (e) => {
     if (e.target instanceof HTMLImageElement) {
@@ -547,8 +651,26 @@ function openGame(id) {
   $("#play-all-btn").onclick = () => {
     state.queue = game.tracks.map((t) => ({ gameId: game.id, track: t }));
     state.queueIndex = 0;
+    state.shuffle = false;
     state.loopsDone = 0;
     playCurrent();
+    renderQueue();
+  };
+
+  $("#shuffle-all-btn").onclick = () => {
+    const items = game.tracks.map((t) => ({ gameId: game.id, track: t }));
+    // Fisher–Yates
+    for (let i = items.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [items[i], items[j]] = [items[j], items[i]];
+    }
+    state.queue = items;
+    state.queueIndex = 0;
+    state.shuffle = true;
+    state.loopsDone = 0;
+    playCurrent();
+    renderQueue();
+    updatePlayerUI();
   };
 }
 
@@ -558,27 +680,41 @@ function bindTabs() {
       document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
       tab.classList.add("active");
       document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
+
+      const name = tab.dataset.tab;
+
+      if (name === "games" && state.currentGame) {
+        // return to the game you were in
+        gameDetail.classList.remove("hidden");
+        gameDetail.classList.add("active");
+        openGame(state.currentGame.id);
+        return;
+      }
+
       gameDetail.classList.add("hidden");
       gameDetail.classList.remove("active");
-      const panel = $(`#tab-${tab.dataset.tab}`);
+      const panel = $(`#tab-${name}`);
       if (panel) panel.classList.add("active");
     });
   });
 
   $("#back-to-games").addEventListener("click", () => {
+    state.currentGame = null;
     gameDetail.classList.add("hidden");
     gameDetail.classList.remove("active");
     tabGames.classList.add("active");
-    document.querySelector('.tab[data-tab="games"]').classList.add("active");
+    document.querySelector('.tab[data-tab="games"]')?.classList.add("active");
+    $("#tab-games")?.classList.add("active");
   });
 }
 
 function playFromGame(game, track) {
   const idx = game.tracks.findIndex((t) => t.id === track.id);
-  state.queue = game.tracks.slice(idx).map((t) => ({ gameId: game.id, track: t }));
-  state.queueIndex = 0;
+  state.queue = game.tracks.map((t) => ({ gameId: game.id, track: t }));
+  state.queueIndex = Math.max(0, idx);
   state.loopsDone = 0;
   playCurrent();
+  renderQueue();
 }
 
 async function playCurrent() {
@@ -615,6 +751,8 @@ async function playCurrent() {
     state.currentTime = 0;
 
     playBuffer(decodedBuffer, 0);
+    // end of playCurrent success path, and inside markPlayingTrack:
+    if (!$("#queue-panel")?.classList.contains("hidden")) renderQueue();
   } catch (err) {
     console.error("[Noma] BFSTM decode/play failed:", err);
     alert(`Konnte Track nicht abspielen:\n${track.title}\n\n${err.message}`);
@@ -630,6 +768,7 @@ function getCurrentTrackId() {
 }
 
 function markPlayingTrack(trackId) {
+  // ── Game track list ──
   document.querySelectorAll(".track-row").forEach((row) => {
     const isCurrent = trackId && row.dataset.trackId === trackId;
     row.classList.toggle("playing", !!isCurrent);
@@ -641,11 +780,29 @@ function markPlayingTrack(trackId) {
     }
 
     if (state.playing) {
-      // Resume / start: clear inline styles, then enable bounce
       clearEqInline(row);
       row.classList.add("audio-on");
     } else {
-      // Pause: freeze at current height, then ease down to 0.35
+      smoothPauseEq(row);
+      row.classList.remove("audio-on");
+    }
+  });
+
+  // ── Queue list ──
+  document.querySelectorAll(".queue-item").forEach((row) => {
+    const isCurrent = +row.dataset.index === state.queueIndex;
+    row.classList.toggle("current", isCurrent);
+
+    if (!isCurrent) {
+      row.classList.remove("audio-on");
+      clearEqInline(row);
+      return;
+    }
+
+    if (state.playing) {
+      clearEqInline(row);
+      row.classList.add("audio-on");
+    } else {
       smoothPauseEq(row);
       row.classList.remove("audio-on");
     }
@@ -755,10 +912,10 @@ function prevTrack() {
   const pos = getPlaybackPosition();
   const dur = decodedBuffer?.duration ?? 0;
 
-  // Restart current if past 10s
-  if (dur > RESTART_THRESHOLD && pos > RESTART_THRESHOLD) {
+  // Restart current if past threshold OR already on first track
+  if (state.queueIndex === 0 || (dur > RESTART_THRESHOLD && pos > RESTART_THRESHOLD)) {
     pauseOffset = 0;
-    if (state.playing) {
+    if (state.playing && decodedBuffer) {
       playBuffer(decodedBuffer, 0);
     } else {
       $("#progress-fill").style.width = "0%";
@@ -767,7 +924,7 @@ function prevTrack() {
     return;
   }
 
-  state.queueIndex = (state.queueIndex - 1 + state.queue.length) % state.queue.length;
+  state.queueIndex -= 1;
   state.loopsDone = 0;
   playCurrent();
 }
@@ -830,16 +987,141 @@ function addToEnd(game, track) {
 function renderQueue() {
   const list = $("#queue-list");
   if (!list) return;
+
+  const currentId = getCurrentTrackId();
+
   list.innerHTML = state.queue
     .map((item, i) => {
       const game = LIBRARY.find((g) => g.id === item.gameId);
+      const isCurrent = i === state.queueIndex;
+      const file = item.track.file;
       return `
-      <li class="queue-item ${i === state.queueIndex ? "current" : ""}">
-        <span>${escapeHtml(item.track.title)}</span>
-        <span class="muted" style="margin-left:auto;font-size:0.75rem">${escapeHtml(game?.short || "")}</span>
+      <li class="queue-item ${isCurrent ? "current" : ""} ${isCurrent && state.playing ? "audio-on" : ""}"
+          data-index="${i}" draggable="false">
+        <span class="q-drag" title="Ziehen" draggable="true" data-drag-handle="1">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M9 5h2v2H9V5zm0 6h2v2H9v-2zm0 6h2v2H9v-2zm4-12h2v2h-2V5zm0 6h2v2h-2v-2zm0 6h2v2h-2v-2z"/></svg>
+        </span>
+        <img class="q-cover" src="${game?.cover || PLACEHOLDER}" alt="">
+        <span class="q-num">
+        <span class="num">${i + 1}</span>
+          <span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
+          <span class="q-hover-play" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+           </span>
+        </span>
+        <div class="q-meta">
+          <span class="q-title">${escapeHtml(item.track.title)}</span>
+          <span class="q-game muted">${escapeHtml(game?.short || "")}</span>
+        </div>
+        <span class="q-duration" data-file="${escapeHtml(file)}">–:––</span>
+        <button class="q-remove" type="button" title="Entfernen" data-remove="${i}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+        </button>
       </li>`;
     })
     .join("");
+
+  // durations
+  state.queue.forEach(async (item) => {
+    const sec = await getTrackDuration(item.track.file);
+    if (sec == null) return;
+    list.querySelectorAll(`.q-duration[data-file="${CSS.escape(item.track.file)}"]`)
+      .forEach((el) => { el.textContent = formatTime(sec); });
+  });
+
+  bindQueueItemEvents(list);
+}
+
+function bindQueueItemEvents(list) {
+  list.querySelectorAll(".queue-item").forEach((row) => {
+    row.addEventListener("click", (e) => {
+      if (e.target.closest(".q-drag") || e.target.closest(".q-remove")) return;
+      const i = +row.dataset.index;
+      if (i === state.queueIndex) {
+        togglePlay();
+      } else {
+        state.queueIndex = i;
+        state.loopsDone = 0;
+        playCurrent();
+      }
+      renderQueue();
+    });
+  });
+
+  list.querySelectorAll(".q-remove").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      removeFromQueue(+btn.dataset.remove);
+    });
+  });
+
+  // Drag only from handle
+  let dragFrom = -1;
+  list.querySelectorAll(".q-drag").forEach((handle) => {
+    handle.addEventListener("dragstart", (e) => {
+      dragFrom = +handle.closest(".queue-item").dataset.index;
+      e.dataTransfer.effectAllowed = "move";
+      handle.closest(".queue-item")?.classList.add("dragging");
+    });
+    handle.addEventListener("dragend", () => {
+      list.querySelectorAll(".queue-item").forEach((el) => el.classList.remove("dragging", "drag-over"));
+      dragFrom = -1;
+    });
+  });
+
+  list.querySelectorAll(".queue-item").forEach((row) => {
+    row.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      row.classList.add("drag-over");
+      autoScrollQueue(e.clientY);
+    });
+    row.addEventListener("dragleave", () => row.classList.remove("drag-over"));
+    row.addEventListener("drop", (e) => {
+      e.preventDefault();
+      row.classList.remove("drag-over");
+      const to = +row.dataset.index;
+      if (dragFrom < 0 || dragFrom === to) return;
+      reorderQueue(dragFrom, to);
+    });
+  });
+}
+
+function reorderQueue(from, to) {
+  const item = state.queue.splice(from, 1)[0];
+  state.queue.splice(to, 0, item);
+  if (state.queueIndex === from) state.queueIndex = to;
+  else if (from < state.queueIndex && to >= state.queueIndex) state.queueIndex--;
+  else if (from > state.queueIndex && to <= state.queueIndex) state.queueIndex++;
+  renderQueue();
+}
+
+function removeFromQueue(index) {
+  if (index < 0 || index >= state.queue.length) return;
+  const wasCurrent = index === state.queueIndex;
+  state.queue.splice(index, 1);
+
+  if (state.queue.length === 0) {
+    resetPlayerToIdle();
+    return;
+  }
+
+  if (wasCurrent) {
+    state.queueIndex = Math.min(index, state.queue.length - 1);
+    playCurrent();
+  } else if (index < state.queueIndex) {
+    state.queueIndex--;
+  }
+  renderQueue();
+}
+
+function autoScrollQueue(clientY) {
+  const panel = $("#queue-panel");
+  const list = $("#queue-list");
+  if (!panel || !list) return;
+  const rect = list.getBoundingClientRect();
+  const edge = 40;
+  if (clientY < rect.top + edge) list.scrollTop -= 12;
+  else if (clientY > rect.bottom - edge) list.scrollTop += 12;
 }
 
 function bindQueuePanel() {
@@ -908,18 +1190,62 @@ function bindPlayerChrome() {
   $("#btn-shuffle")?.addEventListener("click", toggleShuffle);
 
   const bar = $("#progress-bar");
-  bar?.addEventListener("click", (e) => {
-    if (!decodedBuffer) return;
+  if (!bar) return;
+
+  function ratioFromClientX(clientX) {
     const rect = bar.getBoundingClientRect();
-    const ratio = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+    if (rect.width <= 0) return 0;
+    return Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+  }
+
+  function paintSeek(ratio) {
+    if (!decodedBuffer) return 0;
     const seekTo = ratio * decodedBuffer.duration;
+    $("#progress-fill").style.width = `${ratio * 100}%`;
+    $("#time-current").textContent = formatTime(seekTo);
+    return seekTo;
+  }
+
+  bar.addEventListener("pointerdown", (e) => {
+    if (!decodedBuffer || transitioning) return;
+    scrubbing = true;
+    document.body.classList.add("is-scrubbing");
+    try { bar.setPointerCapture(e.pointerId); } catch (_) {}
+    paintSeek(ratioFromClientX(e.clientX));
+    e.preventDefault();
+  });
+
+  window.addEventListener("pointermove", (e) => {
+    if (!scrubbing || !decodedBuffer) return;
+    paintSeek(ratioFromClientX(e.clientX));
+  });
+
+  window.addEventListener("pointerup", (e) => {
+    if (!scrubbing) return;
+    scrubbing = false;
+    document.body.classList.remove("is-scrubbing");
+
+    if (!decodedBuffer) return;
+
+    // cancel any transition logic that might have been pending
+    if (typeof cancelTransition === "function") cancelTransition(true);
+    awaitingLoopWrap = false;
+
+    const seekTo = paintSeek(ratioFromClientX(e.clientX));
+    // stay a bit before the true end so we don't instantly fire onended / transition
+    const safeEnd = Math.max(0, decodedBuffer.duration - 0.05);
+    const pos = Math.min(seekTo, safeEnd);
+
     if (state.playing) {
-      playBuffer(decodedBuffer, seekTo);
+      playBuffer(decodedBuffer, pos);
     } else {
-      pauseOffset = seekTo;
-      $("#progress-fill").style.width = `${ratio * 100}%`;
-      $("#time-current").textContent = formatTime(seekTo);
+      pauseOffset = pos;
     }
+  });
+
+  window.addEventListener("pointercancel", () => {
+    scrubbing = false;
+    document.body.classList.remove("is-scrubbing");
   });
 }
 
