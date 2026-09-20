@@ -25,32 +25,31 @@ export function getTemplate({
       user-select: none;
     }
 
-    /* Subtle moving logo background (not as strong as fullscreen player) */
     .bg-layer {
       position: fixed;
-      inset: -60px;
+      inset: -80px;
       background-image: url("/Assets/Logo/NomaMusicLogoSquare.jpg");
       background-size: cover;
       background-position: center;
-      filter: blur(48px) saturate(1.25) brightness(0.55);
-      opacity: 0.28;
-      transform: scale(1.12);
+      filter: blur(52px) saturate(1.45) brightness(0.62);
+      opacity: 0.42;
+      transform: scale(1.15);
       z-index: 0;
       pointer-events: none;
-      animation: bgDrift 28s ease-in-out infinite alternate;
+      animation: bgDrift 22s ease-in-out infinite alternate;
     }
 
     .bg-layer::after {
       content: "";
       position: absolute;
-      inset: -8%;
+      inset: -10%;
       background: inherit;
       background-size: cover;
       background-position: center;
-      filter: blur(32px) saturate(1.35);
-      opacity: 0.35;
+      filter: blur(36px) saturate(1.55);
+      opacity: 0.45;
       mix-blend-mode: screen;
-      animation: bgDrift 36s ease-in-out infinite alternate-reverse;
+      animation: bgDrift 30s ease-in-out infinite alternate-reverse;
     }
 
     .bg-overlay {
@@ -60,16 +59,16 @@ export function getTemplate({
       pointer-events: none;
       background: linear-gradient(
         180deg,
-        rgba(10, 10, 10, 0.55) 0%,
-        rgba(10, 10, 10, 0.78) 50%,
-        rgba(10, 10, 10, 0.92) 100%
+        rgba(10, 10, 10, 0.4) 0%,
+        rgba(10, 10, 10, 0.7) 55%,
+        rgba(10, 10, 10, 0.88) 100%
       );
     }
 
     @keyframes bgDrift {
-      0%   { transform: scale(1.1)  translate(-1.5%, -1%) rotate(-0.6deg); }
-      50%  { transform: scale(1.16) translate(1.5%, 1%)   rotate(0.6deg); }
-      100% { transform: scale(1.12) translate(-1%, 1.5%)  rotate(-0.3deg); }
+      0%   { transform: scale(1.12) translate(-2%, -1%) rotate(-0.8deg); }
+      50%  { transform: scale(1.2)  translate(2%, 1%)   rotate(0.8deg); }
+      100% { transform: scale(1.15) translate(-1%, 2%)  rotate(-0.4deg); }
     }
 
     .container {
@@ -77,14 +76,27 @@ export function getTemplate({
       z-index: 2;
       min-height: 100vh;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
+      gap: 28px;
       padding: 24px;
+    }
+
+    /* Logo stands alone — not inside the password card */
+    .brand-logo {
+      display: block;
+      width: min(340px, 78vw);
+      height: auto;
+      object-fit: contain;
+      -webkit-user-drag: none;
+      user-drag: none;
+      filter: drop-shadow(0 8px 28px rgba(0, 0, 0, 0.45));
     }
 
     .card {
       width: min(400px, 100%);
-      padding: 36px 32px 32px;
+      padding: 32px 28px 28px;
       text-align: center;
       background: rgba(20, 20, 20, 0.72);
       border: 1px solid rgba(255, 255, 255, 0.08);
@@ -92,16 +104,6 @@ export function getTemplate({
       box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
       backdrop-filter: blur(18px);
       -webkit-backdrop-filter: blur(18px);
-    }
-
-    .brand-logo {
-      display: block;
-      width: min(220px, 70%);
-      height: auto;
-      margin: 0 auto 22px;
-      object-fit: contain;
-      -webkit-user-drag: none;
-      user-drag: none;
     }
 
     h1 {
@@ -177,13 +179,13 @@ export function getTemplate({
   <div class="bg-overlay" aria-hidden="true"></div>
 
   <main class="container">
-    <div class="card">
-      <img
-        class="brand-logo"
-        src="/Assets/Logo/NomaMusicLogoText.png"
-        alt="Noma Music"
-      >
+    <img
+      class="brand-logo"
+      src="/Assets/Logo/NomaMusicLogoText.png"
+      alt="Noma Music"
+    >
 
+    <div class="card">
       <h1>Willkommen</h1>
       <p class="subtitle">Bitte gib das Passwort ein, um fortzufahren.</p>
 
