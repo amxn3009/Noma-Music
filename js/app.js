@@ -1,21 +1,6 @@
 import { Bfstm } from './bfstm.js';
 
-const LIBRARY = [
-  {
-    id: "oot",
-    title: "The Legend of Zelda: Ocarina of Time",
-    short: "Ocarina of Time",
-    composer: "Koji Kondo",
-    cover: "Assets/Games/OOT/AlbumCover/AlbumCover_OOT.jpg",
-    tracks: [
-      {
-        id: "oot-title",
-        title: "Title Theme",
-        file: "Assets/Games/OOT/Tracks/Title Theme.bfstm",
-      },
-    ],
-  },
-];
+let LIBRARY = [];
 
 const state = {
   currentGame: null,
@@ -29,6 +14,13 @@ const state = {
   duration: 0,
   currentTime: 0,
 };
+
+const TRANSITION_SEC = 5;
+const RESTART_THRESHOLD = 10; // seconds
+
+let transitioning = false;
+let transitionStartedAt = 0; // audioCtx.currentTime
+let awaitingLoopWrap = false; // true after first full play when loop is off
 
 const PLACEHOLDER = "Assets/MusicPlayer/PlaceholderImage.jpg";
 
@@ -140,9 +132,34 @@ function getPlaybackPosition() {
 function updateProgressUI() {
   if (!decodedBuffer) return;
 
-  const elapsed = getPlaybackPosition();
   const duration = decodedBuffer.duration;
+  const loopStart = getLoopStartSec();
 
+  // ── Transition mode: 5s bar ──────────────────────────
+  if (transitioning && audioCtx) {
+    const t = Math.min(TRANSITION_SEC, Math.max(0, audioCtx.currentTime - transitionStartedAt));
+    const ratio = t / TRANSITION_SEC;
+
+    const fill = $("#progress-fill");
+    if (fill) fill.style.width = `${ratio * 100}%`;
+    const tCur = $("#time-current");
+    if (tCur) tCur.textContent = formatTime(t);
+    const tTot = $("#time-total");
+    if (tTot) tTot.textContent = formatTime(TRANSITION_SEC);
+
+    if (t >= TRANSITION_SEC - 0.03) {
+      finishTransition();
+      return;
+    }
+
+    if (state.playing) {
+      animFrame = requestAnimationFrame(updateProgressUI);
+    }
+    return;
+  }
+
+  // ── Normal progress ──────────────────────────────────
+  const elapsed = getPlaybackPosition();
   state.currentTime = elapsed;
   state.duration = duration;
 
@@ -155,12 +172,26 @@ function updateProgressUI() {
   const tTot = $("#time-total");
   if (tTot) tTot.textContent = formatTime(duration);
 
-  const fsFill = $("#fs-progress-fill");
-  if (fsFill) fsFill.style.width = `${ratio * 100}%`;
-  const fsCur = $("#fs-time-current");
-  if (fsCur) fsCur.textContent = formatTime(elapsed);
-  const fsTot = $("#fs-time-total");
-  if (fsTot) fsTot.textContent = formatTime(duration);
+  // Detect: loop off → first time we pass the end → next wrap starts transition
+  if (
+    state.loopMode === "off" &&
+    state.playing &&
+    loopStart > 0 &&
+    currentSource &&
+    currentSource.loop
+  ) {
+    let absoluteElapsed = pauseOffset;
+    if (audioCtx) absoluteElapsed += audioCtx.currentTime - startTime;
+
+    if (absoluteElapsed >= duration - 0.05) {
+      awaitingLoopWrap = true;
+    }
+    // after wrap, position is back near loopStart
+    if (awaitingLoopWrap && absoluteElapsed >= duration && elapsed <= loopStart + 0.25) {
+      awaitingLoopWrap = false;
+      startTransition();
+    }
+  }
 
   if (state.playing) {
     animFrame = requestAnimationFrame(updateProgressUI);
@@ -175,6 +206,11 @@ function playBuffer(audioBuffer, offsetSeconds = 0) {
   const loopStart = getLoopStartSec();
   let offset = Math.max(0, offsetSeconds);
 
+  // cancel any ongoing transition when starting fresh
+  if (!transitioning) {
+    awaitingLoopWrap = false;
+  }
+
   currentSource = ctx.createBufferSource();
   currentSource.buffer = audioBuffer;
   currentGain = ctx.createGain();
@@ -182,7 +218,12 @@ function playBuffer(audioBuffer, offsetSeconds = 0) {
   currentSource.connect(currentGain);
   currentGain.connect(ctx.destination);
 
-  if (state.loopMode === "one") {
+  const wantInfiniteLoop = state.loopMode === "one";
+  // loop off but file has loop points → still loop so we can fade at loop start
+  const wantSoftEnd =
+    state.loopMode === "off" && loopStart > 0 && !transitioning;
+
+  if (wantInfiniteLoop || wantSoftEnd) {
     currentSource.loop = true;
     if (loopStart > 0) {
       currentSource.loopStart = loopStart;
@@ -198,8 +239,9 @@ function playBuffer(audioBuffer, offsetSeconds = 0) {
   }
 
   currentSource.onended = () => {
-    if (!state.playing) return;
-    nextTrack();
+    if (!state.playing || transitioning) return;
+    // no loop points / hard end
+    nextTrack(true);
   };
 
   pauseOffset = offset;
@@ -211,6 +253,36 @@ function playBuffer(audioBuffer, offsetSeconds = 0) {
   updatePlayerUI();
   markPlayingTrack(getCurrentTrackId());
   updateProgressUI();
+}
+
+function startTransition() {
+  if (transitioning || !audioCtx || !currentGain) return;
+  transitioning = true;
+  transitionStartedAt = audioCtx.currentTime;
+  document.body.classList.add("is-transitioning");
+
+  const now = audioCtx.currentTime;
+  currentGain.gain.cancelScheduledValues(now);
+  currentGain.gain.setValueAtTime(currentGain.gain.value, now);
+  currentGain.gain.linearRampToValueAtTime(0, now + TRANSITION_SEC);
+}
+
+function cancelTransition(keepPlaying = false) {
+  transitioning = false;
+  awaitingLoopWrap = false;
+  document.body.classList.remove("is-transitioning");
+  if (currentGain && audioCtx) {
+    const now = audioCtx.currentTime;
+    currentGain.gain.cancelScheduledValues(now);
+    if (keepPlaying) {
+      currentGain.gain.setValueAtTime(masterVolume, now);
+    }
+  }
+}
+
+function finishTransition() {
+  cancelTransition(false);
+  nextTrack(true); // force advance, no new transition on same tick
 }
 
 function setVolume(value) {
@@ -341,7 +413,16 @@ async function decodeBfstm(url) {
 
 // ─── App UI ────────────────────────────────────────────────────
 
-function init() {
+async function init() {
+  try {
+   const res = await fetch("/Assets/games.json");
+    if (!res.ok) throw new Error(res.status);
+    LIBRARY = await res.json();
+  } catch (err) {
+    console.error("[Noma] Failed to load games.json:", err);
+    LIBRARY = [];
+  }
+
   renderGames();
   bindTabs();
   bindPlayerChrome();
@@ -355,10 +436,10 @@ function init() {
   $("#fs-cover").src = PLACEHOLDER;
   bgLayer.style.backgroundImage = `url("${PLACEHOLDER}")`;
   document.addEventListener("dragstart", (e) => {
-  if (e.target instanceof HTMLImageElement) {
-    e.preventDefault();
-  }
-});
+    if (e.target instanceof HTMLImageElement) {
+      e.preventDefault();
+    }
+  });
 }
 
 function renderGames() {
@@ -501,6 +582,8 @@ function playFromGame(game, track) {
 }
 
 async function playCurrent() {
+  cancelTransition(false);
+
   const item = state.queue[state.queueIndex];
   if (!item) return;
 
@@ -595,14 +678,47 @@ function togglePlay() {
   if (state.queueIndex < 0 && state.queue.length === 0) return;
 
   if (state.playing) {
-    // Pause: freeze at the true current position
+    // freeze transition clock via pauseOffset style for normal pos
+    if (transitioning && audioCtx) {
+      // keep transitioning true; just stop the source clock
+      // gain ramp is scheduled on AudioParam — pause by suspending ctx is heavy;
+      // simpler: store how far into the 5s we are
+      const t = audioCtx.currentTime - transitionStartedAt;
+      pauseOffset = t; // reuse as transition progress when paused
+      if (currentGain) {
+        currentGain.gain.cancelScheduledValues(audioCtx.currentTime);
+        // hold current gain level
+        const g = currentGain.gain.value;
+        currentGain.gain.setValueAtTime(g, audioCtx.currentTime);
+      }
+      stopSource(); // stops buffer; we'll resume transition on play
+      state.playing = false;
+      document.body.classList.remove("is-playing");
+      markPlayingTrack(getCurrentTrackId());
+      updatePlayerUI();
+      return;
+    }
+
     pauseOffset = getPlaybackPosition();
     stopSource();
     state.playing = false;
     document.body.classList.remove("is-playing");
-    markPlayingTrack(getCurrentTrackId()); // keeps .playing, removes .audio-on
+    markPlayingTrack(getCurrentTrackId());
+  } else if (transitioning && decodedBuffer) {
+    // resume fade from remaining time
+    const already = pauseOffset; // seconds into the 5s
+    const remaining = Math.max(0.05, TRANSITION_SEC - already);
+    playBuffer(decodedBuffer, getLoopStartSec()); // continue near loop region
+    // re-apply partial fade
+    if (currentGain && audioCtx) {
+      const now = audioCtx.currentTime;
+      const startGain = masterVolume * (1 - already / TRANSITION_SEC);
+      currentGain.gain.cancelScheduledValues(now);
+      currentGain.gain.setValueAtTime(startGain, now);
+      currentGain.gain.linearRampToValueAtTime(0, now + remaining);
+      transitionStartedAt = now - already;
+    }
   } else if (decodedBuffer) {
-    // Resume from exact position (not loop start)
     playBuffer(decodedBuffer, pauseOffset);
   } else {
     playCurrent();
@@ -610,8 +726,15 @@ function togglePlay() {
   updatePlayerUI();
 }
 
-function nextTrack() {
+function nextTrack(fromNaturalEnd = false) {
   if (state.queue.length === 0) return;
+
+  // Skip during transition → go straight to next
+  if (transitioning) {
+    cancelTransition(false);
+    stopSource();
+  }
+
   if (state.shuffle) {
     state.queueIndex = Math.floor(Math.random() * state.queue.length);
   } else {
@@ -623,6 +746,27 @@ function nextTrack() {
 
 function prevTrack() {
   if (state.queue.length === 0) return;
+
+  if (transitioning) {
+    cancelTransition(false);
+    stopSource();
+  }
+
+  const pos = getPlaybackPosition();
+  const dur = decodedBuffer?.duration ?? 0;
+
+  // Restart current if past 10s
+  if (dur > RESTART_THRESHOLD && pos > RESTART_THRESHOLD) {
+    pauseOffset = 0;
+    if (state.playing) {
+      playBuffer(decodedBuffer, 0);
+    } else {
+      $("#progress-fill").style.width = "0%";
+      $("#time-current").textContent = "0:00";
+    }
+    return;
+  }
+
   state.queueIndex = (state.queueIndex - 1 + state.queue.length) % state.queue.length;
   state.loopsDone = 0;
   playCurrent();

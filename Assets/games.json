@@ -1,0 +1,26 @@
+[
+  
+{
+    "id": "oot",
+    "title": "The Legend of Zelda: Ocarina of Time",
+    "short": "Ocarina of Time",
+    "composer": "Koji Kondo",
+    "cover": "Assets/Games/OOT/AlbumCover/AlbumCover_OOT.jpg",
+    "tracks": [
+      {
+        "id": "oot-title",
+        "title": "Title Theme",
+        "file": "Assets/Games/OOT/Tracks/Title Theme.bfstm"
+      },
+
+       {
+        "id": "oot-kokiri-forest",
+        "title": "Kokiri Forest",
+        "file": "Assets/Games/OOT/Tracks/Kokiri Forest.bfstm"
+      }
+    ]
+  }
+
+
+
+]

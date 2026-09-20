@@ -15,4 +15,6 @@ export const CFP_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
 export const CFP_ALLOWED_PATHS = [
   "/Assets/Logo/Favicon/",
   "/favicon.ico",
+  "/site.webmanifest",
+  "/Assets/games.json"
 ];
