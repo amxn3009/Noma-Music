@@ -10,7 +10,9 @@ var CFP_ALLOWED_PATHS = [
   "/Assets/Logo/Favicon/",
   "/favicon.ico",
   "/site.webmanifest",
-  "/Assets/games.json"
+  "/Assets/games.json",
+  "/Assets/Logo/NomaMusicLogoSquare.jpg",
+  "/Assets/Logo/NomaMusicLogoText.png"
 ];
 async function sha256(str) {
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));

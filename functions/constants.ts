@@ -16,5 +16,7 @@ export const CFP_ALLOWED_PATHS = [
   "/Assets/Logo/Favicon/",
   "/favicon.ico",
   "/site.webmanifest",
-  "/Assets/games.json"
+  "/Assets/games.json",
+  "/Assets/Logo/NomaMusicLogoSquare.jpg",
+  "/Assets/Logo/NomaMusicLogoText.png",
 ];
