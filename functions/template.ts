@@ -158,7 +158,7 @@ export function getTemplate({
 
     button:hover {
       background: #eee;
-      box-shadow: 0 0 16px rgba(255, 255, 255, 0.2);
+      box-shadow: 0 0 20px rgba(255, 255, 255, 0.25);
       transform: translateY(-1px);
     }
 
@@ -186,7 +186,7 @@ export function getTemplate({
     >
 
     <div class="card">
-      <h1>Willkommen</h1>
+      <h1>Willkommen 👋</h1>
       <p class="subtitle">Bitte gib das Passwort ein, um fortzufahren.</p>
 
       <form method="post" action="/cfp_login">
