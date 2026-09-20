@@ -11,47 +11,111 @@ export function getTemplate({
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Willkommen</title>
+  <title>Noma Music</title>
   <style>
-    * {
-      box-sizing: border-box;
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+      background: #0a0a0a;
+      color: #f2f2f2;
+      overflow: hidden;
+      -webkit-user-select: none;
+      user-select: none;
     }
 
-    body {
-      margin: 0;
+    /* Subtle moving logo background (not as strong as fullscreen player) */
+    .bg-layer {
+      position: fixed;
+      inset: -60px;
+      background-image: url("/Assets/Logo/NomaMusicLogoSquare.jpg");
+      background-size: cover;
+      background-position: center;
+      filter: blur(48px) saturate(1.25) brightness(0.55);
+      opacity: 0.28;
+      transform: scale(1.12);
+      z-index: 0;
+      pointer-events: none;
+      animation: bgDrift 28s ease-in-out infinite alternate;
+    }
+
+    .bg-layer::after {
+      content: "";
+      position: absolute;
+      inset: -8%;
+      background: inherit;
+      background-size: cover;
+      background-position: center;
+      filter: blur(32px) saturate(1.35);
+      opacity: 0.35;
+      mix-blend-mode: screen;
+      animation: bgDrift 36s ease-in-out infinite alternate-reverse;
+    }
+
+    .bg-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      background: linear-gradient(
+        180deg,
+        rgba(10, 10, 10, 0.55) 0%,
+        rgba(10, 10, 10, 0.78) 50%,
+        rgba(10, 10, 10, 0.92) 100%
+      );
+    }
+
+    @keyframes bgDrift {
+      0%   { transform: scale(1.1)  translate(-1.5%, -1%) rotate(-0.6deg); }
+      50%  { transform: scale(1.16) translate(1.5%, 1%)   rotate(0.6deg); }
+      100% { transform: scale(1.12) translate(-1%, 1.5%)  rotate(-0.3deg); }
+    }
+
+    .container {
+      position: relative;
+      z-index: 2;
       min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-family: Arial, sans-serif;
-      background: #111;
-      color: white;
-    }
-
-    .container {
-      width: 100%;
-      padding: 20px;
+      padding: 24px;
     }
 
     .card {
-      width: min(420px, 100%);
-      margin: auto;
-      padding: 40px;
+      width: min(400px, 100%);
+      padding: 36px 32px 32px;
       text-align: center;
-      background: #1c1c1c;
-      border: 1px solid #333;
-      border-radius: 16px;
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+      background: rgba(20, 20, 20, 0.72);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 20px;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+    }
+
+    .brand-logo {
+      display: block;
+      width: min(220px, 70%);
+      height: auto;
+      margin: 0 auto 22px;
+      object-fit: contain;
+      -webkit-user-drag: none;
+      user-drag: none;
     }
 
     h1 {
-      margin: 0 0 10px;
-      font-size: 32px;
+      margin: 0 0 8px;
+      font-size: 1.35rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
     }
 
-    p {
-      color: #aaa;
-      margin-bottom: 25px;
+    .subtitle {
+      color: #9a9a9a;
+      font-size: 0.95rem;
+      margin-bottom: 24px;
+      line-height: 1.4;
     }
 
     form {
@@ -64,58 +128,64 @@ export function getTemplate({
     button {
       width: 100%;
       padding: 14px 16px;
-      border-radius: 10px;
-      font-size: 16px;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-family: inherit;
     }
 
     input {
-      border: 1px solid #444;
-      background: #111;
-      color: white;
+      border: 1px solid #333;
+      background: rgba(10, 10, 10, 0.85);
+      color: #f2f2f2;
       outline: none;
+      transition: border-color 0.2s ease;
     }
 
     input:focus {
-      border-color: #777;
+      border-color: #7c9cff;
     }
 
     button {
       border: none;
-      background: white;
+      background: #fff;
       color: #111;
-      font-weight: bold;
+      font-weight: 700;
       cursor: pointer;
-      transition:
-        background 0.2s ease,
-        transform 0.15s ease,
-        box-shadow 0.25s ease;
+      transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.25s ease;
     }
 
     button:hover {
-      background: #ddd;
-      box-shadow:
-        0 0 8px rgba(255, 255, 255, 0.5),
-        0 0 20px rgba(255, 255, 255, 0.25);
+      background: #eee;
+      box-shadow: 0 0 16px rgba(255, 255, 255, 0.2);
       transform: translateY(-1px);
     }
 
     button:active {
-      transform: scale(0.96);
-      box-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
+      transform: scale(0.97);
     }
 
     .error {
-      display: ${withError ? 'block' : 'none'};
-      margin: 18px 0 0;
+      display: ${withError ? "block" : "none"};
+      margin: 16px 0 0;
       color: #ff6b6b;
+      font-size: 0.9rem;
     }
   </style>
 </head>
 <body>
+  <div class="bg-layer" aria-hidden="true"></div>
+  <div class="bg-overlay" aria-hidden="true"></div>
+
   <main class="container">
     <div class="card">
-      <h1>Willkommen👋</h1>
-      <p>Bitte gib das Passwort ein, um fortzufahren.</p>
+      <img
+        class="brand-logo"
+        src="/Assets/Logo/NomaMusicLogoText.png"
+        alt="Noma Music"
+      >
+
+      <h1>Willkommen</h1>
+      <p class="subtitle">Bitte gib das Passwort ein, um fortzufahren.</p>
 
       <form method="post" action="/cfp_login">
         <input type="hidden" name="redirect" value="${redirectPath}" />
@@ -123,7 +193,7 @@ export function getTemplate({
           type="password"
           name="password"
           placeholder="Passwort"
-          autocomplete="off"
+          autocomplete="current-password"
           required
           autofocus
         >
