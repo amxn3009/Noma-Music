@@ -5,12 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Noma Music</title>
   <link rel="stylesheet" href="css/app.css">
-  <link rel="icon" type="image/png" href="/Assets/Logo/Favicon/favicon-96x96.png?v=20260920" sizes="96x96" />
-  <link rel="icon" type="image/svg+xml" href="/Assets/Logo/Favicon/favicon.svg?v=20260920" />
-  <link rel="shortcut icon" href="/Assets/Logo/Favicon/favicon.ico?v=20260920" />
-  <link rel="apple-touch-icon" sizes="180x180" href="/Assets/Logo/Favicon/apple-touch-icon.png?v=20260920" />
-  <meta name="apple-mobile-web-app-title" content="Noma Music" />
-  <link rel="manifest" href="/Assets/Logo/Favicon/site.webmanifest?v=20260920" />
+  <link rel="icon" href="/Assets/Logo/Favicon/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="96x96" href="/Assets/Logo/Favicon/favicon-96x96.png">
+  <link rel="icon" type="image/svg+xml" href="/Assets/Logo/Favicon/favicon.svg">
+  <link rel="apple-touch-icon" href="/Assets/Logo/Favicon/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Noma Music">
+  <meta name="theme-color" content="#0a0a0a">
+  <link rel="manifest" href="/Assets/Logo/Favicon/site.webmanifest">
 </head>
 <body>
   <div id="bg-layer" class="bg-layer" aria-hidden="true"></div>
@@ -138,13 +141,6 @@
     <ul id="queue-list" class="queue-list"></ul>
   </aside>
 
-  <!-- Fullscreen stage (cover only – controls stay in bottom bar) -->
-  <div id="fullscreen-player" class="fullscreen-player hidden">
-    <img id="fs-cover" class="fs-cover" src="" alt="">
-    <h2 id="fs-title" class="fs-title"></h2>
-    <p id="fs-game" class="fs-game muted"></p>
-  </div>
-
   <!-- Context menu -->
 <div id="context-menu" class="context-menu hidden">
   <button data-action="play-next">
@@ -158,36 +154,11 @@
 </div>
   </div>
 
-  <aside id="queue-panel" class="queue-panel hidden">
-    <div class="queue-header">
-      <h2>Warteschlange</h2>
-      <button id="queue-close" class="ctrl-btn">✕</button>
-    </div>
-    <ul id="queue-list" class="queue-list"></ul>
-  </aside>
-
+  <!-- Fullscreen stage (cover only – controls stay in bottom bar) -->
   <div id="fullscreen-player" class="fullscreen-player hidden">
-    <button id="fs-close" class="fs-close">✕</button>
     <img id="fs-cover" class="fs-cover" src="" alt="">
     <h2 id="fs-title" class="fs-title"></h2>
     <p id="fs-game" class="fs-game muted"></p>
-    <div class="fs-progress progress-row">
-      <span id="fs-time-current" class="time">0:00</span>
-      <div id="fs-progress-bar" class="progress-bar">
-        <div id="fs-progress-fill" class="progress-fill"></div>
-      </div>
-      <span id="fs-time-total" class="time">0:00</span>
-    </div>
-    <div class="fs-controls controls">
-      <button id="fs-prev" class="ctrl-btn">⏮</button>
-      <button id="fs-play" class="ctrl-btn play-btn">▶</button>
-      <button id="fs-next" class="ctrl-btn">⏭</button>
-    </div>
-  </div>
-
-  <div id="context-menu" class="context-menu hidden">
-    <button data-action="play-next">Als Nächstes spielen</button>
-    <button data-action="add-end">Ans Ende der Queue</button>
   </div>
 
   <script type="module" src="js/app.js"></script>

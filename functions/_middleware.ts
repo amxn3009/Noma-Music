@@ -13,10 +13,14 @@ export async function onRequest(context: {
   const cookie = request.headers.get('cookie') || '';
   const cookieKeyValue = await getCookieKeyValue(env.CFP_PASSWORD);
 
+   const isAllowedPath = CFP_ALLOWED_PATHS.some(
+    (p) => pathname === p || pathname.startsWith(p)
+  );
+
   if (
     cookie.includes(cookieKeyValue) ||
-    (request.method == "POST" && pathname === '/cfp_login') ||
-    CFP_ALLOWED_PATHS.includes(pathname) ||
+    (request.method == "POST" && pathname === "/cfp_login") ||
+    isAllowedPath ||
     !env.CFP_PASSWORD
   ) {
     return await next();

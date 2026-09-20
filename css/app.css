@@ -515,31 +515,32 @@ body.fs-open.is-playing .bg-layer {
   gap: 8px;
 }
 
-/* Fullscreen: keep the same 1px border space so nothing jumps */
+/* Fullscreen: keep the same 1px border space so nothing jumps vertically */
 body.fs-open .player-bar {
   background: transparent;
-  border-top-color: transparent; /* was: border-top: none */
+  border-top-color: transparent; /* same height as normal mode */
   backdrop-filter: none;
-  /* keep the SAME grid as normal mode */
-  grid-template-columns: 1fr 1.6fr 1fr;
+  grid-template-columns: 1fr auto 1fr; /* equal sides → true center */
   height: var(--player-h);
   padding: 0 20px;
 }
 
 body.fs-open .player-left {
-  visibility: hidden;
-  pointer-events: none;
+  display: none; /* remove from layout so center can sit in the middle */
 }
 
 body.fs-open .player-center {
   grid-column: 2;
+  justify-self: center;
   width: 520px;
   max-width: min(520px, 90vw);
-  /* don’t add extra margin/padding here */
   margin: 0;
   transform: none;
 }
+
 body.fs-open .player-right {
+  grid-column: 3;
+  justify-self: end;
   justify-content: flex-end;
   align-items: center;
 }
