@@ -9,18 +9,50 @@ const state = {
   playing: false,
   shuffle: false,
   loopMode: "off", // "off" | "one" | "count"
-  loopCount: 1,
-  loopsDone: 0,
+  loopsRemaining: 0, // countdown for "count" mode (shown on badge)
   duration: 0,
   currentTime: 0,
 };
 
-const TRANSITION_SEC = 5;
+const SETTINGS_KEY = "noma-settings-v1";
+const DEFAULT_SETTINGS = {
+  loopTimes: 3,       // 1–99
+  transitionSec: 5,   // 0 | 5 | 10
+};
+
+let settings = { ...DEFAULT_SETTINGS };
+
+function loadSettings() {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    settings.loopTimes = clampInt(parsed.loopTimes, 1, 99, 3);
+    settings.transitionSec = [0, 5, 10].includes(parsed.transitionSec)
+      ? parsed.transitionSec
+      : 5;
+  } catch (_) {}
+}
+
+function saveSettings() {
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+}
+
+function clampInt(v, min, max, fallback) {
+  const n = Number.parseInt(v, 10);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(max, Math.max(min, n));
+}
+
+function getTransitionSec() {
+  return settings.transitionSec;
+}
+
 const RESTART_THRESHOLD = 10; // seconds
 
 let transitioning = false;
 let transitionStartedAt = 0; // audioCtx.currentTime
-let awaitingLoopWrap = false; // true after first full play when loop is off
+let lastLoopCycle = -1; // -1 = still in first playthrough (before any wrap)
 let scrubbing = false;
 
 const PLACEHOLDER = "Assets/MusicPlayer/PlaceholderImage.jpg";
@@ -50,9 +82,9 @@ let masterVolume = 1; // 0–1
 
 function resetPlayerToIdle() {
   stopSource();
-  cancelTransition?.(false);
+  if (typeof cancelTransition === "function") cancelTransition(false);
   transitioning = false;
-  awaitingLoopWrap = false;
+  lastLoopCycle = -1;
   decodedBuffer = null;
   pauseOffset = 0;
   loopStartSample = 0;
@@ -181,21 +213,25 @@ function updateProgressUI() {
 
   // ── Transition mode: 5s bar ──────────────────────────
   if (transitioning && audioCtx) {
-    const t = Math.min(TRANSITION_SEC, Math.max(0, audioCtx.currentTime - transitionStartedAt));
-    const ratio = t / TRANSITION_SEC;
+    const sec = getTransitionSec();
+    if (sec <= 0) {
+      finishTransition();
+      return;
+    }
+    const t = Math.min(sec, Math.max(0, audioCtx.currentTime - transitionStartedAt));
+    const ratio = t / sec;
 
     const fill = $("#progress-fill");
     if (fill) fill.style.width = `${ratio * 100}%`;
     const tCur = $("#time-current");
     if (tCur) tCur.textContent = formatTime(t);
     const tTot = $("#time-total");
-    if (tTot) tTot.textContent = formatTime(TRANSITION_SEC);
+    if (tTot) tTot.textContent = formatTime(sec);
 
-    if (t >= TRANSITION_SEC - 0.03) {
+    if (t >= sec - 0.03) {
       finishTransition();
       return;
     }
-
     if (state.playing) {
       animFrame = requestAnimationFrame(updateProgressUI);
     }
@@ -216,24 +252,43 @@ function updateProgressUI() {
   const tTot = $("#time-total");
   if (tTot) tTot.textContent = formatTime(duration);
 
-  // Detect: loop off → first time we pass the end → next wrap starts transition
+  // Detect loop wraps via cycle index (stable; no multi-fire per frame)
   if (
-    state.loopMode === "off" &&
+    (state.loopMode === "off" || state.loopMode === "count") &&
     state.playing &&
     loopStart > 0 &&
     currentSource &&
-    currentSource.loop
+    currentSource.loop &&
+    !transitioning &&
+    audioCtx
   ) {
-    let absoluteElapsed = pauseOffset;
-    if (audioCtx) absoluteElapsed += audioCtx.currentTime - startTime;
+    const absoluteElapsed = pauseOffset + (audioCtx.currentTime - startTime);
 
-    if (absoluteElapsed >= duration - 0.05) {
-      awaitingLoopWrap = true;
-    }
-    // after wrap, position is back near loopStart
-    if (awaitingLoopWrap && absoluteElapsed >= duration && elapsed <= loopStart + 0.25) {
-      awaitingLoopWrap = false;
-      startTransition();
+    if (absoluteElapsed < duration) {
+      // Still in the intro / first pass
+      lastLoopCycle = -1;
+    } else {
+      const loopLen = Math.max(0.001, duration - loopStart);
+      // 0 = first time we crossed the end, 1 = second wrap, ...
+      const cycle = Math.floor((absoluteElapsed - duration) / loopLen);
+
+      if (cycle > lastLoopCycle) {
+        lastLoopCycle = cycle;
+
+        if (state.loopMode === "off") {
+          // First wrap → outro (same as before)
+          startTransition();
+        } else if (state.loopMode === "count") {
+          if (state.loopsRemaining <= 1) {
+            state.loopsRemaining = 0;
+            updatePlayerUI();
+            startTransition();
+          } else {
+            state.loopsRemaining -= 1;
+            updatePlayerUI();
+          }
+        }
+      }
     }
   }
 
@@ -252,7 +307,7 @@ function playBuffer(audioBuffer, offsetSeconds = 0) {
 
   // cancel any ongoing transition when starting fresh
   if (!transitioning) {
-    awaitingLoopWrap = false;
+    lastLoopCycle = -1;
   }
 
   currentSource = ctx.createBufferSource();
@@ -262,10 +317,12 @@ function playBuffer(audioBuffer, offsetSeconds = 0) {
   currentSource.connect(currentGain);
   currentGain.connect(ctx.destination);
 
-  const wantInfiniteLoop = state.loopMode === "one";
-  // loop off but file has loop points → still loop so we can fade at loop start
+   const wantInfiniteLoop = state.loopMode === "one";
+  // off / count: keep hardware loop until we decide to fade out
   const wantSoftEnd =
-    state.loopMode === "off" && loopStart > 0 && !transitioning;
+    (state.loopMode === "off" || state.loopMode === "count") &&
+    loopStart > 0 &&
+    !transitioning;
 
   if (wantInfiniteLoop || wantSoftEnd) {
     currentSource.loop = true;
@@ -301,6 +358,14 @@ function playBuffer(audioBuffer, offsetSeconds = 0) {
 
 function startTransition() {
   if (transitioning || !audioCtx || !currentGain) return;
+
+  const sec = getTransitionSec();
+  if (sec <= 0) {
+    // instant advance
+    finishTransition();
+    return;
+  }
+
   transitioning = true;
   transitionStartedAt = audioCtx.currentTime;
   document.body.classList.add("is-transitioning");
@@ -308,12 +373,12 @@ function startTransition() {
   const now = audioCtx.currentTime;
   currentGain.gain.cancelScheduledValues(now);
   currentGain.gain.setValueAtTime(currentGain.gain.value, now);
-  currentGain.gain.linearRampToValueAtTime(0, now + TRANSITION_SEC);
+  currentGain.gain.linearRampToValueAtTime(0, now + sec);
 }
 
 function cancelTransition(keepPlaying = false) {
   transitioning = false;
-  awaitingLoopWrap = false;
+  lastLoopCycle = -1;
   document.body.classList.remove("is-transitioning");
   if (currentGain && audioCtx) {
     const now = audioCtx.currentTime;
@@ -344,8 +409,8 @@ function setVolume(value) {
   if (transitioning) {
     // Keep the fade to 0, but scale it to the new volume
     const elapsed = Math.max(0, now - transitionStartedAt);
-    const progress = Math.min(1, elapsed / TRANSITION_SEC);
-    const remaining = Math.max(0.05, TRANSITION_SEC - elapsed);
+    const progress = Math.min(1, elapsed / getTransitionSec());
+    const remaining = Math.max(0.05, getTransitionSec() - elapsed);
     const levelNow = masterVolume * (1 - progress);
 
     currentGain.gain.cancelScheduledValues(now);
@@ -408,7 +473,9 @@ function bindHotkeys() {
         break;
       case "Escape":
         e.preventDefault();
-        if (!$("#fullscreen-player")?.classList.contains("hidden")) {
+        if (!$("#settings-view")?.classList.contains("hidden")) {
+          closeSettings();
+        } else if (!$("#fullscreen-player")?.classList.contains("hidden")) {
           toggleFullscreen();
         } else if (state.currentGame && gameDetail.classList.contains("active")) {
           $("#back-to-games")?.click();
@@ -534,6 +601,8 @@ async function init() {
   updatePlayerUI();
   bindVolume();
   bindHotkeys();
+  loadSettings();
+  bindSettings();
   $("#now-cover").src = PLACEHOLDER;
   $("#fs-cover").src = PLACEHOLDER;
   $("#now-title").textContent = "Nichts läuft";
@@ -652,7 +721,11 @@ function openGame(id) {
     state.queue = game.tracks.map((t) => ({ gameId: game.id, track: t }));
     state.queueIndex = 0;
     state.shuffle = false;
-    state.loopsDone = 0;
+      if (state.loopMode === "count") {
+    state.loopsRemaining = settings.loopTimes;
+  } else {
+    state.loopsRemaining = 0;
+  }
     playCurrent();
     renderQueue();
   };
@@ -667,7 +740,11 @@ function openGame(id) {
     state.queue = items;
     state.queueIndex = 0;
     state.shuffle = true;
-    state.loopsDone = 0;
+      if (state.loopMode === "count") {
+    state.loopsRemaining = settings.loopTimes;
+  } else {
+    state.loopsRemaining = 0;
+  }
     playCurrent();
     renderQueue();
     updatePlayerUI();
@@ -712,7 +789,11 @@ function playFromGame(game, track) {
   const idx = game.tracks.findIndex((t) => t.id === track.id);
   state.queue = game.tracks.map((t) => ({ gameId: game.id, track: t }));
   state.queueIndex = Math.max(0, idx);
-  state.loopsDone = 0;
+    if (state.loopMode === "count") {
+    state.loopsRemaining = settings.loopTimes;
+  } else {
+    state.loopsRemaining = 0;
+  }
   playCurrent();
   renderQueue();
 }
@@ -725,6 +806,10 @@ async function playCurrent() {
 
   const game = LIBRARY.find((g) => g.id === item.gameId);
   const track = item.track;
+
+  if (state.loopMode === "count") {
+    state.loopsRemaining = Number(settings.loopTimes) || 3;
+  }
 
   $("#now-cover").src = game?.cover || PLACEHOLDER;
   $("#now-title").textContent = track.title;
@@ -864,12 +949,12 @@ function togglePlay() {
   } else if (transitioning && decodedBuffer) {
     // resume fade from remaining time
     const already = pauseOffset; // seconds into the 5s
-    const remaining = Math.max(0.05, TRANSITION_SEC - already);
+    const remaining = Math.max(0.05, getTransitionSec() - already);
     playBuffer(decodedBuffer, getLoopStartSec()); // continue near loop region
     // re-apply partial fade
     if (currentGain && audioCtx) {
       const now = audioCtx.currentTime;
-      const startGain = masterVolume * (1 - already / TRANSITION_SEC);
+      const startGain = masterVolume * (1 - already / getTransitionSec());
       currentGain.gain.cancelScheduledValues(now);
       currentGain.gain.setValueAtTime(startGain, now);
       currentGain.gain.linearRampToValueAtTime(0, now + remaining);
@@ -897,7 +982,11 @@ function nextTrack(fromNaturalEnd = false) {
   } else {
     state.queueIndex = (state.queueIndex + 1) % state.queue.length;
   }
-  state.loopsDone = 0;
+    if (state.loopMode === "count") {
+    state.loopsRemaining = settings.loopTimes;
+  } else {
+    state.loopsRemaining = 0;
+  }
   playCurrent();
 }
 
@@ -925,7 +1014,11 @@ function prevTrack() {
   }
 
   state.queueIndex -= 1;
-  state.loopsDone = 0;
+    if (state.loopMode === "count") {
+    state.loopsRemaining = settings.loopTimes;
+  } else {
+    state.loopsRemaining = 0;
+  }
   playCurrent();
 }
 
@@ -933,16 +1026,20 @@ function toggleLoop() {
   const modes = ["off", "one", "count"];
   const i = modes.indexOf(state.loopMode);
   state.loopMode = modes[(i + 1) % modes.length];
+
+  if (state.loopMode === "count") {
+    state.loopsRemaining = settings.loopTimes;
+  } else {
+    state.loopsRemaining = 0;
+  }
+
   updatePlayerUI();
 
-  // Apply immediately to the current source
   if (decodedBuffer) {
     const pos = getPlaybackPosition();
     if (state.playing) {
-      // Recreate source from current position with new loop mode
       playBuffer(decodedBuffer, pos);
     }
-    // If paused, next resume will already use the new state.loopMode
   }
 }
 
@@ -961,6 +1058,22 @@ function updatePlayerUI() {
   }
   $("#btn-loop")?.classList.toggle("active", state.loopMode !== "off");
   $("#btn-shuffle")?.classList.toggle("active", state.shuffle);
+
+  const badge = $("#loop-badge");
+  if (badge) {
+    if (state.loopMode === "one") {
+      badge.textContent = "∞";
+      badge.style.fontSize = "1rem";
+      badge.classList.remove("hidden");
+    } else if (state.loopMode === "count") {
+      badge.textContent = String(Math.max(0, state.loopsRemaining));
+      badge.style.fontSize = "";
+      badge.classList.remove("hidden");
+    } else {
+      badge.textContent = "";
+      badge.classList.add("hidden");
+    }
+  }
 }
 
 function addPlayNext(game, track) {
@@ -1041,7 +1154,11 @@ function bindQueueItemEvents(list) {
         togglePlay();
       } else {
         state.queueIndex = i;
-        state.loopsDone = 0;
+          if (state.loopMode === "count") {
+    state.loopsRemaining = settings.loopTimes;
+  } else {
+    state.loopsRemaining = 0;
+  }
         playCurrent();
       }
       renderQueue();
@@ -1229,7 +1346,7 @@ function bindPlayerChrome() {
 
     // cancel any transition logic that might have been pending
     if (typeof cancelTransition === "function") cancelTransition(true);
-    awaitingLoopWrap = false;
+    lastLoopCycle = -1;
 
     const seekTo = paintSeek(ratioFromClientX(e.clientX));
     // stay a bit before the true end so we don't instantly fire onended / transition
@@ -1255,6 +1372,92 @@ function escapeHtml(str) {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+let settingsReturn = null; // { type: "games"|"playlists"|"game", gameId? }
+
+function openSettings() {
+  // remember where we were
+  if (!gameDetail.classList.contains("hidden") && state.currentGame) {
+    settingsReturn = { type: "game", gameId: state.currentGame.id };
+  } else if ($("#tab-playlists")?.classList.contains("active")) {
+    settingsReturn = { type: "playlists" };
+  } else {
+    settingsReturn = { type: "games" };
+  }
+
+  // hide main panels, show settings
+  document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
+  gameDetail.classList.add("hidden");
+  gameDetail.classList.remove("active");
+  $("#settings-view")?.classList.remove("hidden");
+  document.body.classList.add("settings-open");
+
+  // sync form
+  const loopInput = $("#setting-loop-times");
+  const transSelect = $("#setting-transition");
+  if (loopInput) loopInput.value = String(settings.loopTimes);
+  if (transSelect) transSelect.value = String(settings.transitionSec);
+}
+
+function closeSettings() {
+  $("#settings-view")?.classList.add("hidden");
+  document.body.classList.remove("settings-open");
+
+  if (settingsReturn?.type === "game" && settingsReturn.gameId) {
+    openGame(settingsReturn.gameId);
+  } else if (settingsReturn?.type === "playlists") {
+    document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
+    document.querySelector('.tab[data-tab="playlists"]')?.classList.add("active");
+    document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
+    $("#tab-playlists")?.classList.add("active");
+  } else {
+    document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
+    document.querySelector('.tab[data-tab="games"]')?.classList.add("active");
+    document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
+    $("#tab-games")?.classList.add("active");
+  }
+  settingsReturn = null;
+}
+
+function bindSettings() {
+  $("#btn-settings")?.addEventListener("click", openSettings);
+  $("#settings-back")?.addEventListener("click", closeSettings);
+
+  $("#setting-loop-times")?.addEventListener("change", (e) => {
+    settings.loopTimes = clampInt(e.target.value, 1, 99, 3);
+    e.target.value = String(settings.loopTimes);
+    saveSettings();
+    // if currently in count mode and not mid-song countdown preference: refresh badge default
+    if (state.loopMode === "count" && !state.playing) {
+      state.loopsRemaining = settings.loopTimes;
+      updatePlayerUI();
+    }
+  });
+
+  $("#setting-loop-times")?.addEventListener("input", (e) => {
+    // strip non-digits while typing
+    e.target.value = e.target.value.replace(/[^\d]/g, "").slice(0, 2);
+  });
+
+  $("#setting-transition")?.addEventListener("change", (e) => {
+    const v = Number(e.target.value);
+    settings.transitionSec = [0, 5, 10].includes(v) ? v : 5;
+    saveSettings();
+  });
+
+  $("#settings-reset")?.addEventListener("click", () => {
+    settings = { ...DEFAULT_SETTINGS };
+    saveSettings();
+    const loopInput = $("#setting-loop-times");
+    const transSelect = $("#setting-transition");
+    if (loopInput) loopInput.value = String(settings.loopTimes);
+    if (transSelect) transSelect.value = String(settings.transitionSec);
+    if (state.loopMode === "count") {
+      state.loopsRemaining = settings.loopTimes;
+      updatePlayerUI();
+    }
+  });
 }
 
 init();

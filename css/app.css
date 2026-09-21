@@ -1136,3 +1136,142 @@ body.fs-open .progress-row {
   background: rgba(255,255,255,0.18);
   transform: scale(1.05);
 }
+
+/* Loop badge on control */
+#btn-loop {
+  position: relative;
+}
+.loop-badge {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #0a0a0a;
+  font-size: 0.85rem;   /* bigger for ∞ */
+  font-weight: 800;
+  line-height: 16px;
+  text-align: center;
+  pointer-events: none;
+}
+.loop-badge.hidden { display: none !important; }
+
+/* Settings cog in topbar */
+.topbar {
+  /* if not already: */
+  justify-content: flex-start;
+}
+.settings-btn {
+  margin-left: auto;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.04);
+  color: var(--muted);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s, border-color 0.15s;
+}
+.settings-btn:hover {
+  color: var(--text);
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.14);
+}
+
+/* Settings full view (player stays visible) */
+.settings-view {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: var(--player-h);
+  z-index: 45;
+  overflow-y: auto;
+  background: rgba(10, 10, 10, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  padding: 20px 28px 32px;
+}
+.settings-view.hidden { display: none !important; }
+
+.settings-inner {
+  max-width: 640px;
+  margin: 0 auto;
+}
+.settings-top {
+  margin-bottom: 12px;
+}
+.settings-section {
+  margin-top: 18px;
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.03);
+}
+.settings-section-title {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin-bottom: 14px;
+}
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+.settings-row:first-of-type { border-top: none; padding-top: 0; }
+.settings-row-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.settings-label {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+.settings-hint {
+  font-size: 0.8rem;
+  color: var(--muted);
+  line-height: 1.35;
+}
+.settings-number,
+.settings-select {
+  width: 96px;
+  flex-shrink: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #333;
+  background: #111;
+  color: var(--text);
+  font-size: 0.95rem;
+  font-family: inherit;
+}
+.settings-number:focus,
+.settings-select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.settings-reset-btn {
+  margin-top: 20px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.06);
+  color: var(--text);
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+.settings-reset-btn:hover {
+  background: rgba(255,255,255,0.1);
+}
