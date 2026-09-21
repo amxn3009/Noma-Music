@@ -16,8 +16,9 @@ const state = {
 
 const SETTINGS_KEY = "noma-settings-v1";
 const DEFAULT_SETTINGS = {
-  loopTimes: 3,       // 1–99
-  transitionSec: 5,   // 0 | 5 | 10
+  loopTimes: 2,       // 1-99
+  transitionSec: 10,   // 0 | 5 | 10
+  volume: 0.5,          // 0-1
 };
 
 let settings = { ...DEFAULT_SETTINGS };
@@ -27,10 +28,12 @@ function loadSettings() {
     const raw = localStorage.getItem(SETTINGS_KEY);
     if (!raw) return;
     const parsed = JSON.parse(raw);
-    settings.loopTimes = clampInt(parsed.loopTimes, 1, 99, 3);
+    settings.loopTimes = clampInt(parsed.loopTimes, 1, 99, 2);
     settings.transitionSec = [0, 5, 10].includes(parsed.transitionSec)
       ? parsed.transitionSec
-      : 5;
+      : 10;
+    const vol = Number(parsed.volume);
+    settings.volume = Number.isFinite(vol) ? Math.min(1, Math.max(0, vol)) : 0.5;
   } catch (_) {}
 }
 
@@ -52,6 +55,7 @@ const RESTART_THRESHOLD = 10; // seconds
 
 let transitioning = false;
 let transitionStartedAt = 0; // audioCtx.currentTime
+let transitionProgress = 0; // seconds into the fade when paused
 let lastLoopCycle = -1; // -1 = still in first playthrough (before any wrap)
 let scrubbing = false;
 
@@ -279,13 +283,13 @@ function updateProgressUI() {
           // First wrap → outro (same as before)
           startTransition();
         } else if (state.loopMode === "count") {
-          if (state.loopsRemaining <= 1) {
-            state.loopsRemaining = 0;
-            updatePlayerUI();
-            startTransition();
-          } else {
+          if (state.loopsRemaining > 0) {
+            // Still have loops left — count down, keep playing
             state.loopsRemaining -= 1;
             updatePlayerUI();
+          } else {
+            // Already at 0: this end is the last one → outro
+            startTransition();
           }
         }
       }
@@ -377,6 +381,7 @@ function startTransition() {
 }
 
 function cancelTransition(keepPlaying = false) {
+  transitionProgress = 0;
   transitioning = false;
   lastLoopCycle = -1;
   document.body.classList.remove("is-transitioning");
@@ -420,6 +425,8 @@ function setVolume(value) {
     currentGain.gain.cancelScheduledValues(now);
     currentGain.gain.setValueAtTime(masterVolume, now);
   }
+  settings.volume = masterVolume;
+  saveSettings();
 }
 
 function bindVolume() {
@@ -499,12 +506,12 @@ function bindHotkeys() {
         break;
       case "ArrowLeft":
         e.preventDefault();
-        nextTrack();
+        prevTrack();   // same as ← button
         handled = true;
         break;
       case "ArrowRight":
         e.preventDefault();
-        prevTrack();
+        nextTrack();   // same as → button
         handled = true;
         break;
       default:
@@ -602,6 +609,9 @@ async function init() {
   bindVolume();
   bindHotkeys();
   loadSettings();
+  masterVolume = settings.volume ?? 1;
+  const volSlider = $("#volume-slider");
+  if (volSlider) volSlider.value = String(masterVolume);
   bindSettings();
   $("#now-cover").src = PLACEHOLDER;
   $("#fs-cover").src = PLACEHOLDER;
@@ -808,7 +818,7 @@ async function playCurrent() {
   const track = item.track;
 
   if (state.loopMode === "count") {
-    state.loopsRemaining = Number(settings.loopTimes) || 3;
+    state.loopsRemaining = Number(settings.loopTimes) || DEFAULT_SETTINGS.loopTimes;
   }
 
   $("#now-cover").src = game?.cover || PLACEHOLDER;
@@ -920,20 +930,18 @@ function togglePlay() {
   if (state.queueIndex < 0 && state.queue.length === 0) return;
 
   if (state.playing) {
-    // freeze transition clock via pauseOffset style for normal pos
     if (transitioning && audioCtx) {
-      // keep transitioning true; just stop the source clock
-      // gain ramp is scheduled on AudioParam — pause by suspending ctx is heavy;
-      // simpler: store how far into the 5s we are
-      const t = audioCtx.currentTime - transitionStartedAt;
-      pauseOffset = t; // reuse as transition progress when paused
+      // How far into the fade we are
+      transitionProgress = Math.max(0, audioCtx.currentTime - transitionStartedAt);
+      // Real song position (not the 5s transition clock)
+      pauseOffset = getPlaybackPosition();
+
       if (currentGain) {
-        currentGain.gain.cancelScheduledValues(audioCtx.currentTime);
-        // hold current gain level
-        const g = currentGain.gain.value;
-        currentGain.gain.setValueAtTime(g, audioCtx.currentTime);
+        const now = audioCtx.currentTime;
+        currentGain.gain.cancelScheduledValues(now);
+        currentGain.gain.setValueAtTime(currentGain.gain.value, now);
       }
-      stopSource(); // stops buffer; we'll resume transition on play
+      stopSource();
       state.playing = false;
       document.body.classList.remove("is-playing");
       markPlayingTrack(getCurrentTrackId());
@@ -947,18 +955,22 @@ function togglePlay() {
     document.body.classList.remove("is-playing");
     markPlayingTrack(getCurrentTrackId());
   } else if (transitioning && decodedBuffer) {
-    // resume fade from remaining time
-    const already = pauseOffset; // seconds into the 5s
-    const remaining = Math.max(0.05, getTransitionSec() - already);
-    playBuffer(decodedBuffer, getLoopStartSec()); // continue near loop region
-    // re-apply partial fade
+    // Resume from the real pause point, continue the same fade
+    const sec = getTransitionSec();
+    const already = Math.min(sec, Math.max(0, transitionProgress));
+    const remaining = Math.max(0.05, sec - already);
+
+    playBuffer(decodedBuffer, pauseOffset); // ← was getLoopStartSec() before
+
     if (currentGain && audioCtx) {
       const now = audioCtx.currentTime;
-      const startGain = masterVolume * (1 - already / getTransitionSec());
+      const startGain = masterVolume * (1 - already / sec);
       currentGain.gain.cancelScheduledValues(now);
-      currentGain.gain.setValueAtTime(startGain, now);
+      currentGain.gain.setValueAtTime(Math.max(0, startGain), now);
       currentGain.gain.linearRampToValueAtTime(0, now + remaining);
       transitionStartedAt = now - already;
+      transitioning = true;
+      document.body.classList.add("is-transitioning");
     }
   } else if (decodedBuffer) {
     playBuffer(decodedBuffer, pauseOffset);
@@ -1028,12 +1040,15 @@ function toggleLoop() {
   state.loopMode = modes[(i + 1) % modes.length];
 
   if (state.loopMode === "count") {
-    state.loopsRemaining = settings.loopTimes;
+    state.loopsRemaining = Number(settings.loopTimes) || DEFAULT_SETTINGS.loopTimes;
   } else {
     state.loopsRemaining = 0;
   }
 
   updatePlayerUI();
+
+  // During outro: only update mode/UI, keep the fade going
+  if (transitioning) return;
 
   if (decodedBuffer) {
     const pos = getPlaybackPosition();
@@ -1425,7 +1440,7 @@ function bindSettings() {
   $("#settings-back")?.addEventListener("click", closeSettings);
 
   $("#setting-loop-times")?.addEventListener("change", (e) => {
-    settings.loopTimes = clampInt(e.target.value, 1, 99, 3);
+    settings.loopTimes = clampInt(e.target.value, 1, 99, DEFAULT_SETTINGS.loopTimes);
     e.target.value = String(settings.loopTimes);
     saveSettings();
     // if currently in count mode and not mid-song countdown preference: refresh badge default
@@ -1442,17 +1457,23 @@ function bindSettings() {
 
   $("#setting-transition")?.addEventListener("change", (e) => {
     const v = Number(e.target.value);
-    settings.transitionSec = [0, 5, 10].includes(v) ? v : 5;
+    settings.transitionSec = [0, 5, 10].includes(v) ? v : DEFAULT_SETTINGS.transitionSec;
     saveSettings();
   });
 
   $("#settings-reset")?.addEventListener("click", () => {
-    settings = { ...DEFAULT_SETTINGS };
+    const keepVolume = masterVolume; // don't reset volume
+    settings = {
+      ...DEFAULT_SETTINGS,
+      volume: keepVolume,
+    };
     saveSettings();
+
     const loopInput = $("#setting-loop-times");
     const transSelect = $("#setting-transition");
     if (loopInput) loopInput.value = String(settings.loopTimes);
     if (transSelect) transSelect.value = String(settings.transitionSec);
+
     if (state.loopMode === "count") {
       state.loopsRemaining = settings.loopTimes;
       updatePlayerUI();
