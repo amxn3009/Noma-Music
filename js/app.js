@@ -125,20 +125,79 @@ function resetPlayerToIdle() {
   renderQueue();
 }
 
+function isIOS() {
+  const ua = navigator.userAgent || "";
+  const iOSDevice = /iPad|iPhone|iPod/.test(ua);
+  // iPadOS 13+ may report as Mac
+  const iPadOs =
+    navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+  return iOSDevice || iPadOs;
+}
+
+/** Best playable URL for this track on this device */
+function getTrackUrl(track) {
+  if (!track) return "";
+  if (isIOS() && track.fileIos) return track.fileIos;
+  return track.file;
+}
+
+function isWebAudioFile(url) {
+  return /\.(opus|m4a|mp3|wav|ogg)($|\?)/i.test(url || "");
+}
+
 function ensureAudioContext() {
   if (!audioCtx) {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   }
-  if (audioCtx.state === "suspended") {
-    audioCtx.resume();
-  }
   return audioCtx;
+}
+
+// at start of playCurrent / togglePlay when starting sound:
+async function resumeAudio() {
+  const ctx = ensureAudioContext();
+  if (ctx.state === "suspended") await ctx.resume();
+  return ctx;
 }
 
 const durationCache = new Map(); // url → seconds
 
-async function getTrackDuration(url) {
+async function decodeWebAudio(url) {
+  const ctx = await resumeAudio();
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Failed to load ${url}: ${res.status}`);
+  const buf = await res.arrayBuffer();
+  const audioBuffer = await ctx.decodeAudioData(buf.slice(0));
+  return audioBuffer;
+}
+
+function isOpusUrl(url) {
+  return /\.opus($|\?)/i.test(url || "");
+}
+
+async function getTrackDuration(url, track) {
+  if (track && Number.isFinite(track.duration) && track.duration > 0) {
+    durationCache.set(url, track.duration);
+    return track.duration;
+  }
   if (durationCache.has(url)) return durationCache.get(url);
+
+  // Opus/WAV: decode once for length (only if no JSON duration)
+  if (isOpusUrl(url) || /\.(wav|m4a|mp3|ogg)($|\?)/i.test(url || "")) {
+    try {
+      const ctx = ensureAudioContext();
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(res.status);
+      const buf = await res.arrayBuffer();
+      const audioBuffer = await ctx.decodeAudioData(buf.slice(0));
+      durationCache.set(url, audioBuffer.duration);
+      return audioBuffer.duration;
+    } catch (err) {
+      console.warn("[Noma] duration failed:", url, err);
+      return null;
+    }
+  }
+
+  // BFSTM fallback
   try {
     const res = await fetch(url);
     if (!res.ok) throw new Error(res.status);
@@ -648,7 +707,7 @@ async function decodeBfstm(url) {
     const channelData = audioBuffer.getChannelData(c);
     const src = channels[c];
     for (let i = 0; i < src.length; i++) {
-      channelData[i] = src[i] / 32768;
+      channelData[i] = (src[i] / 32768) * 0.98;
     }
   }
 
@@ -761,7 +820,8 @@ function openGame(id) {
 
   // Load durations in the background
   game.tracks.forEach(async (t) => {
-    const sec = await getTrackDuration(t.file);
+    const url = getTrackUrl(t); // iOS → fileIos, else file
+    const sec = await getTrackDuration(url, t);
     if (sec == null) return;
     const el = trackListEl.querySelector(
       `.track-duration[data-file="${CSS.escape(t.file)}"]`
@@ -911,10 +971,13 @@ async function playCurrent() {
   const game = LIBRARY.find((g) => g.id === item.gameId);
   const track = item.track;
 
-  if (state.loopMode === "count") {
-    state.loopsRemaining = Number(settings.loopTimes) || DEFAULT_SETTINGS.loopTimes;
+  // ── TEMP TEST: unlock audio on this user gesture ──
+  const ctx = ensureAudioContext();
+  if (ctx.state === "suspended") {
+    await ctx.resume();
   }
 
+  // ... your existing UI updates (cover, title, etc.) ...
   $("#now-cover").src = game?.cover || PLACEHOLDER;
   $("#now-title").textContent = track.title;
   $("#now-game").textContent = game?.short || "";
@@ -930,21 +993,57 @@ async function playCurrent() {
   pauseOffset = 0;
   updatePlayerUI();
 
-  try {
-    const decoded = await decodeBfstm(track.file);
+     try {
+    const url = getTrackUrl(track); // ← this is the iOS switch
+    await resumeAudio();
+
+    if (isWebAudioFile(url)) {
+      // Opus / m4a / wav / …
+      const audioBuffer = await decodeWebAudio(url);
+      decodedBuffer = audioBuffer;
+      sampleRate = audioBuffer.sampleRate;
+
+      forceFullLoop = !!track.LoopFromStoE;
+      if (forceFullLoop) {
+        loopStartSample = 0;
+      } else if (Number.isFinite(track.loopStart) && track.loopStart > 0) {
+        loopStartSample = Math.floor(track.loopStart * sampleRate);
+      } else {
+        loopStartSample = 0;
+      }
+
+      state.duration =
+        Number.isFinite(track.duration) && track.duration > 0
+          ? track.duration
+          : audioBuffer.duration;
+      state.currentTime = 0;
+
+      playBuffer(decodedBuffer, 0);
+      if (!$("#queue-panel")?.classList.contains("hidden")) renderQueue();
+      return;
+    }
+
+    // Still .bfstm
+    const decoded = await decodeBfstm(url);
     decodedBuffer = decoded.audioBuffer;
     loopStartSample = decoded.loopStartSample;
     sampleRate = decoded.sampleRate;
     forceFullLoop = !!track.LoopFromStoE;
 
-    state.duration = decodedBuffer.duration;
+    if (!forceFullLoop && Number.isFinite(track.loopStart) && track.loopStart > 0) {
+      loopStartSample = Math.floor(track.loopStart * sampleRate);
+    }
+
+    state.duration =
+      Number.isFinite(track.duration) && track.duration > 0
+        ? track.duration
+        : decodedBuffer.duration;
     state.currentTime = 0;
 
     playBuffer(decodedBuffer, 0);
-    // end of playCurrent success path, and inside markPlayingTrack:
     if (!$("#queue-panel")?.classList.contains("hidden")) renderQueue();
   } catch (err) {
-    console.error("[Noma] BFSTM decode/play failed:", err);
+    console.error("[Noma] decode/play failed:", err);
     alert(`Konnte Track nicht abspielen:\n${track.title}\n\n${err.message}`);
     document.body.classList.remove("is-playing");
     state.playing = false;
@@ -1256,7 +1355,8 @@ function renderQueue() {
 
   // durations
   state.queue.forEach(async (item) => {
-    const sec = await getTrackDuration(item.track.file);
+    const url = getTrackUrl(item.track);
+    const sec = await getTrackDuration(url, item.track);
     if (sec == null) return;
     list.querySelectorAll(`.q-duration[data-file="${CSS.escape(item.track.file)}"]`)
       .forEach((el) => { el.textContent = formatTime(sec); });

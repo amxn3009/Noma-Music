@@ -1,0 +1,50 @@
+TO DO:
+• Überall in games.json "duration:" adden
+• Searchbar (Lupe) in Gameslist hinzufügen
+    ➜ Auch bei games und insgesamt dass man alle titel durchsuchen kann oder ein spiel
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+•
+➜

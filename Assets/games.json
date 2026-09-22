@@ -145,7 +145,10 @@
       {
         "id": "oot-ganondorfs-theme",
         "title": "Ganondorf's Theme",
-        "file": "Assets/Games/OOT/Tracks/Ganondorf's Theme.bfstm"
+        "file": "Assets/Games/OOT/Tracks/Ganondorf's Theme.opus",
+        "fileIos": "Assets/Games/OOT/Tracks/Ganondorf's Theme.m4a",
+        "duration": 31.68,
+        "loopStart": 0.3076
       },
       {
         "id": "oot-chamber-of-sages",
@@ -225,7 +228,9 @@
       {
         "id": "oot-credits",
         "title": "Credits",
-        "file": "Assets/Games/OOT/Tracks/Credits.bfstm"
+        "file": "Assets/Games/OOT/Tracks/Credits.opus",
+        "fileIos": "Assets/Games/OOT/Tracks/Credits.m4a",
+        "duration": 433.2
       }
     ]
   }
