@@ -57,6 +57,7 @@ let transitioning = false;
 let transitionStartedAt = 0; // audioCtx.currentTime
 let transitionProgress = 0; // seconds into the fade when paused
 let lastLoopCycle = -1; // -1 = still in first playthrough (before any wrap)
+let forceFullLoop = false; // true when track has LoopFromStoE
 let scrubbing = false;
 
 const PLACEHOLDER = "Assets/MusicPlayer/PlaceholderImage.jpg";
@@ -73,6 +74,7 @@ const contextMenu = $("#context-menu");
 let contextTrack = null;
 
 // ─── Web Audio state ───────────────────────────────────────────
+let unshuffledQueue = null; // canonical order while shuffle is on
 let audioCtx = null;
 let currentSource = null;
 let currentGain = null;
@@ -92,6 +94,8 @@ function resetPlayerToIdle() {
   decodedBuffer = null;
   pauseOffset = 0;
   loopStartSample = 0;
+  forceFullLoop = false;
+   unshuffledQueue = null;
   state.playing = false;
   state.queueIndex = -1;
   state.currentTime = 0;
@@ -172,6 +176,7 @@ function formatTime(sec) {
 }
 
 function getLoopStartSec() {
+  if (forceFullLoop) return 0;
   return loopStartSample > 0 ? loopStartSample / sampleRate : 0;
 }
 
@@ -256,29 +261,27 @@ function updateProgressUI() {
   const tTot = $("#time-total");
   if (tTot) tTot.textContent = formatTime(duration);
 
-  // Detect loop wraps via cycle index (stable; no multi-fire per frame)
   if (
     (state.loopMode === "off" || state.loopMode === "count") &&
     state.playing &&
-    loopStart > 0 &&
+    (loopStart > 0 || forceFullLoop) &&
     currentSource &&
     currentSource.loop &&
     !transitioning &&
     audioCtx
   ) {
     const absoluteElapsed = pauseOffset + (audioCtx.currentTime - startTime);
+    const loopLen = forceFullLoop
+      ? Math.max(0.001, duration)
+      : Math.max(0.001, duration - loopStart);
 
     if (absoluteElapsed < duration) {
-      // Still in the intro / first pass
       lastLoopCycle = -1;
     } else {
-      const loopLen = Math.max(0.001, duration - loopStart);
-      // 0 = first time we crossed the end, 1 = second wrap, ...
       const cycle = Math.floor((absoluteElapsed - duration) / loopLen);
 
       if (cycle > lastLoopCycle) {
         lastLoopCycle = cycle;
-
         if (state.loopMode === "off") {
           // First wrap → outro (same as before)
           startTransition();
@@ -306,10 +309,9 @@ function playBuffer(audioBuffer, offsetSeconds = 0) {
   const ctx = ensureAudioContext();
 
   const duration = audioBuffer.duration;
-  const loopStart = getLoopStartSec();
+  let loopStart = getLoopStartSec();
   let offset = Math.max(0, offsetSeconds);
 
-  // cancel any ongoing transition when starting fresh
   if (!transitioning) {
     lastLoopCycle = -1;
   }
@@ -321,22 +323,31 @@ function playBuffer(audioBuffer, offsetSeconds = 0) {
   currentSource.connect(currentGain);
   currentGain.connect(ctx.destination);
 
-   const wantInfiniteLoop = state.loopMode === "one";
-  // off / count: keep hardware loop until we decide to fade out
+  const wantInfiniteLoop = state.loopMode === "one";
+  // Soft end / count: BFSTM loop points OR full start→end loop
   const wantSoftEnd =
     (state.loopMode === "off" || state.loopMode === "count") &&
-    loopStart > 0 &&
+    (loopStart > 0 || forceFullLoop) &&
     !transitioning;
 
   if (wantInfiniteLoop || wantSoftEnd) {
     currentSource.loop = true;
-    if (loopStart > 0) {
+    if (forceFullLoop) {
+      // entire file repeats
+      currentSource.loopStart = 0;
+      currentSource.loopEnd = duration;
+      loopStart = 0;
+    } else if (loopStart > 0) {
       currentSource.loopStart = loopStart;
       currentSource.loopEnd = duration;
     }
-    if (offset >= duration && loopStart > 0) {
-      const loopLen = duration - loopStart;
-      offset = loopStart + ((offset - duration) % loopLen);
+    if (offset >= duration) {
+      if (forceFullLoop) {
+        offset = offset % duration;
+      } else if (loopStart > 0) {
+        const loopLen = duration - loopStart;
+        offset = loopStart + ((offset - duration) % loopLen);
+      }
     }
   } else {
     currentSource.loop = false;
@@ -395,8 +406,26 @@ function cancelTransition(keepPlaying = false) {
 }
 
 function finishTransition() {
+  // Hard-mute before tearing down so nothing spikes for a frame
+  if (currentGain && audioCtx) {
+    const now = audioCtx.currentTime;
+    currentGain.gain.cancelScheduledValues(now);
+    currentGain.gain.setValueAtTime(0, now);
+  }
+  try {
+    if (currentSource) {
+      currentSource.onended = null;
+      currentSource.stop();
+    }
+  } catch (_) {}
+
   cancelTransition(false);
-  nextTrack(true); // force advance, no new transition on same tick
+  stopSource();
+
+  // Small delay so the silent frame is committed (helps mobile)
+  setTimeout(() => {
+    nextTrack(true);
+  }, 30);
 }
 
 function setVolume(value) {
@@ -536,24 +565,44 @@ function showVolumeSlider() {
   }, 1200);
 }
 
-function toggleFullscreen() {
-  const fs = $("#fullscreen-player");
-  const btnFs = $("#btn-fullscreen");
-  const btnMin = $("#btn-minimize");
-  if (!fs) return;
+function cloneQueue(q) {
+  return q.map((item) => ({
+    gameId: item.gameId,
+    track: item.track,
+    insert: item.insert ?? null,
+  }));
+}
 
-  const open = fs.classList.contains("hidden");
-  if (open) {
-    fs.classList.remove("hidden");
-    document.body.classList.add("fs-open");
-    btnFs?.classList.add("hidden");
-    btnMin?.classList.remove("hidden");
+function toggleShuffle() {
+  if (!state.shuffle) {
+    // Save current order, then shuffle view under current song
+    unshuffledQueue = cloneQueue(state.queue);
+
+    if (state.queue.length > 1 && state.queueIndex >= 0) {
+      const current = state.queue[state.queueIndex];
+      const rest = state.queue.filter((_, i) => i !== state.queueIndex);
+      for (let i = rest.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [rest[i], rest[j]] = [rest[j], rest[i]];
+      }
+      state.queue = [current, ...rest];
+      state.queueIndex = 0;
+    }
+    state.shuffle = true;
   } else {
-    fs.classList.add("hidden");
-    document.body.classList.remove("fs-open");
-    btnMin?.classList.add("hidden");
-    btnFs?.classList.remove("hidden");
+    // Restore exact saved order (includes play-next / end adds / moves)
+    if (unshuffledQueue && unshuffledQueue.length) {
+      const currentId = getCurrentTrackId();
+      state.queue = cloneQueue(unshuffledQueue);
+      const idx = state.queue.findIndex((i) => i.track?.id === currentId);
+      state.queueIndex = idx >= 0 ? idx : 0;
+    }
+    unshuffledQueue = null;
+    state.shuffle = false;
   }
+
+  updatePlayerUI();
+  renderQueue();
 }
 
 async function decodeBfstm(url) {
@@ -728,21 +777,37 @@ function openGame(id) {
   }
 
   $("#play-all-btn").onclick = () => {
-    state.queue = game.tracks.map((t) => ({ gameId: game.id, track: t }));
+    unshuffledQueue = null;
+    state.queue = game.tracks.map((t) => ({
+      gameId: game.id,
+      track: t,
+      insert: null,
+    }));
     state.queueIndex = 0;
     state.shuffle = false;
-      if (state.loopMode === "count") {
-    state.loopsRemaining = settings.loopTimes;
-  } else {
-    state.loopsRemaining = 0;
-  }
+    if (state.loopMode === "count") {
+      state.loopsRemaining = settings.loopTimes;
+    } else {
+      state.loopsRemaining = 0;
+    }
     playCurrent();
     renderQueue();
+    updatePlayerUI();
   };
 
   $("#shuffle-all-btn").onclick = () => {
-    const items = game.tracks.map((t) => ({ gameId: game.id, track: t }));
-    // Fisher–Yates
+    // Canonical = normal album order
+    unshuffledQueue = game.tracks.map((t) => ({
+      gameId: game.id,
+      track: t,
+      insert: null,
+    }));
+
+    const items = game.tracks.map((t) => ({
+      gameId: game.id,
+      track: t,
+      insert: null,
+    }));
     for (let i = items.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [items[i], items[j]] = [items[j], items[i]];
@@ -750,11 +815,11 @@ function openGame(id) {
     state.queue = items;
     state.queueIndex = 0;
     state.shuffle = true;
-      if (state.loopMode === "count") {
-    state.loopsRemaining = settings.loopTimes;
-  } else {
-    state.loopsRemaining = 0;
-  }
+    if (state.loopMode === "count") {
+      state.loopsRemaining = settings.loopTimes;
+    } else {
+      state.loopsRemaining = 0;
+    }
     playCurrent();
     renderQueue();
     updatePlayerUI();
@@ -796,10 +861,15 @@ function bindTabs() {
 }
 
 function playFromGame(game, track) {
+  unshuffledQueue = null;
   const idx = game.tracks.findIndex((t) => t.id === track.id);
-  state.queue = game.tracks.map((t) => ({ gameId: game.id, track: t }));
+  state.queue = game.tracks.map((t) => ({
+    gameId: game.id,
+    track: t,
+    insert: null,
+  }));
   state.queueIndex = Math.max(0, idx);
-    if (state.loopMode === "count") {
+  if (state.loopMode === "count") {
     state.loopsRemaining = settings.loopTimes;
   } else {
     state.loopsRemaining = 0;
@@ -841,6 +911,7 @@ async function playCurrent() {
     decodedBuffer = decoded.audioBuffer;
     loopStartSample = decoded.loopStartSample;
     sampleRate = decoded.sampleRate;
+    forceFullLoop = !!track.LoopFromStoE;
 
     state.duration = decodedBuffer.duration;
     state.currentTime = 0;
@@ -989,11 +1060,8 @@ function nextTrack(fromNaturalEnd = false) {
     stopSource();
   }
 
-  if (state.shuffle) {
-    state.queueIndex = Math.floor(Math.random() * state.queue.length);
-  } else {
-    state.queueIndex = (state.queueIndex + 1) % state.queue.length;
-  }
+  // Queue is already reordered when shuffle was enabled
+  state.queueIndex = (state.queueIndex + 1) % state.queue.length;
     if (state.loopMode === "count") {
     state.loopsRemaining = settings.loopTimes;
   } else {
@@ -1058,11 +1126,6 @@ function toggleLoop() {
   }
 }
 
-function toggleShuffle() {
-  state.shuffle = !state.shuffle;
-  updatePlayerUI();
-}
-
 function updatePlayerUI() {
   const playing = state.playing;
   const playIcon = $("#icon-play");
@@ -1092,19 +1155,36 @@ function updatePlayerUI() {
 }
 
 function addPlayNext(game, track) {
-  const item = { gameId: game.id, track };
+  const item = { gameId: game.id, track, insert: "next" };
+
   if (state.queueIndex < 0) {
     state.queue = [item];
     state.queueIndex = 0;
+    unshuffledQueue = null;
     playCurrent();
     return;
   }
+
   state.queue.splice(state.queueIndex + 1, 0, item);
+
+  if (state.shuffle && unshuffledQueue) {
+    const curId = getCurrentTrackId();
+    let i = unshuffledQueue.findIndex((x) => x.track?.id === curId);
+    if (i < 0) i = unshuffledQueue.length - 1;
+    unshuffledQueue.splice(i + 1, 0, { ...item });
+  }
+
   renderQueue();
 }
 
 function addToEnd(game, track) {
-  state.queue.push({ gameId: game.id, track });
+  const item = { gameId: game.id, track, insert: "end" };
+  state.queue.push(item);
+
+  if (state.shuffle && unshuffledQueue) {
+    unshuffledQueue.push({ ...item });
+  }
+
   if (state.queueIndex < 0) {
     state.queueIndex = 0;
     playCurrent();
@@ -1125,23 +1205,24 @@ function renderQueue() {
       const file = item.track.file;
       return `
       <li class="queue-item ${isCurrent ? "current" : ""} ${isCurrent && state.playing ? "audio-on" : ""}"
-          data-index="${i}" draggable="false">
-        <span class="q-drag" title="Ziehen" draggable="true" data-drag-handle="1">
+          data-index="${i}" data-game-id="${item.gameId}" data-track-id="${escapeHtml(item.track.id)}">
+        <span class="q-drag" title="Ziehen" data-drag-handle="1">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M9 5h2v2H9V5zm0 6h2v2H9v-2zm0 6h2v2H9v-2zm4-12h2v2h-2V5zm0 6h2v2h-2v-2zm0 6h2v2h-2v-2z"/></svg>
         </span>
         <img class="q-cover" src="${game?.cover || PLACEHOLDER}" alt="">
         <span class="q-num">
-        <span class="num">${i + 1}</span>
+          <span class="num">${i + 1}</span>
           <span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
           <span class="q-hover-play" aria-hidden="true">
-              <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-           </span>
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          </span>
         </span>
         <div class="q-meta">
           <span class="q-title">${escapeHtml(item.track.title)}</span>
           <span class="q-game muted">${escapeHtml(game?.short || "")}</span>
         </div>
         <span class="q-duration" data-file="${escapeHtml(file)}">–:––</span>
+        <span class="track-actions q-actions" data-action="menu">⋮</span>
         <button class="q-remove" type="button" title="Entfernen" data-remove="${i}">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
         </button>
@@ -1161,25 +1242,66 @@ function renderQueue() {
 }
 
 function bindQueueItemEvents(list) {
+  // Click row → play / toggle
   list.querySelectorAll(".queue-item").forEach((row) => {
     row.addEventListener("click", (e) => {
-      if (e.target.closest(".q-drag") || e.target.closest(".q-remove")) return;
+      if (
+        e.target.closest(".q-drag") ||
+        e.target.closest(".q-remove") ||
+        e.target.closest(".track-actions")
+      ) {
+        return;
+      }
       const i = +row.dataset.index;
       if (i === state.queueIndex) {
         togglePlay();
       } else {
         state.queueIndex = i;
-          if (state.loopMode === "count") {
-    state.loopsRemaining = settings.loopTimes;
-  } else {
-    state.loopsRemaining = 0;
-  }
+        if (state.loopMode === "count") {
+          state.loopsRemaining = settings.loopTimes;
+        } else {
+          state.loopsRemaining = 0;
+        }
         playCurrent();
       }
       renderQueue();
     });
+
+    // Right-click → same context menu as game list
+    row.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+      const item = state.queue[+row.dataset.index];
+      if (!item) return;
+      const game = LIBRARY.find((g) => g.id === item.gameId);
+      if (!game) return;
+      showContextMenu(e.clientX, e.clientY, {
+        game,
+        track: item.track,
+        fromQueue: true,
+      });
+    });
   });
 
+  // ⋮ button
+  list.querySelectorAll(".track-actions").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const row = btn.closest(".queue-item");
+      const item = state.queue[+row.dataset.index];
+      if (!item) return;
+      const game = LIBRARY.find((g) => g.id === item.gameId);
+      if (!game) return;
+      const rect = btn.getBoundingClientRect();
+      showContextMenu(rect.left, rect.bottom + 4, {
+        game,
+        track: item.track,
+        fromQueue: true,
+      });
+    });
+  });
+
+  // Remove
   list.querySelectorAll(".q-remove").forEach((btn) => {
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -1187,33 +1309,71 @@ function bindQueueItemEvents(list) {
     });
   });
 
-  // Drag only from handle
-  let dragFrom = -1;
-  list.querySelectorAll(".q-drag").forEach((handle) => {
-    handle.addEventListener("dragstart", (e) => {
-      dragFrom = +handle.closest(".queue-item").dataset.index;
-      e.dataTransfer.effectAllowed = "move";
-      handle.closest(".queue-item")?.classList.add("dragging");
-    });
-    handle.addEventListener("dragend", () => {
-      list.querySelectorAll(".queue-item").forEach((el) => el.classList.remove("dragging", "drag-over"));
-      dragFrom = -1;
-    });
-  });
+  // Pointer drag (desktop + mobile)
+  bindQueuePointerDrag(list);
+}
 
-  list.querySelectorAll(".queue-item").forEach((row) => {
-    row.addEventListener("dragover", (e) => {
+function bindQueuePointerDrag(list) {
+  let dragFrom = -1;
+  let draggingEl = null;
+  let startY = 0;
+  let moved = false;
+
+  list.querySelectorAll(".q-drag").forEach((handle) => {
+    handle.addEventListener("pointerdown", (e) => {
+      const row = handle.closest(".queue-item");
+      if (!row) return;
+      contextMenu?.classList.add("hidden");
+      dragFrom = +row.dataset.index;
+      draggingEl = row;
+      startY = e.clientY;
+      moved = false;
+      row.classList.add("dragging");
+      handle.setPointerCapture?.(e.pointerId);
       e.preventDefault();
-      row.classList.add("drag-over");
-      autoScrollQueue(e.clientY);
     });
-    row.addEventListener("dragleave", () => row.classList.remove("drag-over"));
-    row.addEventListener("drop", (e) => {
-      e.preventDefault();
-      row.classList.remove("drag-over");
-      const to = +row.dataset.index;
-      if (dragFrom < 0 || dragFrom === to) return;
-      reorderQueue(dragFrom, to);
+
+    handle.addEventListener("pointermove", (e) => {
+      if (dragFrom < 0 || !draggingEl) return;
+      if (Math.abs(e.clientY - startY) > 4) moved = true;
+
+      autoScrollQueue(e.clientY);
+
+      // Highlight row under finger/cursor
+      list.querySelectorAll(".queue-item").forEach((el) => el.classList.remove("drag-over"));
+      const el = document.elementFromPoint(e.clientX, e.clientY);
+      const over = el?.closest?.(".queue-item");
+      if (over && over !== draggingEl) over.classList.add("drag-over");
+    });
+
+    handle.addEventListener("pointerup", (e) => {
+      if (dragFrom < 0) return;
+
+      list.querySelectorAll(".queue-item").forEach((el) => {
+        el.classList.remove("dragging", "drag-over");
+      });
+
+      if (moved) {
+        const el = document.elementFromPoint(e.clientX, e.clientY);
+        const over = el?.closest?.(".queue-item");
+        if (over) {
+          const to = +over.dataset.index;
+          if (to !== dragFrom && to >= 0) reorderQueue(dragFrom, to);
+        }
+      }
+
+      dragFrom = -1;
+      draggingEl = null;
+      moved = false;
+    });
+
+    handle.addEventListener("pointercancel", () => {
+      list.querySelectorAll(".queue-item").forEach((el) => {
+        el.classList.remove("dragging", "drag-over");
+      });
+      dragFrom = -1;
+      draggingEl = null;
+      moved = false;
     });
   });
 }
@@ -1221,14 +1381,22 @@ function bindQueueItemEvents(list) {
 function reorderQueue(from, to) {
   const item = state.queue.splice(from, 1)[0];
   state.queue.splice(to, 0, item);
+
   if (state.queueIndex === from) state.queueIndex = to;
   else if (from < state.queueIndex && to >= state.queueIndex) state.queueIndex--;
   else if (from > state.queueIndex && to <= state.queueIndex) state.queueIndex++;
+
+  // This order is now the truth (also while shuffled)
+  if (state.shuffle) {
+    unshuffledQueue = cloneQueue(state.queue);
+  }
+
   renderQueue();
 }
 
 function removeFromQueue(index) {
   if (index < 0 || index >= state.queue.length) return;
+
   const wasCurrent = index === state.queueIndex;
   state.queue.splice(index, 1);
 
@@ -1243,6 +1411,12 @@ function removeFromQueue(index) {
   } else if (index < state.queueIndex) {
     state.queueIndex--;
   }
+
+  // Keep saved order in sync while shuffled
+  if (state.shuffle) {
+    unshuffledQueue = cloneQueue(state.queue);
+  }
+
   renderQueue();
 }
 

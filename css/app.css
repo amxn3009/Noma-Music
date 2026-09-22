@@ -824,13 +824,38 @@ body.is-transitioning .time {
 
 .queue-item {
   display: grid;
-  grid-template-columns: 20px 40px 28px 1fr auto 28px;
+  grid-template-columns: 28px 40px 28px 1fr auto 28px 28px;
   align-items: center;
   gap: 8px;
   padding: 8px 10px;
   border-radius: 12px;
   font-size: 0.9rem;
   cursor: pointer; /* hand on whole row */
+}
+
+.q-actions {
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  cursor: pointer;
+  border-radius: 6px;
+  width: 28px;
+  height: 28px;
+  font-size: 1.1rem;
+  line-height: 1;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+.q-actions:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.q-drag {
+  touch-action: none; /* important for mobile drag */
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .queue-item:hover {
@@ -1044,7 +1069,9 @@ body.is-transitioning .time {
 .play-btn,
 .primary-btn,
 .tab,
-.back-btn {
+.back-btn,
+.settings-btn,
+.circle-btn {
   transition: transform 0.12s ease, background 0.15s, color 0.15s, box-shadow 0.15s;
 }
 
@@ -1052,7 +1079,9 @@ body.is-transitioning .time {
 .play-btn:active,
 .primary-btn:active,
 .tab:active,
-.back-btn:active {
+.back-btn:active,
+.settings-btn:active,
+.circle-btn:active {
   transform: scale(0.92);
 }
 

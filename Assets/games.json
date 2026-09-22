@@ -17,6 +17,17 @@
         "id": "oot-kokiri-forest",
         "title": "Kokiri Forest",
         "file": "Assets/Games/OOT/Tracks/Kokiri Forest.bfstm"
+      },
+      {
+        "id": "oot-enter-ganondorf",
+        "title": "Enter Ganondorf",
+        "file": "Assets/Games/OOT/Tracks/Enter Ganondorf.bfstm"
+      },
+      {
+        "id": "oot-TEST",
+        "title": "TEST Track",
+        "file": "Assets/Games/OOT/Tracks/TEST.bfstm",
+        "LoopFromStoE": true
       }
     ]
   }
