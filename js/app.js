@@ -565,6 +565,30 @@ function showVolumeSlider() {
   }, 1200);
 }
 
+function toggleFullscreen() {
+  const fs = $("#fullscreen-player");
+  const btnFs = $("#btn-fullscreen");
+  const btnMin = $("#btn-minimize");
+  if (!fs) return;
+
+  const open = fs.classList.contains("hidden");
+  if (open) {
+    // Leave settings if open, then go fullscreen
+    if (!$("#settings-view")?.classList.contains("hidden")) {
+      closeSettings();
+    }
+    fs.classList.remove("hidden");
+    document.body.classList.add("fs-open");
+    btnFs?.classList.add("hidden");
+    btnMin?.classList.remove("hidden");
+  } else {
+    fs.classList.add("hidden");
+    document.body.classList.remove("fs-open");
+    btnMin?.classList.add("hidden");
+    btnFs?.classList.remove("hidden");
+  }
+}
+
 function cloneQueue(q) {
   return q.map((item) => ({
     gameId: item.gameId,
@@ -1316,19 +1340,62 @@ function bindQueueItemEvents(list) {
 function bindQueuePointerDrag(list) {
   let dragFrom = -1;
   let draggingEl = null;
+  let ghost = null;
   let startY = 0;
   let moved = false;
+
+  function makeGhost(row) {
+    const item = state.queue[+row.dataset.index];
+    if (!item) return null;
+    const game = LIBRARY.find((g) => g.id === item.gameId);
+    const el = document.createElement("div");
+    el.className = "queue-drag-ghost";
+    el.innerHTML = `
+      <img src="${game?.cover || PLACEHOLDER}" alt="">
+      <div>
+        <div class="ghost-title">${escapeHtml(item.track.title)}</div>
+        <div class="ghost-sub">${escapeHtml(game?.short || "")}</div>
+      </div>
+      <span class="ghost-sub">${row.querySelector(".q-duration")?.textContent || ""}</span>
+    `;
+    document.body.appendChild(el);
+    return el;
+  }
+
+  function moveGhost(clientX, clientY) {
+    if (!ghost) return;
+    ghost.style.left = `${clientX}px`;
+    ghost.style.top = `${clientY}px`;
+  }
+
+  function clearDrag() {
+    list.querySelectorAll(".queue-item").forEach((el) => {
+      el.classList.remove("dragging", "drag-over");
+    });
+    if (ghost) {
+      ghost.remove();
+      ghost = null;
+    }
+    dragFrom = -1;
+    draggingEl = null;
+    moved = false;
+  }
 
   list.querySelectorAll(".q-drag").forEach((handle) => {
     handle.addEventListener("pointerdown", (e) => {
       const row = handle.closest(".queue-item");
       if (!row) return;
+
       contextMenu?.classList.add("hidden");
       dragFrom = +row.dataset.index;
       draggingEl = row;
       startY = e.clientY;
       moved = false;
       row.classList.add("dragging");
+
+      ghost = makeGhost(row);
+      moveGhost(e.clientX, e.clientY);
+
       handle.setPointerCapture?.(e.pointerId);
       e.preventDefault();
     });
@@ -1337,11 +1404,14 @@ function bindQueuePointerDrag(list) {
       if (dragFrom < 0 || !draggingEl) return;
       if (Math.abs(e.clientY - startY) > 4) moved = true;
 
+      moveGhost(e.clientX, e.clientY);
       autoScrollQueue(e.clientY);
 
-      // Highlight row under finger/cursor
       list.querySelectorAll(".queue-item").forEach((el) => el.classList.remove("drag-over"));
+      // Ignore the ghost under the cursor
+      if (ghost) ghost.style.visibility = "hidden";
       const el = document.elementFromPoint(e.clientX, e.clientY);
+      if (ghost) ghost.style.visibility = "visible";
       const over = el?.closest?.(".queue-item");
       if (over && over !== draggingEl) over.classList.add("drag-over");
     });
@@ -1349,12 +1419,10 @@ function bindQueuePointerDrag(list) {
     handle.addEventListener("pointerup", (e) => {
       if (dragFrom < 0) return;
 
-      list.querySelectorAll(".queue-item").forEach((el) => {
-        el.classList.remove("dragging", "drag-over");
-      });
-
       if (moved) {
+        if (ghost) ghost.style.visibility = "hidden";
         const el = document.elementFromPoint(e.clientX, e.clientY);
+        if (ghost) ghost.style.visibility = "visible";
         const over = el?.closest?.(".queue-item");
         if (over) {
           const to = +over.dataset.index;
@@ -1362,18 +1430,11 @@ function bindQueuePointerDrag(list) {
         }
       }
 
-      dragFrom = -1;
-      draggingEl = null;
-      moved = false;
+      clearDrag();
     });
 
     handle.addEventListener("pointercancel", () => {
-      list.querySelectorAll(".queue-item").forEach((el) => {
-        el.classList.remove("dragging", "drag-over");
-      });
-      dragFrom = -1;
-      draggingEl = null;
-      moved = false;
+      clearDrag();
     });
   });
 }
@@ -1442,22 +1503,8 @@ function bindQueuePanel() {
 }
 
 function bindFullscreen() {
-  const btnFs = $("#btn-fullscreen");
-  const btnMin = $("#btn-minimize");
-
-  btnFs?.addEventListener("click", () => {
-    $("#fullscreen-player").classList.remove("hidden");
-    document.body.classList.add("fs-open");
-    btnFs.classList.add("hidden");
-    btnMin?.classList.remove("hidden");
-  });
-
-  btnMin?.addEventListener("click", () => {
-    $("#fullscreen-player").classList.add("hidden");
-    document.body.classList.remove("fs-open");
-    btnMin.classList.add("hidden");
-    btnFs?.classList.remove("hidden");
-  });
+  $("#btn-fullscreen")?.addEventListener("click", () => toggleFullscreen());
+  $("#btn-minimize")?.addEventListener("click", () => toggleFullscreen());
 }
 
 function showContextMenu(x, y, payload) {
@@ -1582,11 +1629,7 @@ function openSettings() {
   $("#settings-view")?.classList.remove("hidden");
   document.body.classList.add("settings-open");
 
-  // sync form
-  const loopInput = $("#setting-loop-times");
-  const transSelect = $("#setting-transition");
-  if (loopInput) loopInput.value = String(settings.loopTimes);
-  if (transSelect) transSelect.value = String(settings.transitionSec);
+  syncSettingsForm();
 }
 
 function closeSettings() {
@@ -1617,7 +1660,6 @@ function bindSettings() {
     settings.loopTimes = clampInt(e.target.value, 1, 99, DEFAULT_SETTINGS.loopTimes);
     e.target.value = String(settings.loopTimes);
     saveSettings();
-    // if currently in count mode and not mid-song countdown preference: refresh badge default
     if (state.loopMode === "count" && !state.playing) {
       state.loopsRemaining = settings.loopTimes;
       updatePlayerUI();
@@ -1625,33 +1667,70 @@ function bindSettings() {
   });
 
   $("#setting-loop-times")?.addEventListener("input", (e) => {
-    // strip non-digits while typing
     e.target.value = e.target.value.replace(/[^\d]/g, "").slice(0, 2);
   });
 
-  $("#setting-transition")?.addEventListener("change", (e) => {
-    const v = Number(e.target.value);
-    settings.transitionSec = [0, 5, 10].includes(v) ? v : DEFAULT_SETTINGS.transitionSec;
-    saveSettings();
+  const transWrap = $("#setting-transition-wrap");
+  const transBtn = $("#setting-transition-btn");
+  const transMenu = $("#setting-transition-menu");
+
+  transBtn?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (!transWrap || !transMenu) return;
+    const open = transWrap.classList.toggle("open");
+    transMenu.classList.toggle("hidden", !open);
+    transBtn.setAttribute("aria-expanded", open ? "true" : "false");
+  });
+
+  transMenu?.querySelectorAll("li").forEach((li) => {
+    li.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const v = Number(li.dataset.value);
+      settings.transitionSec = [0, 5, 10].includes(v) ? v : DEFAULT_SETTINGS.transitionSec;
+      saveSettings();
+      syncSettingsForm();
+      transWrap?.classList.remove("open");
+      transMenu?.classList.add("hidden");
+      transBtn?.setAttribute("aria-expanded", "false");
+    });
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!transWrap) return;
+    if (e.target.closest("#setting-transition-wrap")) return;
+    transWrap.classList.remove("open");
+    transMenu?.classList.add("hidden");
+    transBtn?.setAttribute("aria-expanded", "false");
   });
 
   $("#settings-reset")?.addEventListener("click", () => {
-    const keepVolume = masterVolume; // don't reset volume
+    const keepVolume = masterVolume;
     settings = {
-      ...DEFAULT_SETTINGS,
+      loopTimes: DEFAULT_SETTINGS.loopTimes,
+      transitionSec: DEFAULT_SETTINGS.transitionSec,
       volume: keepVolume,
     };
     saveSettings();
-
-    const loopInput = $("#setting-loop-times");
-    const transSelect = $("#setting-transition");
-    if (loopInput) loopInput.value = String(settings.loopTimes);
-    if (transSelect) transSelect.value = String(settings.transitionSec);
-
+    syncSettingsForm();
     if (state.loopMode === "count") {
       state.loopsRemaining = settings.loopTimes;
       updatePlayerUI();
     }
+  });
+}
+
+function syncSettingsForm() {
+  const loopInput = $("#setting-loop-times");
+  if (loopInput) loopInput.value = String(settings.loopTimes);
+
+  const label = $("#setting-transition-label");
+  if (label) label.textContent = `${settings.transitionSec} s`;
+
+  $("#setting-transition-menu")?.querySelectorAll("li").forEach((li) => {
+    li.setAttribute(
+      "aria-selected",
+      li.dataset.value === String(settings.transitionSec) ? "true" : "false"
+    );
   });
 }
 

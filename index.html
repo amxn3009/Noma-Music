@@ -152,13 +152,14 @@
   <!-- Settings -->
   <section id="settings-view" class="settings-view hidden">
     <div class="settings-inner">
-      <div class="settings-top">
+      <header class="settings-top">
         <button id="settings-back" class="back-btn" type="button">
           <img src="Assets/Common/Back1.png" alt="" class="back-icon">
           Zurück
         </button>
-        <h1 class="page-title">Einstellungen</h1>
-      </div>
+        <h1 class="page-title settings-title">Einstellungen</h1>
+      </header>
+      <!-- rest unchanged -->
 
       <div class="settings-section">
         <h2 class="settings-section-title">Music Player</h2>
@@ -180,17 +181,23 @@
           >
         </label>
 
-        <label class="settings-row" for="setting-transition">
+        <div class="settings-row">
           <div class="settings-row-text">
             <span class="settings-label">Übergangszeit</span>
             <span class="settings-hint">Fade zwischen Songs</span>
           </div>
-          <select id="setting-transition" class="settings-select">
-            <option value="0">0 s</option>
-            <option value="5">5 s</option>
-            <option value="10"selected>10 s</option>
-          </select>
-        </label>
+          <div class="custom-select" id="setting-transition-wrap">
+            <button type="button" class="custom-select-btn" id="setting-transition-btn" aria-haspopup="listbox" aria-expanded="false">
+              <span id="setting-transition-label">10 s</span>
+              <svg class="custom-select-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <ul class="custom-select-menu hidden" id="setting-transition-menu" role="listbox">
+              <li role="option" data-value="0">0 s</li>
+              <li role="option" data-value="5">5 s</li>
+              <li role="option" data-value="10">10 s</li>
+            </ul>
+          </div>
+        </div>
       </div>
 
       <button id="settings-reset" class="settings-reset-btn" type="button">Zurücksetzen auf Standard</button>
