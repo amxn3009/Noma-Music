@@ -93,19 +93,7 @@ function isIOS() {
   return /iPad|iPhone|iPod/.test(ua) ||
     (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 }
-function getTrackUrl(track) {
-  if (!track) return "";
-  if (isIOS() && track.fileIos) return track.fileIos;
-  return track.file;
-}
-function isWebAudioFile(url) {
-  return /\.(opus|m4a|mp3|wav|ogg)($|\?)/i.test(url || "");
-}
-async function resumeAudio() {
-  const ctx = ensureAudioContext();
-  if (ctx.state === "suspended") await ctx.resume();
-  return ctx;
-}
+
 async function decodeWebAudio(url) {
   const ctx = await resumeAudio();
   const res = await fetch(url);
@@ -153,15 +141,6 @@ function resetPlayerToIdle() {
   renderQueue();
 }
 
-function isIOS() {
-  const ua = navigator.userAgent || "";
-  const iOSDevice = /iPad|iPhone|iPod/.test(ua);
-  // iPadOS 13+ may report as Mac
-  const iPadOs =
-    navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
-  return iOSDevice || iPadOs;
-}
-
 /** Best playable URL for this track on this device */
 function getTrackUrl(track) {
   if (!track) return "";
@@ -189,22 +168,6 @@ async function resumeAudio() {
 
 const durationCache = new Map(); // url → seconds
 
-<<<<<<< HEAD
-=======
-async function decodeWebAudio(url) {
-  const ctx = await resumeAudio();
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Failed to load ${url}: ${res.status}`);
-  const buf = await res.arrayBuffer();
-  const audioBuffer = await ctx.decodeAudioData(buf.slice(0));
-  return audioBuffer;
-}
-
-function isOpusUrl(url) {
-  return /\.opus($|\?)/i.test(url || "");
-}
-
->>>>>>> 448f7a703f53b6f5ad0fc319ad4e873fde36843f
 async function getTrackDuration(url, track) {
   if (track && Number.isFinite(track.duration) && track.duration > 0) {
     durationCache.set(url, track.duration);
@@ -212,20 +175,9 @@ async function getTrackDuration(url, track) {
   }
   if (durationCache.has(url)) return durationCache.get(url);
 
-<<<<<<< HEAD
   if (isWebAudioFile(url)) {
     try {
       const audioBuffer = await decodeWebAudio(url);
-=======
-  // Opus/WAV: decode once for length (only if no JSON duration)
-  if (isOpusUrl(url) || /\.(wav|m4a|mp3|ogg)($|\?)/i.test(url || "")) {
-    try {
-      const ctx = ensureAudioContext();
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(res.status);
-      const buf = await res.arrayBuffer();
-      const audioBuffer = await ctx.decodeAudioData(buf.slice(0));
->>>>>>> 448f7a703f53b6f5ad0fc319ad4e873fde36843f
       durationCache.set(url, audioBuffer.duration);
       return audioBuffer.duration;
     } catch (err) {
@@ -234,10 +186,6 @@ async function getTrackDuration(url, track) {
     }
   }
 
-<<<<<<< HEAD
-=======
-  // BFSTM fallback
->>>>>>> 448f7a703f53b6f5ad0fc319ad4e873fde36843f
   try {
     const res = await fetch(url);
     if (!res.ok) throw new Error(res.status);
@@ -856,11 +804,7 @@ function openGame(id) {
 
   // Durations (JSON first, else file)
   game.tracks.forEach(async (t) => {
-<<<<<<< HEAD
     const url = typeof getTrackUrl === "function" ? getTrackUrl(t) : t.file;
-=======
-    const url = getTrackUrl(t); // iOS → fileIos, else file
->>>>>>> 448f7a703f53b6f5ad0fc319ad4e873fde36843f
     const sec = await getTrackDuration(url, t);
     if (sec == null) return;
     const el = trackListEl.querySelector(
@@ -1007,16 +951,9 @@ async function playCurrent() {
   const game = LIBRARY.find((g) => g.id === item.gameId);
   const track = item.track;
 
-<<<<<<< HEAD
   if (state.loopMode === "count") {
     state.loopsRemaining =
       Number(settings.loopTimes) || DEFAULT_SETTINGS.loopTimes;
-=======
-  // ── TEMP TEST: unlock audio on this user gesture ──
-  const ctx = ensureAudioContext();
-  if (ctx.state === "suspended") {
-    await ctx.resume();
->>>>>>> 448f7a703f53b6f5ad0fc319ad4e873fde36843f
   }
 
   // ... your existing UI updates (cover, title, etc.) ...
@@ -1035,7 +972,6 @@ async function playCurrent() {
   pauseOffset = 0;
   updatePlayerUI();
 
-<<<<<<< HEAD
   const url = typeof getTrackUrl === "function" ? getTrackUrl(track) : track.file;
 
   try {
@@ -1047,14 +983,6 @@ async function playCurrent() {
 
     // Opus / m4a / wav / …
     if (typeof isWebAudioFile === "function" && isWebAudioFile(url)) {
-=======
-     try {
-    const url = getTrackUrl(track); // ← this is the iOS switch
-    await resumeAudio();
-
-    if (isWebAudioFile(url)) {
-      // Opus / m4a / wav / …
->>>>>>> 448f7a703f53b6f5ad0fc319ad4e873fde36843f
       const audioBuffer = await decodeWebAudio(url);
       decodedBuffer = audioBuffer;
       sampleRate = audioBuffer.sampleRate;
@@ -1079,26 +1007,18 @@ async function playCurrent() {
       return;
     }
 
-<<<<<<< HEAD
     // BFSTM
-=======
-    // Still .bfstm
->>>>>>> 448f7a703f53b6f5ad0fc319ad4e873fde36843f
     const decoded = await decodeBfstm(url);
     decodedBuffer = decoded.audioBuffer;
     loopStartSample = decoded.loopStartSample;
     sampleRate = decoded.sampleRate;
     forceFullLoop = !!track.LoopFromStoE;
 
-<<<<<<< HEAD
     if (
       !forceFullLoop &&
       Number.isFinite(track.loopStart) &&
       track.loopStart > 0
     ) {
-=======
-    if (!forceFullLoop && Number.isFinite(track.loopStart) && track.loopStart > 0) {
->>>>>>> 448f7a703f53b6f5ad0fc319ad4e873fde36843f
       loopStartSample = Math.floor(track.loopStart * sampleRate);
     }
 
@@ -1424,12 +1344,8 @@ function renderQueue() {
     .join("");
 
   state.queue.forEach(async (item) => {
-<<<<<<< HEAD
     const url =
       typeof getTrackUrl === "function" ? getTrackUrl(item.track) : item.track.file;
-=======
-    const url = getTrackUrl(item.track);
->>>>>>> 448f7a703f53b6f5ad0fc319ad4e873fde36843f
     const sec = await getTrackDuration(url, item.track);
     if (sec == null) return;
     list
