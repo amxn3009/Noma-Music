@@ -1,6 +1,5 @@
 [
-  
-{
+  {
     "id": "oot",
     "title": "The Legend of Zelda: Ocarina of Time",
     "short": "Ocarina of Time",
@@ -10,220 +9,260 @@
       {
         "id": "oot-title",
         "title": "Title Theme",
-        "file": "Assets/Games/OOT/Tracks/Title Theme.bfstm"
+        "file": "Assets/Games/OOT/Tracks/Title Theme.bfstm",
+        "duration": 78.8
       },
       {
         "id": "oot-enter-ganondorf",
         "title": "Enter Ganondorf",
-        "file": "Assets/Games/OOT/Tracks/Enter Ganondorf.bfstm"
+        "file": "Assets/Games/OOT/Tracks/Enter Ganondorf.bfstm",
+        "duration": 12.006
       },
       {
         "id": "oot-fairy-flying",
         "title": "Fairy Flying",
-        "file": "Assets/Games/OOT/Tracks/Fairy Flying.bfstm"
+        "file": "Assets/Games/OOT/Tracks/Fairy Flying.bfstm",
+        "duration": 17.095
       },
       {
         "id": "oot-inside-a-house",
         "title": "Inside a House",
-        "file": "Assets/Games/OOT/Tracks/Inside a House.bfstm"
+        "file": "Assets/Games/OOT/Tracks/Inside a House.bfstm",
+        "duration": 28.286
       },
-       {
+      {
         "id": "oot-inside-a-shop",
         "title": "Inside a Shop",
-        "file": "Assets/Games/OOT/Tracks/Inside a Shop.bfstm"
+        "file": "Assets/Games/OOT/Tracks/Inside a Shop.bfstm",
+        "duration": 61.683
       },
       {
         "id": "oot-battle",
         "title": "Battle",
-        "file": "Assets/Games/OOT/Tracks/Battle.bfstm"
+        "file": "Assets/Games/OOT/Tracks/Battle.bfstm",
+        "duration": 58.974
       },
       {
         "id": "oot-inside-the-deku-tree",
         "title": "Inside the Deku Tree",
-        "file": "Assets/Games/OOT/Tracks/Inside the Deku Tree.bfstm"
+        "file": "Assets/Games/OOT/Tracks/Inside the Deku Tree.bfstm",
+        "duration": 81.502
       },
-             {
+      {
         "id": "oot-boss-battle",
         "title": "Boss Battle",
-        "file": "Assets/Games/OOT/Tracks/Boss Battle.bfstm"
+        "file": "Assets/Games/OOT/Tracks/Boss Battle.bfstm",
+        "duration": 73.799
       },
       {
         "id": "oot-hyrule-field-main-theme",
         "title": "Hyrule Field Main Theme",
-        "file": "Assets/Games/OOT/Tracks/Hyrule Field Main Theme.bfstm"
+        "file": "Assets/Games/OOT/Tracks/Hyrule Field Main Theme.bfstm",
+        "duration": 316.375
       },
       {
         "id": "oot-kaepora-gaeboras-theme",
         "title": "Kaepora Gaebora's Theme",
-        "file": "Assets/Games/OOT/Tracks/Kaepora Gaebora's Theme.bfstm"
+        "file": "Assets/Games/OOT/Tracks/Kaepora Gaebora's Theme.bfstm",
+        "duration": 54.396
       },
       {
         "id": "oot-market",
         "title": "Market",
-        "file": "Assets/Games/OOT/Tracks/Market.bfstm"
+        "file": "Assets/Games/OOT/Tracks/Market.bfstm",
+        "duration": 41.401
       },
       {
         "id": "oot-shooting-gallery",
         "title": "Shooting Gallery",
-        "file": "Assets/Games/OOT/Tracks/Shooting Gallery.bfstm"
+        "file": "Assets/Games/OOT/Tracks/Shooting Gallery.bfstm",
+        "duration": 32.378
       },
       {
         "id": "oot-castle-courtyard",
         "title": "Castle Courtyard",
-        "file": "Assets/Games/OOT/Tracks/Castle Courtyard.bfstm"
+        "file": "Assets/Games/OOT/Tracks/Castle Courtyard.bfstm",
+        "duration": 24.665
       },
       {
         "id": "oot-zeldas-theme",
         "title": "Zelda's Theme",
-        "file": "Assets/Games/OOT/Tracks/Zelda's Theme.bfstm"
+        "file": "Assets/Games/OOT/Tracks/Zelda's Theme.bfstm",
+        "duration": 44.806
       },
       {
         "id": "oot-lon-lon-ranch",
         "title": "Lon Lon Ranch",
-        "file": "Assets/Games/OOT/Tracks/Lon Lon Ranch.bfstm"
+        "file": "Assets/Games/OOT/Tracks/Lon Lon Ranch.bfstm",
+        "duration": 244.323
       },
       {
         "id": "oot-mini-game",
         "title": "Mini-Game",
-        "file": "Assets/Games/OOT/Tracks/Mini-game.bfstm"
+        "file": "Assets/Games/OOT/Tracks/Mini-game.bfstm",
+        "duration": 26.601
       },
       {
         "id": "oot-kakariko-village",
         "title": "Kakariko Village",
-        "file": "Assets/Games/OOT/Tracks/Kakariko Village.bfstm"
+        "file": "Assets/Games/OOT/Tracks/Kakariko Village.bfstm",
+        "duration": 93.312
       },
       {
         "id": "oot-goron-city",
         "title": "Goron City",
-        "file": "Assets/Games/OOT/Tracks/Goron City.bfstm"
+        "file": "Assets/Games/OOT/Tracks/Goron City.bfstm",
+        "duration": 84.66
       },
       {
         "id": "oot-lost-woods",
         "title": "Lost Woods",
-        "file": "Assets/Games/OOT/Tracks/Lost Woods.bfstm"
+        "file": "Assets/Games/OOT/Tracks/Lost Woods.bfstm",
+        "duration": 33.133
       },
       {
         "id": "oot-dodongos-cavern",
         "title": "Dodongo's Cavern",
-        "file": "Assets/Games/OOT/Tracks/Dodongo's Cavern.bfstm"
+        "file": "Assets/Games/OOT/Tracks/Dodongo's Cavern.bfstm",
+        "duration": 140.841
       },
       {
         "id": "oot-mini-boss",
         "title": "Mini-boss",
-        "file": "Assets/Games/OOT/Tracks/Mini-boss.bfstm"
+        "file": "Assets/Games/OOT/Tracks/Mini-boss.bfstm",
+        "duration": 61.5
       },
       {
         "id": "oot-king-dodongo-battle",
         "title": "King Dodongo Battle",
-        "file": "Assets/Games/OOT/Tracks/King Dodongo Battle.bfstm"
+        "file": "Assets/Games/OOT/Tracks/King Dodongo Battle.bfstm",
+        "duration": 62.046
       },
       {
         "id": "oot-zoras-domain",
         "title": "Zora's Domain",
-        "file": "Assets/Games/OOT/Tracks/Zora's Domain.bfstm"
+        "file": "Assets/Games/OOT/Tracks/Zora's Domain.bfstm",
+        "duration": 83.696
       },
       {
         "id": "oot-great-fairys-fountain",
         "title": "Great Fairy's Fountain",
-        "file": "Assets/Games/OOT/Tracks/Great Fairy's Fountain.bfstm"
+        "file": "Assets/Games/OOT/Tracks/Great Fairy's Fountain.bfstm",
+        "duration": 29.166
       },
       {
         "id": "oot-kakariko-potion-shop",
         "title": "Kakariko Potion Shop",
-        "file": "Assets/Games/OOT/Tracks/Kakariko Potion Shop.bfstm"
+        "file": "Assets/Games/OOT/Tracks/Kakariko Potion Shop.bfstm",
+        "duration": 45.078
       },
       {
         "id": "oot-inside-jabu-jabus-belly",
         "title": "Inside Jabu-Jabu's Belly",
-        "file": "Assets/Games/OOT/Tracks/Inside Jabu-Jabu's Belly.bfstm"
+        "file": "Assets/Games/OOT/Tracks/Inside Jabu-Jabu's Belly.bfstm",
+        "duration": 52.15
       },
       {
         "id": "oot-temple-of-time",
         "title": "Temple of Time",
-        "file": "Assets/Games/OOT/Tracks/Temple of Time.bfstm"
+        "file": "Assets/Games/OOT/Tracks/Temple of Time.bfstm",
+        "duration": 71.692
       },
       {
         "id": "oot-ganondorfs-theme",
         "title": "Ganondorf's Theme",
-        "file": "Assets/Games/OOT/Tracks/Ganondorf's Theme.opus",
-        "fileIos": "Assets/Games/OOT/Tracks/Ganondorf's Theme.m4a",
-        "duration": 31.68,
-        "loopStart": 0.3076
+        "file": "Assets/Games/OOT/Tracks/Ganondorf's Theme.bfstm",
+        "duration": 31.591
       },
       {
         "id": "oot-chamber-of-sages",
         "title": "Chamber of Sages",
-        "file": "Assets/Games/OOT/Tracks/Chamber of Sages.bfstm"
+        "file": "Assets/Games/OOT/Tracks/Chamber of Sages.bfstm",
+        "duration": 99.235
       },
       {
         "id": "oot-sheiks-theme",
         "title": "Sheik's Theme",
-        "file": "Assets/Games/OOT/Tracks/Sheik's Theme.bfstm"
+        "file": "Assets/Games/OOT/Tracks/Sheik's Theme.bfstm",
+        "duration": 25.489
       },
       {
         "id": "oot-horse-race",
         "title": "Horse Race",
-        "file": "Assets/Games/OOT/Tracks/Horse Race.bfstm"
+        "file": "Assets/Games/OOT/Tracks/Horse Race.bfstm",
+        "duration": 42.359
       },
       {
         "id": "oot-ingos-theme",
         "title": "Ingo's Theme",
-        "file": "Assets/Games/OOT/Tracks/Ingo's Theme.bfstm"
+        "file": "Assets/Games/OOT/Tracks/Ingo's Theme.bfstm",
+        "duration": 31.152
       },
       {
         "id": "oot-kakariko-village-(orchestrated)",
         "title": "Kakariko Village (Orchestrated)",
-        "file": "Assets/Games/OOT/Tracks/Kakariko Village (Orchestrated).bfstm"
+        "file": "Assets/Games/OOT/Tracks/Kakariko Village (Orchestrated).bfstm",
+        "duration": 91.832
       },
       {
         "id": "oot-windmill",
         "title": "Windmill",
-        "file": "Assets/Games/OOT/Tracks/Windmill.bfstm"
+        "file": "Assets/Games/OOT/Tracks/Windmill.bfstm",
+        "duration": 42.2
       },
       {
         "id": "oot-forest-temple",
         "title": "Forest Temple",
-        "file": "Assets/Games/OOT/Tracks/Forest Temple.bfstm"
+        "file": "Assets/Games/OOT/Tracks/Forest Temple.bfstm",
+        "duration": 102.546
       },
       {
         "id": "oot-gerudo-valley",
         "title": "Gerudo Valley",
-        "file": "Assets/Games/OOT/Tracks/Gerudo Valley.bfstm"
+        "file": "Assets/Games/OOT/Tracks/Gerudo Valley.bfstm",
+        "duration": 86.628
       },
       {
         "id": "oot-spirit-temple",
         "title": "Spirit Temple",
-        "file": "Assets/Games/OOT/Tracks/Spirit Temple.bfstm"
+        "file": "Assets/Games/OOT/Tracks/Spirit Temple.bfstm",
+        "duration": 167.296
       },
       {
         "id": "oot-koume-and-kotakes-theme",
         "title": "Koume and Kotake's Theme",
-        "file": "Assets/Games/OOT/Tracks/Koume and Kotake's Theme.bfstm"
+        "file": "Assets/Games/OOT/Tracks/Koume and Kotake's Theme.bfstm",
+        "duration": 49.211
       },
       {
         "id": "oot-reunite-with-zelda",
         "title": "Reunite with Zelda",
-        "file": "Assets/Games/OOT/Tracks/Reunite with Zelda.bfstm"
+        "file": "Assets/Games/OOT/Tracks/Reunite with Zelda.bfstm",
+        "duration": 41.463
       },
       {
         "id": "oot-ganons-castle",
         "title": "Ganon's Castle",
-        "file": "Assets/Games/OOT/Tracks/Ganon's Castle.bfstm"
+        "file": "Assets/Games/OOT/Tracks/Ganon's Castle.bfstm",
+        "duration": 200.922
       },
       {
         "id": "oot-ganondorf-battle",
         "title": "Ganondorf Battle",
-        "file": "Assets/Games/OOT/Tracks/Ganondorf Battle.bfstm"
+        "file": "Assets/Games/OOT/Tracks/Ganondorf Battle.bfstm",
+        "duration": 65.326
       },
       {
         "id": "oot-escaping-from-ganons-castle",
         "title": "Escaping from Ganon's Castle",
-        "file": "Assets/Games/OOT/Tracks/Escaping from Ganon's Castle.bfstm"
+        "file": "Assets/Games/OOT/Tracks/Escaping from Ganon's Castle.bfstm",
+        "duration": 40.919
       },
       {
         "id": "oot-last-battle",
         "title": "Last Battle",
-        "file": "Assets/Games/OOT/Tracks/Last Battle.bfstm"
+        "file": "Assets/Games/OOT/Tracks/Last Battle.bfstm",
+        "duration": 99.34
       },
       {
         "id": "oot-credits",
@@ -234,7 +273,4 @@
       }
     ]
   }
-
-
-
 ]

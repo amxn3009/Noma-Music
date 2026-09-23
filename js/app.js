@@ -2,6 +2,8 @@ import { Bfstm } from './bfstm.js';
 
 let LIBRARY = [];
 
+const DEV_DURATION_TOOL = false; // true only when scanning
+
 const state = {
   currentGame: null,
   queue: [],
@@ -86,6 +88,32 @@ let loopStartSample = 0;
 let sampleRate = 44100;
 let masterVolume = 1; // 0–1
 
+function isIOS() {
+  const ua = navigator.userAgent || "";
+  return /iPad|iPhone|iPod/.test(ua) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+}
+function getTrackUrl(track) {
+  if (!track) return "";
+  if (isIOS() && track.fileIos) return track.fileIos;
+  return track.file;
+}
+function isWebAudioFile(url) {
+  return /\.(opus|m4a|mp3|wav|ogg)($|\?)/i.test(url || "");
+}
+async function resumeAudio() {
+  const ctx = ensureAudioContext();
+  if (ctx.state === "suspended") await ctx.resume();
+  return ctx;
+}
+async function decodeWebAudio(url) {
+  const ctx = await resumeAudio();
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Failed to load ${url}: ${res.status}`);
+  const buf = await res.arrayBuffer();
+  return ctx.decodeAudioData(buf.slice(0));
+}
+
 function resetPlayerToIdle() {
   stopSource();
   if (typeof cancelTransition === "function") cancelTransition(false);
@@ -161,6 +189,8 @@ async function resumeAudio() {
 
 const durationCache = new Map(); // url → seconds
 
+<<<<<<< HEAD
+=======
 async function decodeWebAudio(url) {
   const ctx = await resumeAudio();
   const res = await fetch(url);
@@ -174,6 +204,7 @@ function isOpusUrl(url) {
   return /\.opus($|\?)/i.test(url || "");
 }
 
+>>>>>>> 448f7a703f53b6f5ad0fc319ad4e873fde36843f
 async function getTrackDuration(url, track) {
   if (track && Number.isFinite(track.duration) && track.duration > 0) {
     durationCache.set(url, track.duration);
@@ -181,6 +212,11 @@ async function getTrackDuration(url, track) {
   }
   if (durationCache.has(url)) return durationCache.get(url);
 
+<<<<<<< HEAD
+  if (isWebAudioFile(url)) {
+    try {
+      const audioBuffer = await decodeWebAudio(url);
+=======
   // Opus/WAV: decode once for length (only if no JSON duration)
   if (isOpusUrl(url) || /\.(wav|m4a|mp3|ogg)($|\?)/i.test(url || "")) {
     try {
@@ -189,6 +225,7 @@ async function getTrackDuration(url, track) {
       if (!res.ok) throw new Error(res.status);
       const buf = await res.arrayBuffer();
       const audioBuffer = await ctx.decodeAudioData(buf.slice(0));
+>>>>>>> 448f7a703f53b6f5ad0fc319ad4e873fde36843f
       durationCache.set(url, audioBuffer.duration);
       return audioBuffer.duration;
     } catch (err) {
@@ -197,7 +234,10 @@ async function getTrackDuration(url, track) {
     }
   }
 
+<<<<<<< HEAD
+=======
   // BFSTM fallback
+>>>>>>> 448f7a703f53b6f5ad0fc319ad4e873fde36843f
   try {
     const res = await fetch(url);
     if (!res.ok) throw new Error(res.status);
@@ -755,6 +795,7 @@ async function init() {
       e.preventDefault();
     }
   });
+  mountDurationDevTool();
 }
 
 function renderGames() {
@@ -789,15 +830,10 @@ function openGame(id) {
   $("#game-title").textContent = game.title;
   $("#game-track-count").textContent = `${game.tracks.length} Titel`;
 
-  // Composer
   const composerName = $("#game-composer-name");
-  if (composerName) {
-    composerName.textContent = game.composer || "";
-  }
+  if (composerName) composerName.textContent = game.composer || "";
   const composerEl = $("#game-composer");
-  if (composerEl) {
-    composerEl.style.display = game.composer ? "" : "none";
-  }
+  if (composerEl) composerEl.style.display = game.composer ? "" : "none";
 
   trackListEl.innerHTML = game.tracks
     .map(
@@ -818,9 +854,13 @@ function openGame(id) {
     )
     .join("");
 
-  // Load durations in the background
+  // Durations (JSON first, else file)
   game.tracks.forEach(async (t) => {
+<<<<<<< HEAD
+    const url = typeof getTrackUrl === "function" ? getTrackUrl(t) : t.file;
+=======
     const url = getTrackUrl(t); // iOS → fileIos, else file
+>>>>>>> 448f7a703f53b6f5ad0fc319ad4e873fde36843f
     const sec = await getTrackDuration(url, t);
     if (sec == null) return;
     const el = trackListEl.querySelector(
@@ -829,7 +869,7 @@ function openGame(id) {
     if (el) el.textContent = formatTime(sec);
   });
 
-    trackListEl.querySelectorAll(".track-row").forEach((row) => {
+  trackListEl.querySelectorAll(".track-row").forEach((row) => {
     row.addEventListener("click", (e) => {
       if (e.target.closest(".track-actions")) {
         e.preventDefault();
@@ -854,11 +894,8 @@ function openGame(id) {
     });
   });
 
-  // ← outside the forEach
   const currentId = getCurrentTrackId();
-  if (currentId) {
-    markPlayingTrack(currentId);
-  }
+  if (currentId) markPlayingTrack(currentId);
 
   $("#play-all-btn").onclick = () => {
     unshuffledQueue = null;
@@ -880,7 +917,6 @@ function openGame(id) {
   };
 
   $("#shuffle-all-btn").onclick = () => {
-    // Canonical = normal album order
     unshuffledQueue = game.tracks.map((t) => ({
       gameId: game.id,
       track: t,
@@ -971,10 +1007,16 @@ async function playCurrent() {
   const game = LIBRARY.find((g) => g.id === item.gameId);
   const track = item.track;
 
+<<<<<<< HEAD
+  if (state.loopMode === "count") {
+    state.loopsRemaining =
+      Number(settings.loopTimes) || DEFAULT_SETTINGS.loopTimes;
+=======
   // ── TEMP TEST: unlock audio on this user gesture ──
   const ctx = ensureAudioContext();
   if (ctx.state === "suspended") {
     await ctx.resume();
+>>>>>>> 448f7a703f53b6f5ad0fc319ad4e873fde36843f
   }
 
   // ... your existing UI updates (cover, title, etc.) ...
@@ -993,12 +1035,26 @@ async function playCurrent() {
   pauseOffset = 0;
   updatePlayerUI();
 
+<<<<<<< HEAD
+  const url = typeof getTrackUrl === "function" ? getTrackUrl(track) : track.file;
+
+  try {
+    if (typeof resumeAudio === "function") {
+      await resumeAudio();
+    } else {
+      ensureAudioContext();
+    }
+
+    // Opus / m4a / wav / …
+    if (typeof isWebAudioFile === "function" && isWebAudioFile(url)) {
+=======
      try {
     const url = getTrackUrl(track); // ← this is the iOS switch
     await resumeAudio();
 
     if (isWebAudioFile(url)) {
       // Opus / m4a / wav / …
+>>>>>>> 448f7a703f53b6f5ad0fc319ad4e873fde36843f
       const audioBuffer = await decodeWebAudio(url);
       decodedBuffer = audioBuffer;
       sampleRate = audioBuffer.sampleRate;
@@ -1023,14 +1079,26 @@ async function playCurrent() {
       return;
     }
 
+<<<<<<< HEAD
+    // BFSTM
+=======
     // Still .bfstm
+>>>>>>> 448f7a703f53b6f5ad0fc319ad4e873fde36843f
     const decoded = await decodeBfstm(url);
     decodedBuffer = decoded.audioBuffer;
     loopStartSample = decoded.loopStartSample;
     sampleRate = decoded.sampleRate;
     forceFullLoop = !!track.LoopFromStoE;
 
+<<<<<<< HEAD
+    if (
+      !forceFullLoop &&
+      Number.isFinite(track.loopStart) &&
+      track.loopStart > 0
+    ) {
+=======
     if (!forceFullLoop && Number.isFinite(track.loopStart) && track.loopStart > 0) {
+>>>>>>> 448f7a703f53b6f5ad0fc319ad4e873fde36843f
       loopStartSample = Math.floor(track.loopStart * sampleRate);
     }
 
@@ -1319,16 +1387,18 @@ function renderQueue() {
   const list = $("#queue-list");
   if (!list) return;
 
-  const currentId = getCurrentTrackId();
-
   list.innerHTML = state.queue
     .map((item, i) => {
       const game = LIBRARY.find((g) => g.id === item.gameId);
       const isCurrent = i === state.queueIndex;
       const file = item.track.file;
       return `
-      <li class="queue-item ${isCurrent ? "current" : ""} ${isCurrent && state.playing ? "audio-on" : ""}"
-          data-index="${i}" data-game-id="${item.gameId}" data-track-id="${escapeHtml(item.track.id)}">
+      <li class="queue-item ${isCurrent ? "current" : ""} ${
+        isCurrent && state.playing ? "audio-on" : ""
+      }"
+          data-index="${i}" data-game-id="${item.gameId}" data-track-id="${escapeHtml(
+        item.track.id
+      )}">
         <span class="q-drag" title="Ziehen" data-drag-handle="1">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M9 5h2v2H9V5zm0 6h2v2H9v-2zm0 6h2v2H9v-2zm4-12h2v2h-2V5zm0 6h2v2h-2v-2zm0 6h2v2h-2v-2z"/></svg>
         </span>
@@ -1353,13 +1423,20 @@ function renderQueue() {
     })
     .join("");
 
-  // durations
   state.queue.forEach(async (item) => {
+<<<<<<< HEAD
+    const url =
+      typeof getTrackUrl === "function" ? getTrackUrl(item.track) : item.track.file;
+=======
     const url = getTrackUrl(item.track);
+>>>>>>> 448f7a703f53b6f5ad0fc319ad4e873fde36843f
     const sec = await getTrackDuration(url, item.track);
     if (sec == null) return;
-    list.querySelectorAll(`.q-duration[data-file="${CSS.escape(item.track.file)}"]`)
-      .forEach((el) => { el.textContent = formatTime(sec); });
+    list
+      .querySelectorAll(`.q-duration[data-file="${CSS.escape(item.track.file)}"]`)
+      .forEach((el) => {
+        el.textContent = formatTime(sec);
+      });
   });
 
   bindQueueItemEvents(list);
@@ -1832,6 +1909,104 @@ function syncSettingsForm() {
       li.dataset.value === String(settings.transitionSec) ? "true" : "false"
     );
   });
+}
+
+function formatDurationForJson(sec) {
+  // keep a bit of precision, strip ugly float noise
+  return Math.round(sec * 1000) / 1000;
+}
+
+async function runDurationScan() {
+  if (!LIBRARY.length) {
+    console.warn("[Noma DEV] LIBRARY is empty");
+    return;
+  }
+
+  console.log("%c[Noma DEV] Scanning durations…", "color:#7c9cff;font-weight:bold");
+  const lines = [];
+  const byId = {};
+
+  for (const game of LIBRARY) {
+    for (const track of game.tracks || []) {
+      const url = getTrackUrl(track);
+      try {
+        const sec = await getTrackDuration(url, {
+          // force re-read from file, ignore existing duration
+          ...track,
+          duration: undefined,
+        });
+        if (sec == null || !Number.isFinite(sec)) {
+          console.warn("[Noma DEV] failed:", track.id, url);
+          continue;
+        }
+        const d = formatDurationForJson(sec);
+        byId[track.id] = d;
+        lines.push(`    "duration": ${d},  // ${track.id} — ${track.title}`);
+        console.log(`${track.id}: ${d}s`);
+      } catch (err) {
+        console.warn("[Noma DEV] error:", track.id, err);
+      }
+    }
+  }
+
+  console.log("%c[Noma DEV] Paste helpers", "color:#7c9cff;font-weight:bold");
+  console.log("— One line per track (search id in games.json and add duration):");
+  console.log(lines.join("\n"));
+
+  console.log("— Map by id:");
+  console.log(JSON.stringify(byId, null, 2));
+
+  console.log("— Full tracks with duration merged (copy into games.json tracks arrays carefully):");
+  const merged = LIBRARY.map((g) => ({
+    ...g,
+    tracks: (g.tracks || []).map((t) => ({
+      ...t,
+      duration: byId[t.id] ?? t.duration,
+    })),
+  }));
+  console.log(JSON.stringify(merged, null, 2));
+
+  console.log("%c[Noma DEV] Done.", "color:#7c9cff;font-weight:bold");
+}
+
+function mountDurationDevTool() {
+  if (!DEV_DURATION_TOOL) return;
+
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.id = "dev-duration-scan";
+  btn.textContent = "DEV: Scan durations";
+  btn.title = "Logs JSON-ready durations to the console";
+  Object.assign(btn.style, {
+    position: "fixed",
+    right: "12px",
+    bottom: "110px",
+    zIndex: "9999",
+    padding: "10px 12px",
+    borderRadius: "10px",
+    border: "1px solid rgba(124,156,255,0.5)",
+    background: "rgba(20,20,24,0.95)",
+    color: "#7c9cff",
+    font: "600 12px system-ui,sans-serif",
+    cursor: "pointer",
+    boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+  });
+  btn.addEventListener("click", async () => {
+    btn.disabled = true;
+    btn.textContent = "Scanning…";
+    try {
+      await runDurationScan();
+      btn.textContent = "Done — see console";
+    } catch (e) {
+      console.error(e);
+      btn.textContent = "Error — see console";
+    }
+    setTimeout(() => {
+      btn.disabled = false;
+      btn.textContent = "DEV: Scan durations";
+    }, 2000);
+  });
+  document.body.appendChild(btn);
 }
 
 init();
