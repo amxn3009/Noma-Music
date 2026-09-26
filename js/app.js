@@ -1004,6 +1004,10 @@ function openGame(id) {
     if (el) el.textContent = formatTime(sec);
   });
 
+  bindTrackListFade();
+  bindGameHeaderToggle();
+  requestAnimationFrame(updateTrackFade);
+
   trackListEl.querySelectorAll(".track-row").forEach((row) => {
     row.addEventListener("click", (e) => {
       if (e.target.closest(".track-actions")) {
@@ -1082,12 +1086,7 @@ function openGame(id) {
 
   // ── these must run every time you open a game (NOT inside shuffle) ──
   setupGameTrackSearch();
-
-  const scroller = document.querySelector(".track-list-scroll");
-  if (scroller) scroller.dataset.fadeBound = "";
-  bindTrackListFade();
-  requestAnimationFrame(updateTrackFade);
-
+  bindTrackSearch();
 }
 
 function bindTabs() {
@@ -1859,13 +1858,33 @@ function setupGameTrackSearch() {
   clean.value = "";
   input.replaceWith(clean);
 
+  const emptyEl = document.getElementById("track-search-empty");
+  if (emptyEl) emptyEl.classList.add("hidden");
+
   clean.addEventListener("input", () => {
     const q = clean.value.trim().toLowerCase();
+
     document.querySelectorAll("#track-list .track-row").forEach((row) => {
       const name =
         row.querySelector(".track-name")?.textContent?.toLowerCase() || "";
-      row.hidden = Boolean(q) && !name.includes(q);
+      const match = !q || name.includes(q);
+      row.hidden = !match;
+      row.classList.toggle("track-row-hidden", !match);
+      if (!match) row.style.opacity = "1";
     });
+
+    // empty state
+    if (emptyEl) {
+      if (!q) {
+        emptyEl.classList.add("hidden");
+      } else {
+        const visible = document.querySelectorAll(
+          "#track-list .track-row:not([hidden]):not(.track-row-hidden)"
+        );
+        emptyEl.classList.toggle("hidden", visible.length > 0);
+      }
+    }
+
     requestAnimationFrame(updateTrackFade);
   });
 }
@@ -1876,60 +1895,129 @@ function bindGameHeaderToggle() {
   btn.dataset.bound = "1";
 
   btn.addEventListener("click", () => {
-    const sticky = document.querySelector(".game-sticky-top");
-    const detail = $("#game-detail");
-    if (!sticky || !detail) return;
+  const sticky = document.querySelector(".game-sticky-top");
+  const detail = $("#game-detail");
+  const titleEl = $("#game-title");
+  if (!sticky || !detail) return;
 
-    const collapsed = sticky.classList.toggle("is-collapsed");
-    detail.classList.toggle("header-collapsed", collapsed);
-    btn.setAttribute("aria-expanded", collapsed ? "false" : "true");
+  const collapsed = sticky.classList.toggle("is-collapsed");
+  detail.classList.toggle("header-collapsed", collapsed);
+  btn.setAttribute("aria-expanded", collapsed ? "false" : "true");
 
-    const titleEl = $("#game-title");
-    if (titleEl) {
-      titleEl.textContent = collapsed
-        ? titleEl.dataset.short || titleEl.dataset.full || titleEl.textContent
-        : titleEl.dataset.full || titleEl.textContent;
-    }
+  if (titleEl) {
+    titleEl.textContent = collapsed
+      ? (titleEl.dataset.short || titleEl.dataset.full || titleEl.textContent)
+      : (titleEl.dataset.full || titleEl.textContent);
+  }
 
-    requestAnimationFrame(updateTrackFade);
-  });
+  // keep center alignment during size tween, then settle
+  sticky.classList.add("is-animating-header");
+  window.clearTimeout(sticky._headerAnimTimer);
+  sticky._headerAnimTimer = window.setTimeout(() => {
+    sticky.classList.remove("is-animating-header");
+  }, 450);
+
+  const start = performance.now();
+  const tick = () => {
+    updateTrackFade();
+    if (performance.now() - start < 480) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+});
 }
+
 
 function updateTrackFade() {
   const scroller = document.querySelector(".track-list-scroll");
   const stickyHeader = document.querySelector(".game-sticky-top");
   if (!scroller || !stickyHeader) return;
 
-  const rows = [...scroller.querySelectorAll(".track-row")].filter(
-    (r) => !r.hidden
+  const rows = scroller.querySelectorAll(
+    ".track-row:not(.track-row-hidden):not([hidden])"
   );
   if (!rows.length) return;
 
-  if (scroller.scrollTop < 2) {
-    rows.forEach((row) => {
+  const bar = stickyHeader.querySelector(".game-sticky-bar");
+  const headerBlock =
+    stickyHeader.querySelector(".game-header") || stickyHeader;
+  const barBottom = bar?.getBoundingClientRect().bottom ?? 0;
+  const headerBottom = headerBlock.getBoundingClientRect().bottom;
+  const clipLine = Math.max(barBottom, headerBottom);
+
+  const GAP = 0;
+  const FADE = 12;
+
+  if (scroller.scrollTop < 3) {
+    for (const row of rows) {
+      row.style.transition = "none";
       row.style.opacity = "1";
-    });
+      row.style.pointerEvents = "auto";
+    }
     return;
   }
 
-  const headerBottom = stickyHeader.getBoundingClientRect().bottom;
-  const FADE = 40;
+  for (const row of rows) {
+    const top = row.getBoundingClientRect().top;
+    const dist = top - (clipLine + GAP);
 
-  rows.forEach((row) => {
-    const dist = row.getBoundingClientRect().top - headerBottom;
-    if (dist >= FADE) row.style.opacity = "1";
-    else if (dist <= 0) row.style.opacity = "0";
-    else row.style.opacity = String(dist / FADE);
-  });
+    if (dist >= FADE) {
+      // fully visible → snap, no lag
+      row.style.transition = "none";
+      row.style.opacity = "1";
+      row.style.pointerEvents = "auto";
+    } else if (dist <= 0) {
+      // fully under header → snap invisible + not clickable
+      row.style.transition = "none";
+      row.style.opacity = "0";
+      row.style.pointerEvents = "none";
+    } else {
+      // only the thin band between can soft-fade
+      row.style.transition = "opacity 0.05s linear";
+      row.style.opacity = String(dist / FADE);
+      row.style.pointerEvents = "auto";
+    }
+  }
+}
+
+function bindTrackSearch() {
+  // change the selector if your input id/class is different
+  const input =
+    $("#track-search") ||
+    $(".game-search") ||
+    document.querySelector('input[type="search"]');
+
+  if (!input) {
+    console.warn("[Noma] search input not found");
+    return;
+  }
+
+  input.value = "";
+  input.oninput = () => {
+    const q = input.value.trim().toLowerCase();
+    trackListEl.querySelectorAll(".track-row").forEach((row) => {
+      const name =
+        row.querySelector(".track-name")?.textContent?.toLowerCase() || "";
+      const match = !q || name.includes(q);
+      row.classList.toggle("track-row-hidden", !match);
+      if (!match) row.style.opacity = "1";
+    });
+    requestAnimationFrame(updateTrackFade);
+  };
 }
 
 function bindTrackListFade() {
   const scroller = document.querySelector(".track-list-scroll");
-  if (!scroller || scroller.dataset.fadeBound) return;
+  if (!scroller) return;
+
+  // Re-bind if we re-open a game (don't skip forever after first open)
+  if (scroller.dataset.fadeBound === "1") {
+    updateTrackFade();
+    return;
+  }
   scroller.dataset.fadeBound = "1";
 
   scroller.addEventListener("scroll", updateTrackFade, { passive: true });
-  // also after render / header toggle
+  window.addEventListener("resize", updateTrackFade, { passive: true });
   updateTrackFade();
 }
 

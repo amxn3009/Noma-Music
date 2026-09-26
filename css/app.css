@@ -299,9 +299,10 @@ body.fs-open.is-playing .bg-layer {
   top: 0;
   z-index: 5;
   flex-shrink: 0;
-  padding: 12px 0 12px; /* was 12px 0 0 — room for glow */
+  padding: 12px 0 0;       /* no bottom pad (fade stays fast) */
   background: transparent;
   pointer-events: none;
+  overflow: visible;
 }
 
 /* every control inside must receive clicks */
@@ -316,84 +317,197 @@ body.fs-open.is-playing .bg-layer {
   pointer-events: auto;       /* controls still clickable */
 }
 
-/* ── Compact ─────────────────────────────────────── */
-.game-sticky-top.is-collapsed .game-label,
-.game-sticky-top.is-collapsed .composer {
-  display: none !important;
+
+
+.game-sticky-top.is-collapsed .game-header,
+.game-sticky-top.is-animating-header .game-header {
+  align-items: center;
 }
 
 .game-sticky-top.is-collapsed .game-header {
+  display: flex;
+  flex-direction: row;
   align-items: center;
+  justify-content: flex-start; /* never space-between */
   gap: 12px;
-  max-height: 56px;
   margin-bottom: 0;
+  width: 100%;
+}
+
+.game-cover-lg {
+  width: 200px;
+  height: 200px;
+  border-radius: var(--radius);
+  object-fit: cover;
+  object-position: center;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  background: #222;
+  flex-shrink: 0;
+  /* prevent layout thrash */
+  will-change: width, height;
+  transition:
+    width 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    height 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    border-radius 0.4s ease,
+    box-shadow 0.35s ease;
+}
+
+.game-meta h1 {
+  font-size: 2.2rem;
+  font-weight: 800;
+  margin-bottom: 6px;
+  transition: font-size 0.4s cubic-bezier(0.22, 1, 0.36, 1), margin 0.3s ease;
+}
+
+.game-label,
+.composer {
+  opacity: 1;
+  max-height: 40px;
+  overflow: hidden;
+  transition:
+    opacity 0.3s ease,
+    max-height 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    margin 0.3s ease;
+}
+
+#play-all-btn {
+  transition:
+    width 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    height 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    padding 0.35s ease,
+    border-radius 0.35s ease,
+    gap 0.3s ease,
+    transform 0.12s ease,
+    box-shadow 0.25s,
+    background 0.2s;
+}
+
+#shuffle-all-btn {
+  transition:
+    width 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    height 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    background 0.15s,
+    transform 0.12s,
+    box-shadow 0.2s;
+}
+
+/* Compact — same properties, no display:none on label/composer */
+/* ── Compact ─────────────────────────────────────── */
+.game-sticky-top.is-collapsed {
+  padding-bottom: 0px;
+}
+
+.game-sticky-top.is-collapsed .game-label,
+.game-sticky-top.is-collapsed .composer {
+  opacity: 0;
+  max-height: 0;
+  margin: 0 !important;
+  padding: 0;
+  pointer-events: none;
+  overflow: hidden;
 }
 
 .game-sticky-top.is-collapsed .game-cover-lg {
   width: 48px;
   height: 48px;
+  min-width: 48px;
+  min-height: 48px;
   border-radius: 8px;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
 }
 
 .game-sticky-top.is-collapsed .game-meta {
+  display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 12px;
-  flex: 1;
+  gap: 8px;
+  flex: 0 1 auto !important; /* kill the grow that creates the gap */
+  width: auto !important;
+  max-width: none;
   min-width: 0;
 }
 
 .game-sticky-top.is-collapsed .game-meta h1 {
-  font-size: 1.05rem;
+  flex: 0 1 auto;
   margin: 0;
+  font-size: 1.05rem;
   font-weight: 700;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1.2;
 }
 
+.game-sticky-top.is-collapsed .game-info-row,
+.game-sticky-top.is-collapsed #game-track-count {
+  flex-shrink: 0;
+  margin: 0 !important;
+  margin-right: 0 !important;
+}
+
+/* track count only — no composer block height */
 .game-sticky-top.is-collapsed .game-info-row {
+  display: flex;
+  align-items: center;
   margin: 0;
+  flex-shrink: 0;
+  gap: 0;
+}
+
+.game-sticky-top.is-collapsed #game-track-count {
+  margin-right: 0;
+  font-size: 0.85rem;
+  white-space: nowrap;
   flex-shrink: 0;
 }
 
 .game-sticky-top.is-collapsed .game-play-actions {
-  margin-top: 0;
-  margin-left: 0;          /* NOT auto — sit right after the text */
-  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto !important;
+  margin: 0 0 0 4px !important; /* tight against title – no auto */
+  margin-left: 4px !important;
 }
 
+/* Play-all = icon-only circle */
 .game-sticky-top.is-collapsed #play-all-btn {
-  width: 40px;
-  height: 40px;
-  padding: 0;
-  border-radius: 50%;
-  gap: 0;
-}
-.game-sticky-top.is-collapsed #play-all-btn .play-all-label {
-  position: absolute;
-  width: 1px;
-  height: 1px;
+  width: 40px !important;
+  height: 40px !important;
+  min-width: 40px;
+  padding: 0 !important;
+  border-radius: 50% !important;
+  gap: 0 !important;
   overflow: hidden;
-  clip: rect(0 0 0 0);
 }
+
+.game-sticky-top.is-collapsed #play-all-btn .play-all-label {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+.game-sticky-top.is-collapsed #play-all-btn svg {
+  display: block;
+  margin: 0;
+}
+
 .game-sticky-top.is-collapsed #shuffle-all-btn {
   width: 40px;
   height: 40px;
-}
-
-.game-sticky-top.is-collapsed {
-  padding-bottom: 8px;
+  min-width: 40px;
 }
 
 .play-all-label {
   display: inline-block;
 }
 
-.game-sticky-top.is-collapsed {
-  padding-bottom: 8px;
-}
 
 
 .game-sticky-bar-right {
@@ -417,9 +531,9 @@ body.fs-open.is-playing .bg-layer {
   width: 180px;
 }
 .game-search-wrap:focus-within {
-  background: rgba(255, 255, 255, 0.09);
-  border-color: rgba(124, 156, 255, 0.45);
-  box-shadow: 0 0 0 3px rgba(124, 156, 255, 0.15);
+  border-color: var(--accent);
+  background-color: rgba(124, 156, 255, 0.08);
+  box-shadow: 0 0 0 3px rgba(124, 156, 255, 0.18);
 }
 .game-search-icon {
   flex-shrink: 0;
@@ -441,6 +555,13 @@ body.fs-open.is-playing .bg-layer {
   opacity: 0.8;
 }
 
+.track-search-empty {
+  padding: 28px 12px 40px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
 /* hide webkit clear on search if it looks ugly */
 .game-search-input::-webkit-search-cancel-button {
   -webkit-appearance: none;
@@ -460,14 +581,8 @@ body.fs-open.is-playing .bg-layer {
   -webkit-overflow-scrolling: touch;
   padding: 0 28px calc(var(--player-h) + 28px);
   position: relative;
-  -webkit-mask-image: none;
-  mask-image: none;
 }
 
-/* smooth opacity when rows fade */
-.track-row {
-  transition: opacity 0.1s linear, background 0.15s;
-}
 
 .game-sticky-top .back-btn {
   margin-bottom: 14px;
@@ -511,9 +626,8 @@ body.fs-open.is-playing .bg-layer {
   height: 16px;
   display: block;
   opacity: 0.7;
-  /* Back1 points left → rotate to point up when expanded */
   transform: rotate(90deg);
-  transition: transform 0.2s ease, opacity 0.15s;
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.15s;
 }
 
 .header-toggle-btn:hover .header-toggle-icon {
@@ -628,21 +742,25 @@ body.fs-open.is-playing .bg-layer {
   background: transparent;
 }
 
+/* Expanded (default) — same easing as collapse */
 .game-header {
   display: flex;
   flex-direction: row;
-  align-items: flex-end;
+  align-items: center;     /* always – no flex-end */
   gap: 28px;
   margin-bottom: 4px;
   overflow: visible;
-  max-height: 400px;
+  /* NO max-height, NO max-height transition */
+  transition:
+    gap 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    margin-bottom 0.35s ease;
 }
 
 .game-meta {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  flex: 1;
+  flex: 1; /* expanded only – title can use space */
 }
 
 .game-play-actions {
@@ -650,28 +768,48 @@ body.fs-open.is-playing .bg-layer {
   align-items: center;
   gap: 10px;
   margin-top: 14px;
+  transition: margin 0.35s ease, gap 0.35s ease;
 }
 
 .game-cover-lg {
   width: 200px;
   height: 200px;
+  min-width: 200px;
+  min-height: 200px;
   border-radius: var(--radius);
   object-fit: cover;
+  object-position: center;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
   background: #222;
   flex-shrink: 0;
+  will-change: width, height;
   transition:
-    width 0.35s var(--ease),
-    height 0.35s var(--ease),
-    border-radius 0.3s ease,
-    box-shadow 0.3s ease;
+    width 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    height 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    min-width 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    min-height 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    border-radius 0.35s ease,
+    box-shadow 0.35s ease;
 }
 
 .game-meta h1 {
   font-size: 2.2rem;
   font-weight: 800;
   margin-bottom: 6px;
+  transition: font-size 0.4s cubic-bezier(0.22, 1, 0.36, 1), margin 0.3s ease;
 }
+
+.game-label,
+.composer {
+  opacity: 1;
+  max-height: 40px;
+  overflow: hidden;
+  transition:
+    opacity 0.3s ease,
+    max-height 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    margin 0.3s ease;
+}
+
 .primary-btn {
   margin-top: 0;
   background: white;
@@ -733,6 +871,11 @@ body.fs-open.is-playing .bg-layer {
   transform: scale(0.92) !important;
 }
 
+.primary-btn,
+.circle-btn {
+  overflow: visible;
+}
+
 /* keep shared press list in sync */
 .ctrl-btn,
 .play-btn,
@@ -760,7 +903,7 @@ body.fs-open.is-playing .bg-layer {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding-top: 12px; /* was 20px — less empty space under header */
+  padding-top: 20px;       /* breathing room under sticky */
 }
 
 .track-row {
@@ -768,12 +911,20 @@ body.fs-open.is-playing .bg-layer {
   grid-template-columns: 40px minmax(0, 1fr) 48px 28px;
   align-items: center;
   gap: 8px;
-  padding: 6px 10px;   /* tighter than 8px 12px */
+  padding: 6px 10px;
   border-radius: 8px;
   cursor: pointer;
-  transition: opacity 0.1s linear, background 0.15s;
+  transition: background 0.15s; /* NOT opacity */
   min-height: 0;
   line-height: 1.25;
+}
+
+.track-row.track-row-hidden {
+  display: none !important;
+}
+
+.track-row.is-faded-out {
+  pointer-events: none;
 }
 
 .track-duration {
@@ -1049,11 +1200,15 @@ body.fs-open .volume-wrap {
   font-size: 1.4rem;
   display: grid;
   place-items: center;
+  transition: transform 0.12s ease, background 0.15s, box-shadow 0.15s;
 }
 .play-btn:hover {
   background: #eee;
   color: #111;
   transform: scale(1.06);
+}
+.play-btn:active {
+  transform: scale(0.92) !important;
 }
 
 /* Don’t resize the progress row in fullscreen either */
@@ -1910,4 +2065,84 @@ body.fs-open .progress-row {
 }
 .settings-reset-btn:hover {
   background: rgba(255,255,255,0.1);
+}
+
+
+/* ===== COMPACT LAYOUT FIX (last = highest priority) ===== */
+.game-sticky-top.is-collapsed .game-header {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 12px !important;
+  width: 100%;
+  margin-bottom: 0 !important;
+}
+
+.game-sticky-top.is-collapsed .game-meta {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  flex: 0 1 auto !important;
+  width: auto !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  gap: 8px !important;
+}
+
+/* Label + composer: fully out of layout (not just invisible) */
+.game-sticky-top.is-collapsed .game-label,
+.game-sticky-top.is-collapsed .composer {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  margin: -1px !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  border: 0 !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  flex: none !important;
+}
+
+.game-sticky-top.is-collapsed .game-meta h1 {
+  flex: 0 1 auto !important;
+  margin: 0 !important;
+  font-size: 1.05rem !important;
+  font-weight: 700 !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+.game-sticky-top.is-collapsed .game-info-row {
+  display: flex !important;
+  align-items: center !important;
+  flex: 0 0 auto !important;
+  margin: 0 !important;
+  gap: 0 !important;
+}
+
+.game-sticky-top.is-collapsed #game-track-count {
+  margin: 0 !important;
+  font-size: 0.85rem !important;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.game-sticky-top.is-collapsed .game-play-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  flex: 0 0 auto !important;
+  margin: 0 0 0 6px !important;
+  margin-left: 20px !important;
+  margin-top: 0 !important;
+}
+
+.game-sticky-top.is-collapsed {
+  padding-bottom: 0 !important;
 }
