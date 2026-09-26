@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <title>Noma Music</title>
   <link rel="stylesheet" href="css/app.css">
   <link rel="icon" href="/Assets/Logo/Favicon/favicon.ico" sizes="any">
@@ -53,44 +53,61 @@
         <div id="playlists-list" class="playlists-list"></div>
       </section>
 
-<section id="game-detail" class="tab-panel hidden">
-  <button id="back-to-games" class="back-btn">
-    <img src="Assets/Common/Back1.png" alt="" class="back-icon">
-    Zurück
-  </button>
+<section id="game-detail" class="tab-panel game-detail hidden">
+  <div class="track-list-scroll" id="track-list-scroll">
+    <div class="game-sticky-top">
+      <div class="game-sticky-bar">
+        <button id="back-to-games" class="back-btn">
+          <img src="Assets/Common/Back1.png" alt="" class="back-icon">
+          Zurück
+        </button>
 
-  <div class="game-header">
-    <img id="game-cover" class="game-cover-lg" src="" alt="">
-
-    <div class="game-meta">
-      <p class="label">Spiel</p>
-      <h1 id="game-title"></h1>
-
-      <div class="game-info-row">
-        <p id="game-track-count" class="muted"></p>
-        <p id="game-composer" class="composer">
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-          </svg>
-          <span id="game-composer-name"></span>
-        </p>
+        <button
+          id="game-header-toggle"
+          class="header-toggle-btn"
+          type="button"
+          title="Header ein-/ausklappen"
+          aria-label="Header ein-/ausklappen"
+          aria-expanded="true"
+        >
+          <img src="Assets/Common/Back1.png" alt="" class="header-toggle-icon">
+        </button>
       </div>
 
-      <div class="game-play-actions">
-        <button id="play-all-btn" class="primary-btn">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-          Alles abspielen
-        </button>
-        <button id="shuffle-all-btn" class="circle-btn" title="Shuffle album" aria-label="Shuffle album">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
-            <path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/>
-          </svg>
-        </button>
+      <div class="game-header">
+        <img id="game-cover" class="game-cover-lg" src="" alt="">
+
+        <div class="game-meta">
+          <p class="label">Spiel</p>
+          <h1 id="game-title"></h1>
+
+          <div class="game-info-row">
+            <p id="game-track-count" class="muted"></p>
+            <p id="game-composer" class="composer">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+              </svg>
+              <span id="game-composer-name"></span>
+            </p>
+          </div>
+
+          <div class="game-play-actions">
+            <button id="play-all-btn" class="primary-btn">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+              Alles abspielen
+            </button>
+            <button id="shuffle-all-btn" class="circle-btn" title="Shuffle album" aria-label="Shuffle album">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                <path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/>
+              </svg>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
-  </div>
 
-  <div id="track-list" class="track-list"></div>
+    <div id="track-list" class="track-list"></div>
+  </div>
 </section>
     </main>
 
@@ -157,7 +174,7 @@
           <img src="Assets/Common/Back1.png" alt="" class="back-icon">
           Zurück
         </button>
-        <h1 class="page-title settings-title">Einstellungen</h1>
+        <h1 class="settings-title">Einstellungen</h1>
       </header>
       <!-- rest unchanged -->
 
@@ -205,13 +222,23 @@
   </section>
 
   <!-- Queue panel -->
-  <aside id="queue-panel" class="queue-panel hidden">
-    <div class="queue-header">
-      <h2>Warteschlange</h2>
-      <button id="queue-close" class="ctrl-btn">✕</button>
+<aside id="queue-panel" class="queue-panel hidden">
+  <div class="queue-header">
+    <h2>Warteschlange</h2>
+    <div class="queue-header-actions">
+      <button id="queue-clear" class="ctrl-btn" type="button" title="Warteschlange leeren">
+        <!-- trash or text -->
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+        </svg>
+      </button>
+      <button id="queue-close" class="ctrl-btn" type="button" title="Schließen">✕</button>
     </div>
-    <ul id="queue-list" class="queue-list"></ul>
-  </aside>
+  </div>
+  <ul id="queue-list" class="queue-list"></ul>
+</aside>
+
+
 
   <!-- Context menu -->
 <div id="context-menu" class="context-menu hidden">

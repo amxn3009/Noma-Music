@@ -94,6 +94,35 @@ function isIOS() {
     (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 }
 
+let mediaEl = null;       // HTMLAudioElement when streaming
+let useMediaEl = false;   // true = not using AudioBuffer
+let mediaRaf = null;
+let mediaLoopStart = 0;   // seconds
+let mediaForceFullLoop = false;
+
+function isMobileLike() {
+  return isIOS() || /Android/i.test(navigator.userAgent || "") ||
+    (navigator.maxTouchPoints > 1 && window.innerWidth < 900);
+}
+
+function stopMediaEl() {
+  if (mediaRaf) {
+    cancelAnimationFrame(mediaRaf);
+    mediaRaf = null;
+  }
+  if (mediaEl) {
+    try {
+      mediaEl.onended = null;
+      mediaEl.ontimeupdate = null;
+      mediaEl.pause();
+      mediaEl.removeAttribute("src");
+      mediaEl.load();
+    } catch (_) {}
+    mediaEl = null;
+  }
+  useMediaEl = false;
+}
+
 async function decodeWebAudio(url) {
   const ctx = await resumeAudio();
   const res = await fetch(url);
@@ -116,6 +145,9 @@ function resetPlayerToIdle() {
   state.queueIndex = -1;
   state.currentTime = 0;
   state.duration = 0;
+  state.queue = [];
+  state.queueIndex = -1;
+  unshuffledQueue = null;
 
   document.body.classList.remove("is-playing", "is-transitioning");
 
@@ -201,6 +233,7 @@ async function getTrackDuration(url, track) {
 }
 
 function stopSource() {
+  stopMediaEl();
   if (animFrame) {
     cancelAnimationFrame(animFrame);
     animFrame = null;
@@ -229,6 +262,10 @@ function getLoopStartSec() {
 
 /** Actual playback position in seconds (handles intro + seamless loop). */
 function getPlaybackPosition() {
+  if (useMediaEl && mediaEl) {
+    return mediaEl.currentTime || 0;
+  }
+
   if (!decodedBuffer) return 0;
 
   const duration = decodedBuffer.duration;
@@ -246,13 +283,141 @@ function getPlaybackPosition() {
     return Math.min(Math.max(0, elapsed), duration);
   }
 
-  // With loop: first playthrough goes 0 → duration, then wraps into [loopStart, duration)
   if (elapsed < duration) {
     return Math.min(Math.max(0, elapsed), duration);
   }
   const loopLen = Math.max(0.001, duration - loopStart);
   const afterEnd = elapsed - duration;
   return loopStart + (afterEnd % loopLen);
+}
+
+function getMediaPosition() {
+  return mediaEl ? mediaEl.currentTime : 0;
+}
+
+function updateMediaProgress() {
+  if (!mediaEl || scrubbing) {
+    if (state.playing && useMediaEl) {
+      mediaRaf = requestAnimationFrame(updateMediaProgress);
+    }
+    return;
+  }
+
+  const duration = mediaEl.duration || state.duration || 0;
+  let t = mediaEl.currentTime;
+
+    if (
+    state.playing &&
+    !transitioning &&
+    state.loopMode === "one" &&
+    duration > 0 &&
+    t >= duration - 0.05
+  ) {
+    mediaEl.currentTime = mediaLoopStart > 0 ? mediaLoopStart : 0;
+    t = mediaEl.currentTime;
+  }
+
+  // custom loop point (same idea as BFSTM loopStart)
+  if (
+    state.playing &&
+    !transitioning &&
+    (mediaForceFullLoop || mediaLoopStart > 0) &&
+    (state.loopMode === "one" ||
+      state.loopMode === "off" ||
+      state.loopMode === "count")
+  ) {
+    // soft-end / count handled like buffer path via cycle logic if you want;
+    // simple seamless loop for "one" and soft loop:
+    if (
+      state.loopMode === "one" ||
+      ((state.loopMode === "off" || state.loopMode === "count") &&
+        (mediaForceFullLoop || mediaLoopStart > 0))
+    ) {
+      if (duration > 0 && t >= duration - 0.05) {
+        // wrap
+        if (state.loopMode === "off" || state.loopMode === "count") {
+          // reuse your lastLoopCycle / loopsRemaining logic if desired
+        }
+        mediaEl.currentTime = mediaForceFullLoop ? 0 : mediaLoopStart;
+        t = mediaEl.currentTime;
+      }
+    }
+  }
+
+  state.currentTime = t;
+  state.duration = duration;
+  const ratio = duration > 0 ? Math.min(1, t / duration) : 0;
+  const fill = $("#progress-fill");
+  if (fill) fill.style.width = `${ratio * 100}%`;
+  const tCur = $("#time-current");
+  if (tCur) tCur.textContent = formatTime(t);
+  const tTot = $("#time-total");
+  if (tTot) tTot.textContent = formatTime(duration);
+
+  if (state.playing) {
+    mediaRaf = requestAnimationFrame(updateMediaProgress);
+  }
+}
+
+async function playMediaUrl(url, track, offsetSec = 0) {
+  stopMediaEl();
+  releaseDecodedBuffer();
+
+  await resumeAudio(); // keeps unlock on iOS
+
+  mediaEl = new Audio();
+  mediaEl.preload = "auto";
+  mediaEl.src = url;
+  mediaEl.volume = masterVolume;
+  useMediaEl = true;
+
+  mediaForceFullLoop = !!track.LoopFromStoE;
+  mediaLoopStart =
+    mediaForceFullLoop
+      ? 0
+      : Number.isFinite(track.loopStart) && track.loopStart > 0
+        ? track.loopStart
+        : 0;
+
+  // infinite loop mode
+  // ∞ = full-file repeat (Credits, etc.). Custom loopStart is handled in updateMediaProgress.
+  mediaEl.loop = state.loopMode === "one" && !(mediaLoopStart > 0);
+  // if custom loopStart, we handle wrap in updateMediaProgress (loop=false)
+
+  await new Promise((resolve, reject) => {
+    mediaEl.onloadedmetadata = () => resolve();
+    mediaEl.onerror = () => reject(new Error("Media load failed"));
+  });
+
+  state.duration =
+    Number.isFinite(track.duration) && track.duration > 0
+      ? track.duration
+      : mediaEl.duration;
+  decodedBuffer = null; // no PCM buffer
+
+  const startAt = Math.max(0, Math.min(offsetSec, state.duration - 0.05));
+  mediaEl.currentTime = startAt;
+  pauseOffset = startAt;
+
+  mediaEl.onended = () => {
+    if (!state.playing || transitioning) return;
+
+    if (state.loopMode === "one") {
+      // Safety net if .loop didn't fire (some browsers)
+      mediaEl.currentTime = mediaLoopStart > 0 ? mediaLoopStart : 0;
+      mediaEl.play().catch(() => {});
+      return;
+    }
+
+    nextTrack(true);
+  };
+
+  await mediaEl.play();
+  state.playing = true;
+  document.body.classList.add("is-playing");
+  updatePlayerUI();
+  markPlayingTrack(getCurrentTrackId());
+  updateMediaProgress();
 }
 
 function updateProgressUI() {
@@ -483,12 +648,18 @@ function setVolume(value) {
     slider.value = masterVolume;
   }
 
+  if (mediaEl) {
+    mediaEl.volume = masterVolume;
+  }
+
+  settings.volume = masterVolume;
+  saveSettings();
+
   if (!currentGain || !audioCtx) return;
 
   const now = audioCtx.currentTime;
 
   if (transitioning) {
-    // Keep the fade to 0, but scale it to the new volume
     const elapsed = Math.max(0, now - transitionStartedAt);
     const progress = Math.min(1, elapsed / getTransitionSec());
     const remaining = Math.max(0.05, getTransitionSec() - elapsed);
@@ -501,8 +672,6 @@ function setVolume(value) {
     currentGain.gain.cancelScheduledValues(now);
     currentGain.gain.setValueAtTime(masterVolume, now);
   }
-  settings.volume = masterVolume;
-  saveSettings();
 }
 
 function bindVolume() {
@@ -676,6 +845,15 @@ function toggleShuffle() {
   renderQueue();
 }
 
+function releaseDecodedBuffer() {
+  stopSource(); // also stops media via stopMediaEl()
+  decodedBuffer = null;
+  // help Safari drop the large ArrayBuffer sooner
+  if (typeof window.gc === "function") {
+    try { window.gc(); } catch (_) {}
+  }
+}
+
 async function decodeBfstm(url) {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Failed to load ${url}: ${res.status}`);
@@ -725,6 +903,7 @@ async function init() {
   bindQueuePanel();
   bindFullscreen();
   bindContextMenu();
+  bindGameHeaderToggle();
   updatePlayerUI();
   bindVolume();
   bindHotkeys();
@@ -813,6 +992,9 @@ function openGame(id) {
     if (el) el.textContent = formatTime(sec);
   });
 
+  bindTrackListFade()
+  requestAnimationFrame(updateTrackFade);
+
   trackListEl.querySelectorAll(".track-row").forEach((row) => {
     row.addEventListener("click", (e) => {
       if (e.target.closest(".track-actions")) {
@@ -887,6 +1069,7 @@ function openGame(id) {
     playCurrent();
     renderQueue();
     updatePlayerUI();
+    bindGameHeaderToggle();
   };
 }
 
@@ -967,7 +1150,7 @@ async function playCurrent() {
   document.body.classList.add("is-playing");
   markPlayingTrack(track.id);
 
-  stopSource();
+  releaseDecodedBuffer();
   state.playing = false;
   pauseOffset = 0;
   updatePlayerUI();
@@ -981,28 +1164,10 @@ async function playCurrent() {
       ensureAudioContext();
     }
 
-    // Opus / m4a / wav / …
+    // Opus / m4a / wav / ogg — stream on every device (low RAM)
     if (typeof isWebAudioFile === "function" && isWebAudioFile(url)) {
-      const audioBuffer = await decodeWebAudio(url);
-      decodedBuffer = audioBuffer;
-      sampleRate = audioBuffer.sampleRate;
-
       forceFullLoop = !!track.LoopFromStoE;
-      if (forceFullLoop) {
-        loopStartSample = 0;
-      } else if (Number.isFinite(track.loopStart) && track.loopStart > 0) {
-        loopStartSample = Math.floor(track.loopStart * sampleRate);
-      } else {
-        loopStartSample = 0;
-      }
-
-      state.duration =
-        Number.isFinite(track.duration) && track.duration > 0
-          ? track.duration
-          : audioBuffer.duration;
-      state.currentTime = 0;
-
-      playBuffer(decodedBuffer, 0);
+      await playMediaUrl(url, track, 0);
       if (!$("#queue-panel")?.classList.contains("hidden")) renderQueue();
       return;
     }
@@ -1108,16 +1273,28 @@ function smoothPauseEq(row) {
 }
 
 
-function togglePlay() {
+async function togglePlay() {
   if (state.queueIndex < 0 && state.queue.length === 0) return;
 
+  // ── Pause ──
   if (state.playing) {
-    if (transitioning && audioCtx) {
-      // How far into the fade we are
-      transitionProgress = Math.max(0, audioCtx.currentTime - transitionStartedAt);
-      // Real song position (not the 5s transition clock)
-      pauseOffset = getPlaybackPosition();
+    if (useMediaEl && mediaEl) {
+      pauseOffset = mediaEl.currentTime;
+      mediaEl.pause();
+      if (mediaRaf) {
+        cancelAnimationFrame(mediaRaf);
+        mediaRaf = null;
+      }
+      state.playing = false;
+      document.body.classList.remove("is-playing");
+      markPlayingTrack(getCurrentTrackId());
+      updatePlayerUI();
+      return;
+    }
 
+    if (transitioning && audioCtx) {
+      transitionProgress = Math.max(0, audioCtx.currentTime - transitionStartedAt);
+      pauseOffset = getPlaybackPosition();
       if (currentGain) {
         const now = audioCtx.currentTime;
         currentGain.gain.cancelScheduledValues(now);
@@ -1136,13 +1313,32 @@ function togglePlay() {
     state.playing = false;
     document.body.classList.remove("is-playing");
     markPlayingTrack(getCurrentTrackId());
-  } else if (transitioning && decodedBuffer) {
-    // Resume from the real pause point, continue the same fade
+    updatePlayerUI();
+    return;
+  }
+
+  // ── Resume / start ──
+  if (useMediaEl && mediaEl) {
+    try {
+      mediaEl.currentTime = pauseOffset;
+      await mediaEl.play();
+      state.playing = true;
+      document.body.classList.add("is-playing");
+      markPlayingTrack(getCurrentTrackId());
+      updatePlayerUI();
+      updateMediaProgress();
+    } catch (err) {
+      console.warn("[Noma] media resume failed", err);
+    }
+    return;
+  }
+
+  if (transitioning && decodedBuffer) {
     const sec = getTransitionSec();
     const already = Math.min(sec, Math.max(0, transitionProgress));
     const remaining = Math.max(0.05, sec - already);
 
-    playBuffer(decodedBuffer, pauseOffset); // ← was getLoopStartSec() before
+    playBuffer(decodedBuffer, pauseOffset);
 
     if (currentGain && audioCtx) {
       const now = audioCtx.currentTime;
@@ -1154,7 +1350,11 @@ function togglePlay() {
       transitioning = true;
       document.body.classList.add("is-transitioning");
     }
-  } else if (decodedBuffer) {
+    updatePlayerUI();
+    return;
+  }
+
+  if (decodedBuffer) {
     playBuffer(decodedBuffer, pauseOffset);
   } else {
     playCurrent();
@@ -1226,9 +1426,17 @@ function toggleLoop() {
 
   updatePlayerUI();
 
-  // During outro: only update mode/UI, keep the fade going
+  // During outro: only update mode/UI
   if (transitioning) return;
 
+  // ── Stream path (Opus / m4a) ──
+  if (useMediaEl && mediaEl) {
+    mediaEl.loop = state.loopMode === "one" && !(mediaLoopStart > 0);
+    lastLoopCycle = -1;
+    return;
+  }
+
+  // ── Buffer path (BFSTM) — rebuild source at current position ──
   if (decodedBuffer) {
     const pos = getPlaybackPosition();
     if (state.playing) {
@@ -1356,6 +1564,11 @@ function renderQueue() {
   });
 
   bindQueueItemEvents(list);
+
+  const current = list.querySelector(".queue-item.current");
+  if (current && !$("#queue-panel")?.classList.contains("hidden")) {
+    current.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }
 }
 
 function bindQueueItemEvents(list) {
@@ -1588,16 +1801,85 @@ function bindQueuePanel() {
   $("#btn-queue")?.addEventListener("click", () => {
     const panel = $("#queue-panel");
     panel.classList.toggle("hidden");
-    if (!panel.classList.contains("hidden")) renderQueue();
+    if (!panel.classList.contains("hidden")) {
+      renderQueue();
+      // scroll current track into view after DOM paint
+      requestAnimationFrame(() => {
+        const current = $("#queue-list .queue-item.current");
+        current?.scrollIntoView({ block: "center", behavior: "smooth" });
+      });
+    }
   });
+
   $("#queue-close")?.addEventListener("click", () => {
     $("#queue-panel").classList.add("hidden");
+  });
+
+  $("#queue-clear")?.addEventListener("click", () => {
+    if (!state.queue.length) return;
+    state.queue = [];
+    state.queueIndex = -1;
+    unshuffledQueue = null;
+    resetPlayerToIdle();
+    renderQueue();
   });
 }
 
 function bindFullscreen() {
   $("#btn-fullscreen")?.addEventListener("click", () => toggleFullscreen());
   $("#btn-minimize")?.addEventListener("click", () => toggleFullscreen());
+}
+
+function bindGameHeaderToggle() {
+  const btn = $("#game-header-toggle");
+  if (!btn || btn.dataset.bound) return;
+  btn.dataset.bound = "1";
+
+  btn.addEventListener("click", () => {
+    const sticky = document.querySelector(".game-sticky-top");
+    const detail = $("#game-detail");
+    if (!sticky || !detail) return;
+
+    const collapsed = sticky.classList.toggle("is-collapsed");
+    detail.classList.toggle("header-collapsed", collapsed);
+    btn.setAttribute("aria-expanded", collapsed ? "false" : "true");
+
+    requestAnimationFrame(updateTrackFade);
+  });
+}
+
+function updateTrackFade() {
+  const scroller = document.querySelector(".track-list-scroll");
+  const stickyHeader = document.querySelector(".game-sticky-top");
+  if (!scroller || !stickyHeader) return;
+
+  const rows = scroller.querySelectorAll(".track-row");
+  if (!rows.length) return;
+
+  if (scroller.scrollTop < 2) {
+    for (const row of rows) row.style.opacity = "1";
+    return;
+  }
+
+  const headerBottom = stickyHeader.getBoundingClientRect().bottom;
+  const FADE = 40;
+
+  for (const row of rows) {
+    const dist = row.getBoundingClientRect().top - headerBottom;
+    if (dist >= FADE) row.style.opacity = "1";
+    else if (dist <= 0) row.style.opacity = "0";
+    else row.style.opacity = String(dist / FADE);
+  }
+}
+
+function bindTrackListFade() {
+  const scroller = document.querySelector(".track-list-scroll");
+  if (!scroller || scroller.dataset.fadeBound) return;
+  scroller.dataset.fadeBound = "1";
+
+  scroller.addEventListener("scroll", updateTrackFade, { passive: true });
+  // also after render / header toggle
+  updateTrackFade();
 }
 
 function showContextMenu(x, y, payload) {
@@ -1629,7 +1911,7 @@ function bindContextMenu() {
 }
 
 function bindPlayerChrome() {
-  $("#btn-play")?.addEventListener("click", togglePlay);
+  $("#btn-play")?.addEventListener("click", () => togglePlay());
   $("#btn-prev")?.addEventListener("click", prevTrack);
   $("#btn-next")?.addEventListener("click", nextTrack);
   $("#btn-loop")?.addEventListener("click", toggleLoop);
@@ -1644,25 +1926,36 @@ function bindPlayerChrome() {
     return Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
   }
 
+  function currentDuration() {
+    if (useMediaEl && mediaEl) {
+      return mediaEl.duration || state.duration || 0;
+    }
+    return decodedBuffer?.duration || 0;
+  }
+
   function paintSeek(ratio) {
-    if (!decodedBuffer) return 0;
-    const seekTo = ratio * decodedBuffer.duration;
+    const duration = currentDuration();
+    if (!duration) return 0;
+    const seekTo = ratio * duration;
     $("#progress-fill").style.width = `${ratio * 100}%`;
     $("#time-current").textContent = formatTime(seekTo);
     return seekTo;
   }
 
   bar.addEventListener("pointerdown", (e) => {
-    if (!decodedBuffer || transitioning) return;
+    if (transitioning) return;
+    if (!decodedBuffer && !(useMediaEl && mediaEl)) return;
     scrubbing = true;
     document.body.classList.add("is-scrubbing");
-    try { bar.setPointerCapture(e.pointerId); } catch (_) {}
+    try {
+      bar.setPointerCapture(e.pointerId);
+    } catch (_) {}
     paintSeek(ratioFromClientX(e.clientX));
     e.preventDefault();
   });
 
   window.addEventListener("pointermove", (e) => {
-    if (!scrubbing || !decodedBuffer) return;
+    if (!scrubbing) return;
     paintSeek(ratioFromClientX(e.clientX));
   });
 
@@ -1671,17 +1964,27 @@ function bindPlayerChrome() {
     scrubbing = false;
     document.body.classList.remove("is-scrubbing");
 
-    if (!decodedBuffer) return;
-
-    // cancel any transition logic that might have been pending
     if (typeof cancelTransition === "function") cancelTransition(true);
     lastLoopCycle = -1;
 
+    const duration = currentDuration();
+    if (!duration) return;
+
     const seekTo = paintSeek(ratioFromClientX(e.clientX));
-    // stay a bit before the true end so we don't instantly fire onended / transition
-    const safeEnd = Math.max(0, decodedBuffer.duration - 0.05);
+    const safeEnd = Math.max(0, duration - 0.05);
     const pos = Math.min(seekTo, safeEnd);
 
+    if (useMediaEl && mediaEl) {
+      mediaEl.currentTime = pos;
+      pauseOffset = pos;
+      if (state.playing) {
+        mediaEl.play().catch(() => {});
+        updateMediaProgress();
+      }
+      return;
+    }
+
+    if (!decodedBuffer) return;
     if (state.playing) {
       playBuffer(decodedBuffer, pos);
     } else {
