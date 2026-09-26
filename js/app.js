@@ -1946,6 +1946,7 @@ function updateTrackFade() {
 
   const GAP = 0;
   const FADE = 12;
+  const HIDE = 1; // Safari subpixel: treat ≤1px under header as fully hidden
 
   if (scroller.scrollTop < 3) {
     for (const row of rows) {
@@ -1961,18 +1962,15 @@ function updateTrackFade() {
     const dist = top - (clipLine + GAP);
 
     if (dist >= FADE) {
-      // fully visible → snap, no lag
       row.style.transition = "none";
       row.style.opacity = "1";
       row.style.pointerEvents = "auto";
-    } else if (dist <= 0) {
-      // fully under header → snap invisible + not clickable
+    } else if (dist <= HIDE) {
       row.style.transition = "none";
       row.style.opacity = "0";
       row.style.pointerEvents = "none";
     } else {
-      // only the thin band between can soft-fade
-      row.style.transition = "opacity 0.05s linear";
+      row.style.transition = "none"; // no soft fade lag on Safari
       row.style.opacity = String(dist / FADE);
       row.style.pointerEvents = "auto";
     }
@@ -2009,14 +2007,29 @@ function bindTrackListFade() {
   const scroller = document.querySelector(".track-list-scroll");
   if (!scroller) return;
 
-  // Re-bind if we re-open a game (don't skip forever after first open)
   if (scroller.dataset.fadeBound === "1") {
     updateTrackFade();
     return;
   }
   scroller.dataset.fadeBound = "1";
 
-  scroller.addEventListener("scroll", updateTrackFade, { passive: true });
+  let ticking = false;
+  const onScroll = () => {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => {
+      updateTrackFade();
+      // Safari: second frame after momentum/layout settles
+      requestAnimationFrame(() => {
+        updateTrackFade();
+        ticking = false;
+      });
+    });
+  };
+
+  scroller.addEventListener("scroll", onScroll, { passive: true });
+  // fires when finger/momentum stops (Safari 16.4+)
+  scroller.addEventListener("scrollend", () => updateTrackFade(), { passive: true });
   window.addEventListener("resize", updateTrackFade, { passive: true });
   updateTrackFade();
 }
