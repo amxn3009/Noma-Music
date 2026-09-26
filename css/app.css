@@ -299,7 +299,7 @@ body.fs-open.is-playing .bg-layer {
   top: 0;
   z-index: 5;
   flex-shrink: 0;
-  padding: 12px 0 0;
+  padding: 12px 0 12px; /* was 12px 0 0 — room for glow */
   background: transparent;
   pointer-events: none;
 }
@@ -316,18 +316,140 @@ body.fs-open.is-playing .bg-layer {
   pointer-events: auto;       /* controls still clickable */
 }
 
+/* ── Compact ─────────────────────────────────────── */
+.game-sticky-top.is-collapsed .game-label,
+.game-sticky-top.is-collapsed .composer {
+  display: none !important;
+}
 
-.game-sticky-top.is-collapsed .game-header,
-.game-detail.header-collapsed .game-header {
-  max-height: 0;
-  opacity: 0;
+.game-sticky-top.is-collapsed .game-header {
+  align-items: center;
+  gap: 12px;
+  max-height: 56px;
   margin-bottom: 0;
-  transform: translateY(-8px);
-  pointer-events: none;
+}
+
+.game-sticky-top.is-collapsed .game-cover-lg {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+}
+
+.game-sticky-top.is-collapsed .game-meta {
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.game-sticky-top.is-collapsed .game-meta h1 {
+  font-size: 1.05rem;
+  margin: 0;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.game-sticky-top.is-collapsed .game-info-row {
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.game-sticky-top.is-collapsed .game-play-actions {
+  margin-top: 0;
+  margin-left: 0;          /* NOT auto — sit right after the text */
+  flex-shrink: 0;
+}
+
+.game-sticky-top.is-collapsed #play-all-btn {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 50%;
+  gap: 0;
+}
+.game-sticky-top.is-collapsed #play-all-btn .play-all-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+.game-sticky-top.is-collapsed #shuffle-all-btn {
+  width: 40px;
+  height: 40px;
 }
 
 .game-sticky-top.is-collapsed {
-  padding-bottom: 4px;
+  padding-bottom: 8px;
+}
+
+.play-all-label {
+  display: inline-block;
+}
+
+.game-sticky-top.is-collapsed {
+  padding-bottom: 8px;
+}
+
+
+.game-sticky-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.game-search-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  height: 36px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+  min-width: 0;
+  width: 180px;
+}
+.game-search-wrap:focus-within {
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(124, 156, 255, 0.45);
+  box-shadow: 0 0 0 3px rgba(124, 156, 255, 0.15);
+}
+.game-search-icon {
+  flex-shrink: 0;
+  opacity: 0.55;
+  color: var(--muted);
+}
+.game-search-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.88rem;
+  outline: none;
+}
+.game-search-input::placeholder {
+  color: var(--muted);
+  opacity: 0.8;
+}
+
+/* hide webkit clear on search if it looks ugly */
+.game-search-input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+}
+
+@media (max-width: 720px) {
+  .game-search-wrap {
+    width: 140px;
+  }
 }
 
 /* fade where tracks pass under the header */
@@ -374,11 +496,14 @@ body.fs-open.is-playing .bg-layer {
   place-items: center;
   cursor: pointer;
   flex-shrink: 0;
-  transition: background 0.15s, transform 0.2s ease;
+  transition: background 0.15s, transform 0.12s ease;
 }
 
 .header-toggle-btn:hover {
   background: rgba(255, 255, 255, 0.12);
+}
+.header-toggle-btn:active {
+  transform: scale(0.92);
 }
 
 .header-toggle-icon {
@@ -505,18 +630,26 @@ body.fs-open.is-playing .bg-layer {
 
 .game-header {
   display: flex;
-  gap: 28px;
+  flex-direction: row;
   align-items: flex-end;
-  margin-bottom: 4px;         /* was 12px — less gap under buttons */
-  overflow: hidden;
-  max-height: 320px;
-  opacity: 1;
-  transform: translateY(0);
-  transition:
-    max-height 0.35s var(--ease),
-    opacity 0.25s ease,
-    margin-bottom 0.35s var(--ease),
-    transform 0.35s var(--ease);
+  gap: 28px;
+  margin-bottom: 4px;
+  overflow: visible;
+  max-height: 400px;
+}
+
+.game-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.game-play-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
 }
 
 .game-cover-lg {
@@ -524,16 +657,23 @@ body.fs-open.is-playing .bg-layer {
   height: 200px;
   border-radius: var(--radius);
   object-fit: cover;
-  box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
   background: #222;
+  flex-shrink: 0;
+  transition:
+    width 0.35s var(--ease),
+    height 0.35s var(--ease),
+    border-radius 0.3s ease,
+    box-shadow 0.3s ease;
 }
+
 .game-meta h1 {
   font-size: 2.2rem;
   font-weight: 800;
   margin-bottom: 6px;
 }
 .primary-btn {
-  margin-top: 0; 
+  margin-top: 0;
   background: white;
   color: #111;
   border: none;
@@ -541,22 +681,86 @@ body.fs-open.is-playing .bg-layer {
   border-radius: 999px;
   font-weight: 700;
   cursor: pointer;
-  transition: transform 0.15s, box-shadow 0.25s, background 0.2s;
+  transition:
+    transform 0.15s,
+    box-shadow 0.25s,
+    background 0.2s,
+    width 0.3s var(--ease),
+    height 0.3s var(--ease),
+    padding 0.3s var(--ease),
+    border-radius 0.3s var(--ease);
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
+  /* glow needs room */
+  position: relative;
+  z-index: 1;
 }
+
 .primary-btn:hover {
   background: #eee;
   transform: translateY(-1px);
-  box-shadow: 0 0 20px rgba(255,255,255,0.25);
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.25);
 }
 
-.track-list {   
+.primary-btn:active {
+  transform: scale(0.92);
+}
+
+.circle-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.12s, box-shadow 0.2s;
+  position: relative;
+  z-index: 1;
+}
+.circle-btn:hover {
+  background: rgba(255, 255, 255, 0.18);
+  box-shadow: 0 0 16px rgba(255, 255, 255, 0.15);
+}
+.circle-btn:hover:not(:active) {
+  transform: scale(1.05);
+}
+.circle-btn:active {
+  transform: scale(0.92) !important;
+}
+
+/* keep shared press list in sync */
+.ctrl-btn,
+.play-btn,
+.primary-btn,
+.tab,
+.back-btn,
+.settings-btn,
+.circle-btn,
+.header-toggle-btn {
+  transition: transform 0.12s ease, background 0.15s, color 0.15s, box-shadow 0.15s;
+}
+
+.ctrl-btn:active,
+.play-btn:active,
+.primary-btn:active,
+.tab:active,
+.back-btn:active,
+.settings-btn:active,
+.circle-btn:active,
+.header-toggle-btn:active {
+  transform: scale(0.92);
+}
+
+.track-list {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding-top: 20px; /* breathing room when scrollTop ≈ 0 */
+  padding-top: 12px; /* was 20px — less empty space under header */
 }
 
 .track-row {
@@ -564,11 +768,12 @@ body.fs-open.is-playing .bg-layer {
   grid-template-columns: 40px minmax(0, 1fr) 48px 28px;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px;          /* was 10px — keeps row height down */
+  padding: 6px 10px;   /* tighter than 8px 12px */
   border-radius: 8px;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: opacity 0.1s linear, background 0.15s;
   min-height: 0;
+  line-height: 1.25;
 }
 
 .track-duration {
@@ -611,7 +816,7 @@ body.fs-open.is-playing .bg-layer {
   text-align: center;
   position: relative;
   width: 40px;
-  height: 24px;
+  height: 22px;        /* was 24px */
   display: grid;
   place-items: center;
   align-self: center;
@@ -1323,26 +1528,6 @@ body.is-transitioning .time {
   flex-shrink: 0;
 }
 
-.ctrl-btn,
-.play-btn,
-.primary-btn,
-.tab,
-.back-btn,
-.settings-btn,
-.circle-btn {
-  transition: transform 0.12s ease, background 0.15s, color 0.15s, box-shadow 0.15s;
-}
-
-.ctrl-btn:active,
-.play-btn:active,
-.primary-btn:active,
-.tab:active,
-.back-btn:active,
-.settings-btn:active,
-.circle-btn:active {
-  transform: scale(0.92);
-}
-
 @media (max-width: 720px) {
   .player-bar {
     grid-template-columns: 1fr auto;
@@ -1400,30 +1585,6 @@ body.fs-open .progress-row {
 }
 .composer svg { opacity: 0.85; }
 
-.game-play-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 14px;
-}
-
-.circle-btn {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  border: none;
-  background: rgba(255,255,255,0.1);
-  color: var(--text);
-  display: grid;
-  place-items: center;
-  cursor: pointer;
-  transition: background 0.15s, transform 0.12s;
-}
-.circle-btn:hover {
-  background: rgba(255,255,255,0.18);
-  transform: scale(1.05);
-}
-
 /* Loop badge on control */
 #btn-loop {
   position: relative;
@@ -1468,6 +1629,10 @@ body.fs-open .progress-row {
   color: var(--text);
   background: rgba(255,255,255,0.08);
   border-color: rgba(255,255,255,0.14);
+}
+
+.settings-btn:active {
+  transform: scale(0.92);
 }
 
 /* Settings full view (player stays visible) */

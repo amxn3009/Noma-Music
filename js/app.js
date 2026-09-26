@@ -957,6 +957,18 @@ function openGame(id) {
   $("#game-title").textContent = game.title;
   $("#game-track-count").textContent = `${game.tracks.length} Titel`;
 
+  $("#game-cover").src = game.cover;
+
+  const titleEl = $("#game-title");
+  if (titleEl) {
+    titleEl.dataset.full = game.title || "";
+    titleEl.dataset.short = game.short || game.title || "";
+    const compact = document.querySelector(".game-sticky-top")?.classList.contains("is-collapsed");
+    titleEl.textContent = compact ? titleEl.dataset.short : titleEl.dataset.full;
+  }
+
+  $("#game-track-count").textContent = `${game.tracks.length} Titel`;
+
   const composerName = $("#game-composer-name");
   if (composerName) composerName.textContent = game.composer || "";
   const composerEl = $("#game-composer");
@@ -991,9 +1003,6 @@ function openGame(id) {
     );
     if (el) el.textContent = formatTime(sec);
   });
-
-  bindTrackListFade()
-  requestAnimationFrame(updateTrackFade);
 
   trackListEl.querySelectorAll(".track-row").forEach((row) => {
     row.addEventListener("click", (e) => {
@@ -1042,7 +1051,7 @@ function openGame(id) {
     updatePlayerUI();
   };
 
-  $("#shuffle-all-btn").onclick = () => {
+   $("#shuffle-all-btn").onclick = () => {
     unshuffledQueue = game.tracks.map((t) => ({
       gameId: game.id,
       track: t,
@@ -1069,8 +1078,16 @@ function openGame(id) {
     playCurrent();
     renderQueue();
     updatePlayerUI();
-    bindGameHeaderToggle();
   };
+
+  // ── these must run every time you open a game (NOT inside shuffle) ──
+  setupGameTrackSearch();
+
+  const scroller = document.querySelector(".track-list-scroll");
+  if (scroller) scroller.dataset.fadeBound = "";
+  bindTrackListFade();
+  requestAnimationFrame(updateTrackFade);
+
 }
 
 function bindTabs() {
@@ -1830,6 +1847,29 @@ function bindFullscreen() {
   $("#btn-minimize")?.addEventListener("click", () => toggleFullscreen());
 }
 
+function setupGameTrackSearch() {
+  const input = document.getElementById("game-track-search");
+  if (!input) {
+    console.warn("[Noma] #game-track-search missing");
+    return;
+  }
+
+  // fresh node → no stacked handlers
+  const clean = input.cloneNode(true);
+  clean.value = "";
+  input.replaceWith(clean);
+
+  clean.addEventListener("input", () => {
+    const q = clean.value.trim().toLowerCase();
+    document.querySelectorAll("#track-list .track-row").forEach((row) => {
+      const name =
+        row.querySelector(".track-name")?.textContent?.toLowerCase() || "";
+      row.hidden = Boolean(q) && !name.includes(q);
+    });
+    requestAnimationFrame(updateTrackFade);
+  });
+}
+
 function bindGameHeaderToggle() {
   const btn = $("#game-header-toggle");
   if (!btn || btn.dataset.bound) return;
@@ -1844,6 +1884,13 @@ function bindGameHeaderToggle() {
     detail.classList.toggle("header-collapsed", collapsed);
     btn.setAttribute("aria-expanded", collapsed ? "false" : "true");
 
+    const titleEl = $("#game-title");
+    if (titleEl) {
+      titleEl.textContent = collapsed
+        ? titleEl.dataset.short || titleEl.dataset.full || titleEl.textContent
+        : titleEl.dataset.full || titleEl.textContent;
+    }
+
     requestAnimationFrame(updateTrackFade);
   });
 }
@@ -1853,23 +1900,27 @@ function updateTrackFade() {
   const stickyHeader = document.querySelector(".game-sticky-top");
   if (!scroller || !stickyHeader) return;
 
-  const rows = scroller.querySelectorAll(".track-row");
+  const rows = [...scroller.querySelectorAll(".track-row")].filter(
+    (r) => !r.hidden
+  );
   if (!rows.length) return;
 
   if (scroller.scrollTop < 2) {
-    for (const row of rows) row.style.opacity = "1";
+    rows.forEach((row) => {
+      row.style.opacity = "1";
+    });
     return;
   }
 
   const headerBottom = stickyHeader.getBoundingClientRect().bottom;
   const FADE = 40;
 
-  for (const row of rows) {
+  rows.forEach((row) => {
     const dist = row.getBoundingClientRect().top - headerBottom;
     if (dist >= FADE) row.style.opacity = "1";
     else if (dist <= 0) row.style.opacity = "0";
     else row.style.opacity = String(dist / FADE);
-  }
+  });
 }
 
 function bindTrackListFade() {
