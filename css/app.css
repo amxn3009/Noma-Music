@@ -49,8 +49,7 @@ html, body {
   overflow: hidden;
   -webkit-user-select: none;
   user-select: none;
-  /* fill under status bar / home indicator in standalone */
-  padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);
+  padding: 0; /* safe-area lives on topbar + player-bar */
   box-sizing: border-box;
 }
 
@@ -209,9 +208,15 @@ body.fs-open.is-playing .bg-layer {
   align-items: center;
   gap: 20px;
   padding: 14px 28px;
+  padding-top: calc(14px + env(safe-area-inset-top, 0px));
   border-bottom: 1px solid var(--border);
-  background: rgba(10,10,10,0.6);
-  backdrop-filter: blur(12px);
+  /* same black as the iOS status bar / theme-color */
+  background: #0a0a0a;
+  /* optional slight glass only below the status icons: */
+  background: rgba(10, 10, 10, 0.96);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-sizing: border-box;
 }
 
 .logo {
