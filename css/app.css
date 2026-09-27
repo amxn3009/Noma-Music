@@ -210,13 +210,20 @@ body.fs-open.is-playing .bg-layer {
   padding: 14px 28px;
   padding-top: calc(14px + env(safe-area-inset-top, 0px));
   border-bottom: 1px solid var(--border);
-  /* same black as the iOS status bar / theme-color */
-  background: #0a0a0a;
-  /* optional slight glass only below the status icons: */
-  background: rgba(10, 10, 10, 0.96);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
+  /* desktop / normal browser: transparent + blur (old look) */
+  background: rgba(10, 10, 10, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   box-sizing: border-box;
+}
+
+/* iPad / iPhone home-screen web app only */
+@media (display-mode: standalone) {
+  .topbar {
+    background: #0a0a0a;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
 }
 
 .logo {
