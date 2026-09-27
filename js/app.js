@@ -61,6 +61,8 @@ let transitionProgress = 0; // seconds into the fade when paused
 let lastLoopCycle = -1; // -1 = still in first playthrough (before any wrap)
 let forceFullLoop = false; // true when track has LoopFromStoE
 let scrubbing = false;
+let queueDragging = false; // true while a queue row is being dragged
+let queueDragFrom = -1; // index of the row being dragged, or -1
 
 const PLACEHOLDER = "Assets/MusicPlayer/PlaceholderImage.jpg";
 
@@ -1381,15 +1383,30 @@ async function togglePlay() {
 function nextTrack(fromNaturalEnd = false) {
   if (state.queue.length === 0) return;
 
-  // Skip during transition → go straight to next
   if (transitioning) {
     cancelTransition(false);
     stopSource();
   }
 
-  // Queue is already reordered when shuffle was enabled
-  state.queueIndex = (state.queueIndex + 1) % state.queue.length;
-    if (state.loopMode === "count") {
+  let next = (state.queueIndex + 1) % state.queue.length;
+
+  // If we're dragging the track that would become current, skip it
+  if (queueDragging && queueDragFrom >= 0 && next === queueDragFrom) {
+    if (state.queue.length <= 1) {
+      // only that one song — stay on it / restart via playCurrent
+      next = state.queueIndex;
+    } else {
+      next = (next + 1) % state.queue.length;
+      // avoid landing back on the dragged row in a 2-song queue edge case
+      if (next === queueDragFrom) {
+        next = (next + 1) % state.queue.length;
+      }
+    }
+  }
+
+  state.queueIndex = next;
+
+  if (state.loopMode === "count") {
     state.loopsRemaining = settings.loopTimes;
   } else {
     state.loopsRemaining = 0;
@@ -1531,6 +1548,17 @@ function renderQueue() {
   const list = $("#queue-list");
   if (!list) return;
 
+  // While dragging: only refresh "current" / EQ classes — never destroy the DOM
+    if (queueDragging) {
+    list.querySelectorAll(".queue-item").forEach((row) => {
+      const i = +row.dataset.index;
+      const isCurrent = i === state.queueIndex;
+      row.classList.toggle("current", isCurrent);
+      row.classList.toggle("audio-on", isCurrent && state.playing);
+    });
+    return; // DOM + ghost stay intact
+  }
+
   list.innerHTML = state.queue
     .map((item, i) => {
       const game = LIBRARY.find((g) => g.id === item.gameId);
@@ -1546,21 +1574,21 @@ function renderQueue() {
         <span class="q-drag" title="Ziehen" data-drag-handle="1">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M9 5h2v2H9V5zm0 6h2v2H9v-2zm0 6h2v2H9v-2zm4-12h2v2h-2V5zm0 6h2v2h-2v-2zm0 6h2v2h-2v-2z"/></svg>
         </span>
-        <img class="q-cover" src="${game?.cover || PLACEHOLDER}" alt="">
+        <img class="q-cover" src="${game?.cover || PLACEHOLDER}" alt="" draggable="false">
         <span class="q-num">
           <span class="num">${i + 1}</span>
           <span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
           <span class="q-hover-play" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
           </span>
         </span>
         <div class="q-meta">
-          <span class="q-title">${escapeHtml(item.track.title)}</span>
-          <span class="q-game muted">${escapeHtml(game?.short || "")}</span>
+          <div class="q-title">${escapeHtml(item.track.title)}</div>
+          <div class="q-game muted">${escapeHtml(game?.short || game?.title || "")}</div>
         </div>
         <span class="q-duration" data-file="${escapeHtml(file)}">–:––</span>
         <span class="track-actions q-actions" data-action="menu">⋮</span>
-        <button class="q-remove" type="button" title="Entfernen" data-remove="${i}">
+        <button class="q-remove" type="button" data-remove="${i}" title="Entfernen" aria-label="Entfernen">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
         </button>
       </li>`;
@@ -1568,8 +1596,7 @@ function renderQueue() {
     .join("");
 
   state.queue.forEach(async (item) => {
-    const url =
-      typeof getTrackUrl === "function" ? getTrackUrl(item.track) : item.track.file;
+    const url = typeof getTrackUrl === "function" ? getTrackUrl(item.track) : item.track.file;
     const sec = await getTrackDuration(url, item.track);
     if (sec == null) return;
     list
@@ -1580,11 +1607,7 @@ function renderQueue() {
   });
 
   bindQueueItemEvents(list);
-
-  const current = list.querySelector(".queue-item.current");
-  if (current && !$("#queue-panel")?.classList.contains("hidden")) {
-    current.scrollIntoView({ block: "nearest", behavior: "smooth" });
-  }
+  // NO scrollIntoView here — only when opening the panel
 }
 
 function bindQueueItemEvents(list) {
@@ -1699,6 +1722,8 @@ function bindQueuePointerDrag(list) {
       ghost = null;
     }
     dragFrom = -1;
+    queueDragFrom = -1;
+    queueDragging = false;
     draggingEl = null;
     moved = false;
   }
@@ -1710,6 +1735,8 @@ function bindQueuePointerDrag(list) {
 
       contextMenu?.classList.add("hidden");
       dragFrom = +row.dataset.index;
+      queueDragFrom = dragFrom;
+      queueDragging = true;
       draggingEl = row;
       startY = e.clientY;
       moved = false;
@@ -1741,18 +1768,26 @@ function bindQueuePointerDrag(list) {
     handle.addEventListener("pointerup", (e) => {
       if (dragFrom < 0) return;
 
+      const from = dragFrom;
+      let to = -1;
+
       if (moved) {
         if (ghost) ghost.style.visibility = "hidden";
         const el = document.elementFromPoint(e.clientX, e.clientY);
         if (ghost) ghost.style.visibility = "visible";
         const over = el?.closest?.(".queue-item");
-        if (over) {
-          const to = +over.dataset.index;
-          if (to !== dragFrom && to >= 0) reorderQueue(dragFrom, to);
-        }
+        if (over) to = +over.dataset.index;
       }
 
+      // Clear drag FIRST so renderQueue can do a full rebuild
       clearDrag();
+
+      if (to >= 0 && to !== from) {
+        reorderQueue(from, to);
+      } else {
+        // still refresh numbers / current highlight
+        renderQueue();
+      }
     });
 
     handle.addEventListener("pointercancel", () => {
@@ -1816,10 +1851,10 @@ function autoScrollQueue(clientY) {
 function bindQueuePanel() {
   $("#btn-queue")?.addEventListener("click", () => {
     const panel = $("#queue-panel");
+    const opening = panel.classList.contains("hidden");
     panel.classList.toggle("hidden");
-    if (!panel.classList.contains("hidden")) {
+    if (opening) {
       renderQueue();
-      // scroll current track into view after DOM paint
       requestAnimationFrame(() => {
         const current = $("#queue-list .queue-item.current");
         current?.scrollIntoView({ block: "center", behavior: "smooth" });
