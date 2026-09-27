@@ -208,7 +208,7 @@ body.fs-open.is-playing .bg-layer {
   align-items: center;
   gap: 20px;
   padding: 14px 28px;
-  padding-top: calc(14px + env(safe-area-inset-top, 0px));
+  padding-top: calc(10px + env(safe-area-inset-top, 0px));
   border-bottom: 1px solid var(--border);
   /* desktop / normal browser: transparent + blur (old look) */
   background: rgba(10, 10, 10, 0.6);
