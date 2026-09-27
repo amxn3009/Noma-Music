@@ -2322,6 +2322,21 @@ function formatDurationForJson(sec) {
   return Math.round(sec * 1000) / 1000;
 }
 
+function applyIpadStandaloneClass() {
+  const isIPad =
+    /iPad/.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
+  const isStandalone =
+    window.matchMedia("(display-mode: standalone)").matches ||
+    window.navigator.standalone === true; // older iOS
+
+  document.documentElement.classList.toggle("ipad-standalone", isIPad && isStandalone);
+}
+
+// call it
+applyIpadStandaloneClass();
+
 async function runDurationScan() {
   if (!LIBRARY.length) {
     console.warn("[Noma DEV] LIBRARY is empty");
