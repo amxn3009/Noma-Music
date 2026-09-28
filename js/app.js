@@ -172,6 +172,7 @@ function resetPlayerToIdle() {
 
   markPlayingTrack(null);
   updatePlayerUI();
+  updateMediaSession();
   renderQueue();
 }
 
@@ -248,6 +249,7 @@ function stopSource() {
     currentSource.disconnect();
     currentSource = null;
   }
+  stopKeepAlive();
 }
 
 function formatTime(sec) {
@@ -420,6 +422,7 @@ async function playMediaUrl(url, track, offsetSec = 0) {
   updatePlayerUI();
   markPlayingTrack(getCurrentTrackId());
   updateMediaProgress();
+  updateMediaSession();
 }
 
 function updateProgressUI() {
@@ -582,7 +585,9 @@ function playBuffer(audioBuffer, offsetSeconds = 0) {
   document.body.classList.add("is-playing");
   updatePlayerUI();
   markPlayingTrack(getCurrentTrackId());
+  startKeepAlive()
   updateProgressUI();
+  updateMediaSession();
 }
 
 function startTransition() {
@@ -906,6 +911,7 @@ async function init() {
   bindFullscreen();
   bindContextMenu();
   bindGameHeaderToggle();
+  bindMediaSessionActions();
   updatePlayerUI();
   bindVolume();
   bindHotkeys();
@@ -1219,6 +1225,7 @@ async function playCurrent() {
     document.body.classList.remove("is-playing");
     state.playing = false;
     updatePlayerUI();
+    updateMediaSession();
   }
 }
 
@@ -1307,6 +1314,7 @@ async function togglePlay() {
       document.body.classList.remove("is-playing");
       markPlayingTrack(getCurrentTrackId());
       updatePlayerUI();
+      updateMediaSession();
       return;
     }
 
@@ -1323,6 +1331,7 @@ async function togglePlay() {
       document.body.classList.remove("is-playing");
       markPlayingTrack(getCurrentTrackId());
       updatePlayerUI();
+      updateMediaSession();
       return;
     }
 
@@ -1332,6 +1341,7 @@ async function togglePlay() {
     document.body.classList.remove("is-playing");
     markPlayingTrack(getCurrentTrackId());
     updatePlayerUI();
+    updateMediaSession();
     return;
   }
 
@@ -1344,6 +1354,7 @@ async function togglePlay() {
       document.body.classList.add("is-playing");
       markPlayingTrack(getCurrentTrackId());
       updatePlayerUI();
+      updateMediaSession();
       updateMediaProgress();
     } catch (err) {
       console.warn("[Noma] media resume failed", err);
@@ -1369,6 +1380,7 @@ async function togglePlay() {
       document.body.classList.add("is-transitioning");
     }
     updatePlayerUI();
+    updateMediaSession();
     return;
   }
 
@@ -1378,6 +1390,7 @@ async function togglePlay() {
     playCurrent();
   }
   updatePlayerUI();
+  updateMediaSession();
 }
 
 function nextTrack(fromNaturalEnd = false) {
@@ -2429,5 +2442,131 @@ function mountDurationDevTool() {
   });
   document.body.appendChild(btn);
 }
+
+
+function absoluteUrl(path) {
+  if (!path) return "";
+  try {
+    return new URL(path, window.location.href).href;
+  } catch {
+    return path;
+  }
+}
+
+function updateMediaSession() {
+  if (!("mediaSession" in navigator)) return;
+
+  const item = state.queue[state.queueIndex];
+  if (!item) {
+    try {
+      navigator.mediaSession.metadata = null;
+    } catch (_) {}
+    return;
+  }
+
+  const game = LIBRARY.find((g) => g.id === item.gameId);
+  const track = item.track;
+  const cover = absoluteUrl(game?.cover || PLACEHOLDER);
+
+  navigator.mediaSession.metadata = new MediaMetadata({
+    title: track.title || "Noma Music",
+    artist: game?.composer || game?.short || game?.title || "Noma Music",
+    album: game?.short || game?.title || "Noma Music",
+    artwork: [
+      { src: cover, sizes: "512x512", type: "image/jpeg" },
+      { src: cover, sizes: "256x256", type: "image/jpeg" },
+    ],
+  });
+
+  navigator.mediaSession.playbackState = state.playing ? "playing" : "paused";
+
+  // position (lock-screen scrubber where supported)
+  try {
+    const duration = state.duration || 0;
+    const position = Math.min(getPlaybackPosition(), duration || 0);
+    if (duration > 0 && Number.isFinite(position)) {
+      navigator.mediaSession.setPositionState({
+        duration,
+        position,
+        playbackRate: 1,
+      });
+    }
+  } catch (_) {}
+}
+
+function bindMediaSessionActions() {
+  if (!("mediaSession" in navigator)) return;
+
+  const set = (action, handler) => {
+    try {
+      navigator.mediaSession.setActionHandler(action, handler);
+    } catch (_) {}
+  };
+
+  set("play", () => {
+    if (!state.playing) togglePlay();
+  });
+  set("pause", () => {
+    if (state.playing) togglePlay();
+  });
+  set("previoustrack", () => prevTrack());
+  set("nexttrack", () => nextTrack());
+  set("seekto", (details) => {
+    if (!details || !Number.isFinite(details.seekTime)) return;
+    const t = details.seekTime;
+    if (useMediaEl && mediaEl) {
+      mediaEl.currentTime = t;
+      pauseOffset = t;
+     if (state.playing) updateMediaProgress();
+    } else if (decodedBuffer) {
+      if (state.playing) playBuffer(decodedBuffer, t);
+      else {
+        pauseOffset = t;
+        const fill = $("#progress-fill");
+        if (fill) fill.style.width = `${(t / decodedBuffer.duration) * 100}%`;
+        const tCur = $("#time-current");
+        if (tCur) tCur.textContent = formatTime(t);
+      }
+    }
+    updateMediaSession();
+  });
+}
+
+let keepAliveEl = null;
+
+function ensureKeepAlive() {
+  if (keepAliveEl) return keepAliveEl;
+  keepAliveEl = new Audio(absoluteUrl("Assets/Audio/silence.m4a"));
+  keepAliveEl.loop = true;
+  keepAliveEl.volume = 0.001; // not always 0 — some browsers treat 0 as "not playing"
+  keepAliveEl.preload = "auto";
+  return keepAliveEl;
+}
+
+async function startKeepAlive() {
+  // only needed when using Web Audio (BFSTM), not when useMediaEl is already true
+  if (useMediaEl) return;
+  const el = ensureKeepAlive();
+  try {
+    await el.play();
+  } catch (_) {}
+}
+
+function stopKeepAlive() {
+  if (!keepAliveEl) return;
+  try {
+    keepAliveEl.pause();
+    keepAliveEl.currentTime = 0;
+  } catch (_) {}
+}
+
+let lastMediaSessionPosAt = 0;
+function maybeUpdateMediaSessionPosition() {
+  const now = performance.now();
+  if (now - lastMediaSessionPosAt < 1000) return;
+  lastMediaSessionPosAt = now;
+  updateMediaSession();
+}
+
 
 init();
