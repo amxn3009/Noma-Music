@@ -241,7 +241,7 @@
         "fileIos": "Assets/Games/OOT/Tracks/Reunite with Zelda.m4a",
         "loopStart": 0.2880498866213151927437641723356,
         "duration": 41.463,
-        "playback": "buffer"
+        "playback": "stream"
       },
       {
         "id": "oot-ganons-castle",
