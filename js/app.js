@@ -236,7 +236,6 @@ async function getTrackDuration(url, track) {
 }
 
 function stopSource() {
-  stopMediaEl();
   if (animFrame) {
     cancelAnimationFrame(animFrame);
     animFrame = null;
@@ -249,6 +248,8 @@ function stopSource() {
     currentSource.disconnect();
     currentSource = null;
   }
+  stopStreamPair(); // clears A/B + mediaEl + useMediaEl + raf
+  stopMediaEl();    // safe no-op if already cleared
   stopKeepAlive();
 }
 
@@ -422,6 +423,207 @@ async function playMediaUrl(url, track, offsetSec = 0) {
   updatePlayerUI();
   markPlayingTrack(getCurrentTrackId());
   updateMediaProgress();
+  updateMediaSession();
+}
+
+function getPlaybackMode(track) {
+  const mode = (track?.playback || "").toLowerCase();
+  if (mode === "buffer" || mode === "stream") return mode;
+
+  // default: long tracks stream; looping shorts buffer
+  const dur = Number(track?.duration) || 0;
+  const needsLoop =
+    !!track?.LoopFromStoE ||
+    (Number.isFinite(track?.loopStart) && track.loopStart > 0);
+  if (dur > 180) return "stream";
+  if (needsLoop) return "buffer";
+  return "stream";
+}
+
+// ── Dual-stream loop (opus/m4a) ─────────────────────────
+let mediaA = null;
+let mediaB = null;
+let mediaActive = "A";
+let streamHandoffArmed = false;
+
+function stopStreamPair() {
+  streamHandoffArmed = false;
+  for (const el of [mediaA, mediaB]) {
+    if (!el) continue;
+    try {
+      el.onended = null;
+      el.ontimeupdate = null;
+      el.pause();
+      el.removeAttribute("src");
+      el.load();
+    } catch (_) {}
+  }
+  mediaA = mediaB = null;
+  mediaActive = "A";
+  // keep single mediaEl path in sync
+  mediaEl = null;
+  useMediaEl = false;
+  if (mediaRaf) {
+    cancelAnimationFrame(mediaRaf);
+    mediaRaf = null;
+  }
+}
+
+function activeMedia() {
+  return mediaActive === "A" ? mediaA : mediaB;
+}
+
+function standbyMedia() {
+  return mediaActive === "A" ? mediaB : mediaA;
+}
+
+function bindStreamProgress() {
+  if (mediaRaf) cancelAnimationFrame(mediaRaf);
+  const tick = () => {
+    if (!useMediaEl || scrubbing) {
+      if (state.playing && useMediaEl) mediaRaf = requestAnimationFrame(tick);
+      return;
+    }
+    const cur = activeMedia();
+    if (!cur) return;
+
+    const duration = cur.duration || state.duration || 0;
+    let t = cur.currentTime || 0;
+
+    // handoff ~120ms before end
+    const canLoop =
+      state.loopMode === "one" ||
+      mediaForceFullLoop ||
+      mediaLoopStart > 0;
+
+    if (
+      state.playing &&
+      !transitioning &&
+      duration > 0 &&
+      canLoop
+    ) {
+      const lead = 0.12;
+      if (t >= duration - lead) {
+        handoffStreamLoop(duration);
+        t = activeMedia()?.currentTime || mediaLoopStart || 0;
+      }
+    }
+
+    state.currentTime = t;
+    state.duration = duration;
+    const ratio = duration > 0 ? Math.min(1, t / duration) : 0;
+    const fill = $("#progress-fill");
+    if (fill) fill.style.width = `${ratio * 100}%`;
+    const tCur = $("#time-current");
+    if (tCur) tCur.textContent = formatTime(t);
+    const tTot = $("#time-total");
+    if (tTot) tTot.textContent = formatTime(duration);
+
+    if (state.playing) mediaRaf = requestAnimationFrame(tick);
+  };
+  mediaRaf = requestAnimationFrame(tick);
+}
+
+function handoffStreamLoop(duration) {
+  const cur = activeMedia();
+  const next = standbyMedia();
+  if (!cur || !next || !state.playing) return;
+
+  // count / off: first full play → transition (same idea as buffer path)
+  if (state.loopMode === "off" && lastLoopCycle < 0 && !mediaForceFullLoop && !(mediaLoopStart > 0)) {
+    // no loop points: natural end → next track
+    nextTrack(true);
+    return;
+  }
+
+  if (state.loopMode === "count") {
+    // optional: mirror your loopsRemaining logic here
+  }
+
+  const startAt = mediaForceFullLoop ? 0 : mediaLoopStart > 0 ? mediaLoopStart : 0;
+
+  try {
+    next.currentTime = startAt;
+    next.volume = masterVolume;
+    next.play().catch(() => {});
+  } catch (_) {}
+
+  try {
+    cur.pause();
+    cur.volume = 0;
+    cur.currentTime = startAt; // re-arm
+  } catch (_) {}
+
+  mediaActive = mediaActive === "A" ? "B" : "A";
+  mediaEl = activeMedia();
+  lastLoopCycle = Math.max(0, lastLoopCycle + 1);
+}
+
+async function playMediaUrlStreamLoop(url, track, offsetSec = 0) {
+  stopStreamPair();
+  stopMediaEl();
+  releaseDecodedBuffer();
+  await resumeAudio();
+
+  mediaA = new Audio();
+  mediaB = new Audio();
+  mediaA.preload = "auto";
+  mediaB.preload = "auto";
+  mediaA.src = url;
+  mediaB.src = url;
+  mediaA.loop = false;
+  mediaB.loop = false;
+
+  mediaForceFullLoop = !!track.LoopFromStoE;
+  mediaLoopStart = mediaForceFullLoop
+    ? 0
+    : Number.isFinite(track.loopStart) && track.loopStart > 0
+      ? track.loopStart
+      : 0;
+
+  useMediaEl = true;
+  mediaActive = "A";
+  mediaEl = mediaA;
+
+  await Promise.all([
+    new Promise((res, rej) => {
+      mediaA.onloadedmetadata = () => res();
+      mediaA.onerror = () => rej(new Error("Media A load failed"));
+    }),
+    new Promise((res, rej) => {
+      mediaB.onloadedmetadata = () => res();
+      mediaB.onerror = () => rej(new Error("Media B load failed"));
+    }),
+  ]);
+
+  state.duration =
+    Number.isFinite(track.duration) && track.duration > 0
+      ? track.duration
+      : mediaA.duration;
+
+  const startAt = Math.max(0, Math.min(offsetSec, state.duration - 0.05));
+  mediaA.currentTime = startAt;
+  mediaA.volume = masterVolume;
+  mediaB.currentTime = mediaLoopStart;
+  mediaB.volume = 0;
+  pauseOffset = startAt;
+
+  // natural end with no loop → next track
+  mediaA.onended = mediaB.onended = () => {
+    if (!state.playing || transitioning) return;
+    if (state.loopMode === "one" || mediaForceFullLoop || mediaLoopStart > 0) {
+      handoffStreamLoop(state.duration);
+      return;
+    }
+    nextTrack(true);
+  };
+
+  await mediaA.play();
+  state.playing = true;
+  document.body.classList.add("is-playing");
+  updatePlayerUI();
+  markPlayingTrack(getCurrentTrackId());
+  bindStreamProgress();
   updateMediaSession();
 }
 
@@ -655,9 +857,9 @@ function setVolume(value) {
     slider.value = masterVolume;
   }
 
-  if (mediaEl) {
-    mediaEl.volume = masterVolume;
-  }
+  if (mediaA) mediaA.volume = mediaActive === "A" ? masterVolume : 0;
+  if (mediaB) mediaB.volume = mediaActive === "B" ? masterVolume : 0;
+  if (mediaEl && !mediaA) mediaEl.volume = masterVolume;
 
   settings.volume = masterVolume;
   saveSettings();
@@ -1189,9 +1391,36 @@ async function playCurrent() {
     }
 
     // Opus / m4a / wav / ogg — stream on every device (low RAM)
-    if (typeof isWebAudioFile === "function" && isWebAudioFile(url)) {
+       if (typeof isWebAudioFile === "function" && isWebAudioFile(url)) {
       forceFullLoop = !!track.LoopFromStoE;
-      await playMediaUrl(url, track, 0);
+      const mode = getPlaybackMode(track);
+
+      if (mode === "buffer") {
+        const audioBuffer = await decodeWebAudio(url);
+        decodedBuffer = audioBuffer;
+        sampleRate = audioBuffer.sampleRate;
+
+        if (forceFullLoop) {
+          loopStartSample = 0;
+        } else if (Number.isFinite(track.loopStart) && track.loopStart > 0) {
+          loopStartSample = Math.floor(track.loopStart * sampleRate);
+        } else {
+          loopStartSample = 0;
+        }
+
+        state.duration =
+          Number.isFinite(track.duration) && track.duration > 0
+            ? track.duration
+            : audioBuffer.duration;
+        state.currentTime = 0;
+
+        playBuffer(decodedBuffer, 0);
+        updateMediaSession();
+      } else {
+        // stream + dual-element loop handoff
+        await playMediaUrlStreamLoop(url, track, 0);
+      }
+
       if (!$("#queue-panel")?.classList.contains("hidden")) renderQueue();
       return;
     }
@@ -1304,8 +1533,11 @@ async function togglePlay() {
   // ── Pause ──
   if (state.playing) {
     if (useMediaEl && mediaEl) {
-      pauseOffset = mediaEl.currentTime;
-      mediaEl.pause();
+      const cur = activeMedia() || mediaEl;
+      pauseOffset = cur.currentTime;
+      cur.pause();
+      if (mediaA && mediaA !== cur) mediaA.pause();
+      if (mediaB && mediaB !== cur) mediaB.pause();
       if (mediaRaf) {
         cancelAnimationFrame(mediaRaf);
         mediaRaf = null;
@@ -1348,14 +1580,20 @@ async function togglePlay() {
   // ── Resume / start ──
   if (useMediaEl && mediaEl) {
     try {
-      mediaEl.currentTime = pauseOffset;
-      await mediaEl.play();
+      const cur = activeMedia() || mediaEl;
+      cur.currentTime = pauseOffset;
+      cur.volume = masterVolume;
+      await cur.play();
       state.playing = true;
       document.body.classList.add("is-playing");
       markPlayingTrack(getCurrentTrackId());
       updatePlayerUI();
       updateMediaSession();
-      updateMediaProgress();
+      if (mediaA && mediaB) {
+        bindStreamProgress(); // dual
+      } else {
+        updateMediaProgress(); // single
+      }
     } catch (err) {
       console.warn("[Noma] media resume failed", err);
     }
@@ -2175,11 +2413,20 @@ function bindPlayerChrome() {
     const pos = Math.min(seekTo, safeEnd);
 
     if (useMediaEl && mediaEl) {
-      mediaEl.currentTime = pos;
+      const cur = activeMedia() || mediaEl;
+      cur.currentTime = pos;
       pauseOffset = pos;
+      if (mediaA && mediaB) {
+        const other = standbyMedia();
+        if (other) {
+          other.currentTime = mediaForceFullLoop ? 0 : mediaLoopStart;
+          other.volume = 0;
+        }
+      }
       if (state.playing) {
-        mediaEl.play().catch(() => {});
-        updateMediaProgress();
+        cur.play().catch(() => {});
+        if (mediaA && mediaB) bindStreamProgress();
+        else updateMediaProgress();
       }
       return;
     }
