@@ -21,6 +21,7 @@ const DEFAULT_SETTINGS = {
   loopTimes: 2,       // 1-99
   transitionSec: 10,   // 0 | 5 | 10
   volume: 0.5,          // 0-1
+  queueLoop: true,      // after last track: restart queue vs stop
 };
 
 let settings = { ...DEFAULT_SETTINGS };
@@ -36,6 +37,10 @@ function loadSettings() {
       : 10;
     const vol = Number(parsed.volume);
     settings.volume = Number.isFinite(vol) ? Math.min(1, Math.max(0, vol)) : 0.5;
+    settings.queueLoop =
+      typeof parsed.queueLoop === "boolean"
+        ? parsed.queueLoop
+        : DEFAULT_SETTINGS.queueLoop;
   } catch (_) {}
 }
 
@@ -63,6 +68,16 @@ let forceFullLoop = false; // true when track has LoopFromStoE
 let scrubbing = false;
 let queueDragging = false; // true while a queue row is being dragged
 let queueDragFrom = -1; // index of the row being dragged, or -1
+let playGen = 0; // invalidates in-flight playCurrent when skipping
+let softEndTimer = null; // wall-clock backup for fade → next
+let softEndFadeAt = 0;   // audioCtx.currentTime when fade should start
+let softEndFadeSec = 0;
+let softEndStartTimer = null; // sets transitioning when fade begins
+
+// ── Sleep / Ruhemodus ──
+let sleepEndsAt = 0;       // Date.now() deadline (duration mode)
+let sleepMode = null;      // null | "duration" | "end"
+let sleepTickId = null;
 
 const PLACEHOLDER = "Assets/MusicPlayer/PlaceholderImage.jpg";
 
@@ -135,6 +150,8 @@ async function decodeWebAudio(url) {
 
 function resetPlayerToIdle() {
   stopSource();
+  playGen++;
+  clearSoftEndTimers();
   if (typeof cancelTransition === "function") cancelTransition(false);
   transitioning = false;
   lastLoopCycle = -1;
@@ -234,11 +251,43 @@ async function getTrackDuration(url, track) {
   }
 }
 
+function clearSoftEndTimers() {
+  if (softEndTimer) {
+    clearTimeout(softEndTimer);
+    softEndTimer = null;
+  }
+  if (softEndStartTimer) {
+    clearTimeout(softEndStartTimer);
+    softEndStartTimer = null;
+  }
+  softEndFadeAt = 0;
+  softEndFadeSec = 0;
+}
+
+function syncSoftEndFromClock() {
+  if (!audioCtx || !decodedBuffer || softEndFadeAt <= 0) return;
+
+  const now = audioCtx.currentTime;
+  const fadeEnd = softEndFadeAt + Math.max(0, softEndFadeSec);
+
+  if (now >= softEndFadeAt && now < fadeEnd) {
+    // Mid-fade after minimize — restore transition UI from real audio time
+    transitioning = true;
+    transitionStartedAt = softEndFadeAt;
+    document.body.classList.add("is-transitioning");
+    if (state.playing) updateProgressUI();
+  } else if (now >= fadeEnd && state.playing) {
+    // Fade already finished while backgrounded
+    finishTransition();
+  }
+}
+
 function stopSource() {
   if (animFrame) {
     cancelAnimationFrame(animFrame);
     animFrame = null;
   }
+  clearSoftEndTimers();
   if (currentSource) {
     try {
       currentSource.onended = null;
@@ -721,6 +770,8 @@ function updateProgressUI() {
 
 function playBuffer(audioBuffer, offsetSeconds = 0) {
   stopSource();
+  clearSoftEndTimers();
+
   const ctx = ensureAudioContext();
 
   const duration = audioBuffer.duration;
@@ -739,7 +790,6 @@ function playBuffer(audioBuffer, offsetSeconds = 0) {
   currentGain.connect(ctx.destination);
 
   const wantInfiniteLoop = state.loopMode === "one";
-  // Soft end / count: BFSTM loop points OR full start→end loop
   const wantSoftEnd =
     (state.loopMode === "off" || state.loopMode === "count") &&
     (loopStart > 0 || forceFullLoop) &&
@@ -748,7 +798,6 @@ function playBuffer(audioBuffer, offsetSeconds = 0) {
   if (wantInfiniteLoop || wantSoftEnd) {
     currentSource.loop = true;
     if (forceFullLoop) {
-      // entire file repeats
       currentSource.loopStart = 0;
       currentSource.loopEnd = duration;
       loopStart = 0;
@@ -771,13 +820,56 @@ function playBuffer(audioBuffer, offsetSeconds = 0) {
 
   currentSource.onended = () => {
     if (!state.playing || transitioning) return;
-    // no loop points / hard end
     nextTrack(true);
   };
 
   pauseOffset = offset;
   startTime = ctx.currentTime;
   currentSource.start(0, offset);
+
+  // Pre-schedule soft-end fade in the audio graph (runs even if tab is minimized).
+  // loopMode "off": after first full playthrough. "count": after last remaining loop.
+  if (wantSoftEnd) {
+    const fadeSec = getTransitionSec();
+    let loopsAfterFirst = 0;
+    if (state.loopMode === "count") {
+      loopsAfterFirst = Math.max(0, state.loopsRemaining);
+    }
+    const loopLen = forceFullLoop
+      ? Math.max(0.001, duration)
+      : Math.max(0.001, duration - loopStart);
+    const timeToFadeStart =
+      Math.max(0.01, duration - offset) + loopsAfterFirst * loopLen;
+
+    softEndFadeAt = startTime + timeToFadeStart;
+    softEndFadeSec = fadeSec;
+
+    currentGain.gain.cancelScheduledValues(startTime);
+    currentGain.gain.setValueAtTime(masterVolume, startTime);
+    if (fadeSec <= 0) {
+      currentGain.gain.setValueAtTime(0, softEndFadeAt);
+    } else {
+      currentGain.gain.setValueAtTime(masterVolume, softEndFadeAt);
+      currentGain.gain.linearRampToValueAtTime(0, softEndFadeAt + fadeSec);
+    }
+
+    // Enter transition mode when fade starts (so progress bar uses transition UI)
+    softEndStartTimer = setTimeout(() => {
+      softEndStartTimer = null;
+      if (!state.playing || !currentGain) return;
+      transitioning = true;
+      transitionStartedAt = softEndFadeAt;
+      document.body.classList.add("is-transitioning");
+      lastLoopCycle = Math.max(0, lastLoopCycle);
+      updateProgressUI();
+    }, timeToFadeStart * 1000);
+
+    softEndTimer = setTimeout(() => {
+      softEndTimer = null;
+      if (!state.playing) return;
+      finishTransition();
+    }, (timeToFadeStart + Math.max(0, fadeSec)) * 1000 + 40);
+  }
 
   state.playing = true;
   document.body.classList.add("is-playing");
@@ -788,6 +880,8 @@ function playBuffer(audioBuffer, offsetSeconds = 0) {
 
 function startTransition() {
   if (transitioning || !audioCtx || !currentGain) return;
+
+  clearSoftEndTimers();
 
   const sec = getTransitionSec();
   if (sec <= 0) {
@@ -821,7 +915,7 @@ function cancelTransition(keepPlaying = false) {
 }
 
 function finishTransition() {
-  // Hard-mute before tearing down so nothing spikes for a frame
+  clearSoftEndTimers();
   if (currentGain && audioCtx) {
     const now = audioCtx.currentTime;
     currentGain.gain.cancelScheduledValues(now);
@@ -837,7 +931,11 @@ function finishTransition() {
   cancelTransition(false);
   stopSource();
 
-  // Small delay so the silent frame is committed (helps mobile)
+  if (sleepMode === "end") {
+    fireSleepTimer();
+    return;
+  }
+
   setTimeout(() => {
     nextTrack(true);
   }, 30);
@@ -985,9 +1083,15 @@ function showVolumeSlider() {
 }
 
 function toggleFullscreen() {
+  const sleepPanel = $("#sleep-panel");
+  const sleepBtn = $("#btn-sleep");
+  sleepPanel?.classList.add("hidden");
+  sleepBtn?.setAttribute("aria-expanded", "false");
+
   const fs = $("#fullscreen-player");
   const btnFs = $("#btn-fullscreen");
   const btnMin = $("#btn-minimize");
+  
   if (!fs) return;
 
   const open = fs.classList.contains("hidden");
@@ -1115,6 +1219,8 @@ async function init() {
   const volSlider = $("#volume-slider");
   if (volSlider) volSlider.value = String(masterVolume);
   bindSettings();
+  bindSleepTimer();
+  updateSleepUI();
   $("#now-cover").src = PLACEHOLDER;
   $("#fs-cover").src = PLACEHOLDER;
   $("#now-title").textContent = "Nichts läuft";
@@ -1126,6 +1232,13 @@ async function init() {
     }
   });
   mountDurationDevTool();
+   document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState !== "visible") return;
+    syncSoftEndFromClock();
+    if (state.playing && decodedBuffer && !scrubbing) {
+      updateProgressUI();
+    }
+  });
 }
 
 function renderGames() {
@@ -1345,7 +1458,10 @@ function playFromGame(game, track) {
 }
 
 async function playCurrent() {
+  const gen = ++playGen;
+
   cancelTransition(false);
+  clearSoftEndTimers();
 
   const item = state.queue[state.queueIndex];
   if (!item) return;
@@ -1358,7 +1474,6 @@ async function playCurrent() {
       Number(settings.loopTimes) || DEFAULT_SETTINGS.loopTimes;
   }
 
-  // ... your existing UI updates (cover, title, etc.) ...
   $("#now-cover").src = game?.cover || PLACEHOLDER;
   $("#now-title").textContent = track.title;
   $("#now-game").textContent = game?.short || "";
@@ -1382,14 +1497,16 @@ async function playCurrent() {
     } else {
       ensureAudioContext();
     }
+    if (gen !== playGen) return; // skipped while loading
 
-    // Opus / m4a / wav / ogg — stream on every device (low RAM)
-       if (typeof isWebAudioFile === "function" && isWebAudioFile(url)) {
+    if (typeof isWebAudioFile === "function" && isWebAudioFile(url)) {
       forceFullLoop = !!track.LoopFromStoE;
       const mode = getPlaybackMode(track);
 
       if (mode === "buffer") {
         const audioBuffer = await decodeWebAudio(url);
+        if (gen !== playGen) return;
+
         decodedBuffer = audioBuffer;
         sampleRate = audioBuffer.sampleRate;
 
@@ -1409,8 +1526,8 @@ async function playCurrent() {
 
         playBuffer(decodedBuffer, 0);
       } else {
-        // stream + dual-element loop handoff
         await playMediaUrlStreamLoop(url, track, 0);
+        if (gen !== playGen) return;
       }
 
       if (!$("#queue-panel")?.classList.contains("hidden")) renderQueue();
@@ -1419,6 +1536,8 @@ async function playCurrent() {
 
     // BFSTM
     const decoded = await decodeBfstm(url);
+    if (gen !== playGen) return;
+
     decodedBuffer = decoded.audioBuffer;
     loopStartSample = decoded.loopStartSample;
     sampleRate = decoded.sampleRate;
@@ -1441,6 +1560,7 @@ async function playCurrent() {
     playBuffer(decodedBuffer, 0);
     if (!$("#queue-panel")?.classList.contains("hidden")) renderQueue();
   } catch (err) {
+    if (gen !== playGen) return; // ignore errors from cancelled loads
     console.error("[Noma] decode/play failed:", err);
     alert(`Konnte Track nicht abspielen:\n${track.title}\n\n${err.message}`);
     document.body.classList.remove("is-playing");
@@ -1619,21 +1739,42 @@ async function togglePlay() {
 function nextTrack(fromNaturalEnd = false) {
   if (state.queue.length === 0) return;
 
+  // Sleep: end of current song
+  if (fromNaturalEnd && sleepMode === "end") {
+    fireSleepTimer();
+    return;
+  }
+
   if (transitioning) {
     cancelTransition(false);
     stopSource();
   }
 
+  const atLast = state.queueIndex >= state.queue.length - 1;
+
+  if (atLast && !settings.queueLoop) {
+    // Stop after last track (no wrap)
+    stopSource();
+    state.playing = false;
+    document.body.classList.remove("is-playing");
+    pauseOffset = 0;
+    markPlayingTrack(getCurrentTrackId());
+    updatePlayerUI();
+    if (fromNaturalEnd) {
+      // stay on last track, idle
+      const fill = $("#progress-fill");
+      if (fill) fill.style.width = "100%";
+    }
+    return;
+  }
+
   let next = (state.queueIndex + 1) % state.queue.length;
 
-  // If we're dragging the track that would become current, skip it
   if (queueDragging && queueDragFrom >= 0 && next === queueDragFrom) {
     if (state.queue.length <= 1) {
-      // only that one song — stay on it / restart via playCurrent
       next = state.queueIndex;
     } else {
       next = (next + 1) % state.queue.length;
-      // avoid landing back on the dragged row in a 2-song queue edge case
       if (next === queueDragFrom) {
         next = (next + 1) % state.queue.length;
       }
@@ -1659,11 +1800,31 @@ function prevTrack() {
   }
 
   const pos = getPlaybackPosition();
-  const dur = decodedBuffer?.duration ?? 0;
+  const dur =
+    (decodedBuffer && decodedBuffer.duration) ||
+    state.duration ||
+    (mediaEl && mediaEl.duration) ||
+    0;
 
-  // Restart current if past threshold OR already on first track
-  if (state.queueIndex === 0 || (dur > RESTART_THRESHOLD && pos > RESTART_THRESHOLD)) {
+  // Restart current if far enough into the track (works for BFSTM + stream/Credits)
+  if (dur > RESTART_THRESHOLD && pos > RESTART_THRESHOLD) {
     pauseOffset = 0;
+    if (useMediaEl && mediaEl) {
+      const cur = activeMedia() || mediaEl;
+      cur.currentTime = 0;
+      pauseOffset = 0;
+      if (state.playing) {
+        cur.play().catch(() => {});
+        if (mediaA && mediaB) bindStreamProgress();
+        else updateMediaProgress();
+      } else {
+        const fill = $("#progress-fill");
+        if (fill) fill.style.width = "0%";
+        const tCur = $("#time-current");
+        if (tCur) tCur.textContent = "0:00";
+      }
+      return;
+    }
     if (state.playing && decodedBuffer) {
       playBuffer(decodedBuffer, 0);
     } else {
@@ -1673,8 +1834,30 @@ function prevTrack() {
     return;
   }
 
-  state.queueIndex -= 1;
-    if (state.loopMode === "count") {
+  // Near start: go to previous track
+  if (state.queueIndex <= 0) {
+    if (settings.queueLoop && state.queue.length > 1) {
+      state.queueIndex = state.queue.length - 1;
+    } else {
+      // no wrap — stay on first, jump to 0:00
+      pauseOffset = 0;
+      if (useMediaEl && mediaEl) {
+        const cur = activeMedia() || mediaEl;
+        cur.currentTime = 0;
+        if (state.playing) cur.play().catch(() => {});
+      } else if (state.playing && decodedBuffer) {
+        playBuffer(decodedBuffer, 0);
+      } else {
+        $("#progress-fill").style.width = "0%";
+        $("#time-current").textContent = "0:00";
+      }
+      return;
+    }
+  } else {
+    state.queueIndex -= 1;
+  }
+
+  if (state.loopMode === "count") {
     state.loopsRemaining = settings.loopTimes;
   } else {
     state.loopsRemaining = 0;
@@ -2531,12 +2714,18 @@ function bindSettings() {
     transBtn?.setAttribute("aria-expanded", "false");
   });
 
+$("#setting-queue-loop")?.addEventListener("change", (e) => {
+    settings.queueLoop = !!e.target.checked;
+    saveSettings();
+  });
+
   $("#settings-reset")?.addEventListener("click", () => {
     const keepVolume = masterVolume;
     settings = {
       loopTimes: DEFAULT_SETTINGS.loopTimes,
       transitionSec: DEFAULT_SETTINGS.transitionSec,
       volume: keepVolume,
+      queueLoop: DEFAULT_SETTINGS.queueLoop,
     };
     saveSettings();
     syncSettingsForm();
@@ -2550,6 +2739,9 @@ function bindSettings() {
 function syncSettingsForm() {
   const loopInput = $("#setting-loop-times");
   if (loopInput) loopInput.value = String(settings.loopTimes);
+
+  const qLoop = $("#setting-queue-loop");
+  if (qLoop) qLoop.checked = !!settings.queueLoop;
 
   const label = $("#setting-transition-label");
   if (label) label.textContent = `${settings.transitionSec} s`;
@@ -2673,6 +2865,312 @@ function mountDurationDevTool() {
     }, 2000);
   });
   document.body.appendChild(btn);
+}
+
+function formatSleepCountdown(ms) {
+  const total = Math.max(0, Math.ceil(ms / 1000));
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+function remainingTrackSec() {
+  if (transitioning && audioCtx) {
+    const sec = getTransitionSec();
+    return Math.max(0, sec - (audioCtx.currentTime - transitionStartedAt));
+  }
+  const dur =
+    state.duration ||
+    decodedBuffer?.duration ||
+    (mediaEl && mediaEl.duration) ||
+    0;
+  const pos = getPlaybackPosition();
+  return Math.max(0, dur - pos);
+}
+
+/** Ms until playback of this song fully ends (incl. soft-end transition). */
+function estimateMsUntilSongEnd() {
+  if (transitioning && audioCtx) {
+    const sec = getTransitionSec();
+    const left = Math.max(0, sec - (audioCtx.currentTime - transitionStartedAt));
+    return left * 1000;
+  }
+
+  const dur =
+    state.duration ||
+    decodedBuffer?.duration ||
+    (mediaEl && mediaEl.duration) ||
+    0;
+  const pos = getPlaybackPosition();
+  let rem = Math.max(0, dur - pos);
+
+  // Soft-end: after first full playthrough, fade still runs before next track
+  const loopStart = typeof getLoopStartSec === "function" ? getLoopStartSec() : 0;
+  const willSoftEnd =
+    !useMediaEl &&
+    (state.loopMode === "off" || state.loopMode === "count") &&
+    (loopStart > 0 || forceFullLoop) &&
+    lastLoopCycle < 0 &&
+    !transitioning;
+
+  if (willSoftEnd) {
+    rem += Math.max(0, getTransitionSec());
+  }
+
+  return rem * 1000;
+}
+
+function updateSleepEndLabel() {
+  const el = $("#sleep-end-label");
+  if (!el) return;
+  if (state.queueIndex < 0) {
+    el.textContent = "";
+    return;
+  }
+  const ms = estimateMsUntilSongEnd();
+  el.textContent = `(${formatTime(ms / 1000)})`;
+}
+
+function positionSleepPanel() {
+  const panel = $("#sleep-panel");
+  const btn = $("#btn-sleep");
+  if (!panel || !btn || panel.classList.contains("hidden")) return;
+
+  // ensure panel is not trapped inside .app stacking context
+  if (panel.parentElement !== document.body) {
+    document.body.appendChild(panel);
+  }
+
+  const r = btn.getBoundingClientRect();
+  const pad = 8;
+  const pw = panel.offsetWidth || 260;
+  const ph = panel.offsetHeight || 200;
+
+  let left = r.right - pw;
+  let top = r.bottom + pad;
+  left = Math.max(8, Math.min(left, window.innerWidth - pw - 8));
+  if (top + ph > window.innerHeight - 8) {
+    top = Math.max(8, r.top - ph - pad);
+  }
+  panel.style.left = `${left}px`;
+  panel.style.top = `${top}px`;
+}
+
+function updateSleepUI() {
+  const panel = $("#sleep-panel");
+  const active = $("#sleep-active");
+  const btn = $("#btn-sleep");
+  const cd = $("#sleep-countdown");
+  const on = !!sleepMode;
+
+  btn?.classList.toggle("active", on);
+  btn?.classList.toggle("hidden", on);
+  active?.classList.toggle("hidden", !on);
+
+  if (!on) {
+    // still refresh end label if menu open
+    if (panel && !panel.classList.contains("hidden")) {
+      updateSleepEndLabel();
+      positionSleepPanel();
+    }
+    return;
+  }
+
+if (sleepMode === "end") {
+    if (cd) cd.textContent = formatTime(estimateMsUntilSongEnd() / 1000);
+  } else if (cd) {
+    cd.textContent = formatSleepCountdown(sleepEndsAt - Date.now());
+  }
+}
+
+
+function clearSleepTick() {
+  if (sleepTickId) {
+    clearInterval(sleepTickId);
+    sleepTickId = null;
+  }
+}
+
+function cancelSleepTimer() {
+  clearSleepTick();
+  sleepMode = null;
+  sleepEndsAt = 0;
+  updateSleepUI();
+}
+
+function fireSleepTimer() {
+  cancelSleepTimer();
+  // Stop playback / clear player
+  try {
+    if (state.playing) {
+      // force stop without toggling resume path oddly
+      stopSource();
+      state.playing = false;
+      document.body.classList.remove("is-playing");
+    }
+    resetPlayerToIdle();
+  } catch (_) {}
+
+  // Try close (usually blocked for normal tabs / installed PWAs)
+  try {
+    window.close();
+  } catch (_) {}
+}
+
+function startSleepTick() {
+  clearSleepTick();
+  sleepTickId = setInterval(() => {
+    if (!sleepMode) {
+      clearSleepTick();
+      return;
+    }
+    if (sleepMode === "duration") {
+      const left = sleepEndsAt - Date.now();
+      if (left <= 0) {
+        fireSleepTimer();
+        return;
+      }
+    } else if (sleepMode === "end") {
+      // handled on natural track end + remaining display
+      if (!state.playing && state.queueIndex < 0) {
+        fireSleepTimer();
+        return;
+      }
+    }
+    updateSleepUI();
+  }, 250);
+  updateSleepUI();
+}
+
+function startSleepDuration(minutes) {
+  const ms = Math.max(0.1, Number(minutes)) * 60 * 1000;
+  sleepMode = "duration";
+  sleepEndsAt = Date.now() + ms;
+  $("#sleep-panel")?.classList.add("hidden");
+  $("#btn-sleep")?.setAttribute("aria-expanded", "false");
+  startSleepTick();
+}
+
+function startSleepEndOfSong() {
+  if (state.queueIndex < 0) {
+    alert("Kein Song läuft.");
+    return;
+  }
+  // Stay in "end" mode — fire only when this song actually ends (no early next track)
+  sleepMode = "end";
+  sleepEndsAt = 0;
+  $("#sleep-panel")?.classList.add("hidden");
+  $("#btn-sleep")?.setAttribute("aria-expanded", "false");
+  startSleepTick();
+}
+
+function addSleepMinutes(mins) {
+  if (sleepMode === "end") {
+    // convert to duration from remaining + extra
+    const remMs = remainingTrackSec() * 1000;
+    sleepMode = "duration";
+    sleepEndsAt = Date.now() + remMs + mins * 60 * 1000;
+  } else if (sleepMode === "duration") {
+    sleepEndsAt += mins * 60 * 1000;
+  } else {
+    return;
+  }
+  updateSleepUI();
+}
+
+function bindSleepTimer() {
+  const btn = $("#btn-sleep");
+  const panel = $("#sleep-panel");
+
+  // hoist panel under body once
+  if (panel && panel.parentElement !== document.body) {
+    document.body.appendChild(panel);
+  }
+
+  btn?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (sleepMode) return;
+    const opening = panel?.classList.contains("hidden");
+    if (opening) {
+      updateSleepEndLabel();
+      panel.classList.remove("hidden");
+      btn.setAttribute("aria-expanded", "true");
+      requestAnimationFrame(() => {
+        positionSleepPanel();
+        updateSleepEndLabel();
+      });
+      // live-sync remaining while menu is open
+      if (!sleepTickId) {
+        sleepTickId = setInterval(() => {
+          if (!panel.classList.contains("hidden") && !sleepMode) {
+            updateSleepEndLabel();
+          }
+        }, 250);
+      }
+    } else {
+      panel.classList.add("hidden");
+      btn.setAttribute("aria-expanded", "false");
+    }
+  });
+
+  panel?.addEventListener("click", (e) => e.stopPropagation());
+  panel?.addEventListener("pointerdown", (e) => e.stopPropagation());
+
+  panel?.querySelectorAll("[data-sleep-min]").forEach((b) => {
+    b.addEventListener("click", (e) => {
+      e.stopPropagation();
+      startSleepDuration(Number(b.dataset.sleepMin));
+    });
+  });
+
+  panel?.querySelector('[data-sleep="end"]')?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    startSleepEndOfSong();
+  });
+
+  const customInput = $("#sleep-custom-input");
+  const customGo = $("#sleep-custom-go");
+
+  function submitCustom() {
+    const raw = customInput?.value ?? "";
+    const n = Number(String(raw).replace(",", "."));
+    if (!Number.isFinite(n) || n <= 0) {
+      customInput?.focus();
+      return;
+    }
+    startSleepDuration(n);
+    if (customInput) customInput.value = "";
+  }
+
+  customGo?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    submitCustom();
+  });
+  customInput?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      e.stopPropagation();
+      submitCustom();
+    }
+  });
+  customInput?.addEventListener("click", (e) => e.stopPropagation());
+
+  $("#sleep-add5")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    addSleepMinutes(5);
+  });
+  $("#sleep-cancel")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    cancelSleepTimer();
+  });
+
+  document.addEventListener("click", (e) => {
+    if (e.target.closest(".sleep-wrap") || e.target.closest("#sleep-panel")) return;
+    panel?.classList.add("hidden");
+    btn?.setAttribute("aria-expanded", "false");
+  });
+
+  window.addEventListener("resize", () => positionSleepPanel(), { passive: true });
 }
 
 init();

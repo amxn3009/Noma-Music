@@ -35,6 +35,48 @@
                 Playlists
             </button>
             </nav>
+      <div class="sleep-wrap">
+        <button id="btn-sleep" class="settings-btn sleep-btn" type="button" title="Ruhemodus" aria-label="Ruhemodus-Timer" aria-expanded="false">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
+            <path d="M12.3 2.3a9.7 9.7 0 0 0 9.4 12.9A9.5 9.5 0 1 1 12.3 2.3z"/>
+          </svg>
+        </button>
+
+        <div id="sleep-panel" class="sleep-panel hidden" role="menu">
+          <div class="sleep-panel-title">Ruhemodus</div>
+          <button type="button" data-sleep-min="0.5">30 Sekunden (Test)</button>
+          <button type="button" data-sleep-min="10">10 Minuten</button>
+          <button type="button" data-sleep-min="15">15 Minuten</button>
+          <button type="button" data-sleep-min="20">20 Minuten</button>
+          <button type="button" data-sleep-min="30">30 Minuten</button>
+          <button type="button" data-sleep-min="45">45 Minuten</button>
+          <button type="button" data-sleep-min="60">1 Stunde</button>
+          <button type="button" data-sleep="end">
+            Ende des Songs <span id="sleep-end-label" class="sleep-end-label"></span>
+          </button>
+          <div class="sleep-custom-row">
+            <input
+              id="sleep-custom-input"
+              class="sleep-custom-input"
+              type="number"
+              min="0.1"
+              step="0.1"
+              inputmode="decimal"
+              placeholder="Minuten"
+            >
+            <button type="button" id="sleep-custom-go" class="sleep-custom-go">OK</button>
+          </div>
+        </div>
+
+        <div id="sleep-active" class="sleep-active hidden">
+          <svg class="sleep-active-icon" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true">
+            <path d="M12.3 2.3a9.7 9.7 0 0 0 9.4 12.9A9.5 9.5 0 1 1 12.3 2.3z"/>
+          </svg>
+          <span id="sleep-countdown" class="sleep-countdown">–:––</span>
+          <button id="sleep-add5" class="sleep-chip" type="button" title="+5 Minuten">+5</button>
+          <button id="sleep-cancel" class="sleep-chip sleep-chip-danger" type="button" title="Abbrechen">✕</button>
+        </div>
+      </div>
       <button id="btn-settings" class="settings-btn" title="Einstellungen" aria-label="Einstellungen">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
           <path d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.58-.22l-2.39.96a7.2 7.2 0 0 0-1.62-.94l-.36-2.54A.49.49 0 0 0 14 2h-4a.49.49 0 0 0-.48.41l-.36 2.54c-.59.24-1.13.56-1.62.94l-2.39-.96a.49.49 0 0 0-.58.22L2.65 8.87a.49.49 0 0 0 .12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94L2.77 14.5a.49.49 0 0 0-.12.61l1.92 3.32c.14.24.44.34.7.24l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h4c.24 0 .44-.17.48-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.26.1.56 0 .7-.24l1.92-3.32a.49.49 0 0 0-.12-.61l-2.01-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z"/>
@@ -199,7 +241,7 @@
       <div class="settings-section">
         <h2 class="settings-section-title">Music Player</h2>
 
-               <label class="settings-row" for="setting-loop-times">
+        <label class="settings-row" for="setting-loop-times">
           <div class="settings-row-text">
             <span class="settings-label">Wiederholungen (Loop Stufe 2)</span>
             <span class="settings-hint">Nur Zahlen 1–99</span>
@@ -233,6 +275,14 @@
             </ul>
           </div>
         </div>
+
+        <label class="settings-row" for="setting-queue-loop">
+          <div class="settings-row-text">
+            <span class="settings-label">Warteschlange wiederholen</span>
+            <span class="settings-hint">Nach dem letzten Song wieder von vorne (auch beim Überspringen)</span>
+          </div>
+          <input id="setting-queue-loop" class="settings-toggle" type="checkbox" checked>
+        </label>
       </div>
 
       <button id="settings-reset" class="settings-reset-btn" type="button">Zurücksetzen auf Standard</button>

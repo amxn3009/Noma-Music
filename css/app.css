@@ -2090,6 +2090,191 @@ body.fs-open .progress-row {
   background: rgba(255,255,255,0.1);
 }
 
+/* ── Sleep timer (topbar) ── */
+.sleep-wrap {
+  position: relative;
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.settings-btn {
+  margin-left: 0;
+}
+.sleep-btn.active {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+/* Fixed + on <body> so it stacks above queue / lists */
+.sleep-panel {
+  position: fixed;
+  top: 0;
+  left: 0;
+  min-width: 260px;
+  max-width: min(320px, calc(100vw - 24px));
+  max-height: min(70vh, 480px);
+  overflow-y: auto;
+  padding: 8px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(18, 18, 22, 0.55);
+  backdrop-filter: blur(22px) saturate(1.5);
+  -webkit-backdrop-filter: blur(22px) saturate(1.5);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.55);
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sleep-panel.hidden { display: none !important; }
+.sleep-panel-title {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  padding: 6px 10px 8px;
+}
+.sleep-panel > button {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 0.92rem;
+  cursor: pointer;
+}
+.sleep-panel > button:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+.sleep-end-label {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin-left: 4px;
+}
+.sleep-custom-row {
+  display: flex;
+  gap: 8px;
+  padding: 8px 8px 6px;
+  align-items: center;
+}
+.sleep-custom-input {
+  flex: 1;
+  min-width: 0;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.9rem;
+  outline: none;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.sleep-custom-input::-webkit-outer-spin-button,
+.sleep-custom-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.sleep-custom-input:focus {
+  border-color: rgba(124, 156, 255, 0.5);
+}
+.sleep-custom-go {
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: none;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.sleep-custom-go:hover {
+  background: rgba(124, 156, 255, 0.28);
+}
+.sleep-active {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px 4px 10px;
+  border-radius: 999px;
+  background: rgba(124, 156, 255, 0.12);
+  border: 1px solid rgba(124, 156, 255, 0.25);
+}
+
+.sleep-active-icon {
+  flex-shrink: 0;
+  opacity: 0.95;
+  color: var(--accent);
+}
+
+.sleep-active.hidden { display: none !important; }
+.sleep-countdown {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--accent);
+  min-width: 3.2em;
+}
+.sleep-chip {
+  appearance: none;
+  border: none;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.sleep-chip:hover { background: rgba(255, 255, 255, 0.14); }
+.sleep-chip-danger:hover {
+  background: rgba(255, 80, 80, 0.25);
+  color: #ff8a8a;
+}
+
+/* Settings toggle */
+.settings-toggle {
+  width: 42px;
+  height: 24px;
+  appearance: none;
+  -webkit-appearance: none;
+  background: rgba(255,255,255,0.12);
+  border-radius: 999px;
+  position: relative;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+.settings-toggle::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.15s;
+}
+.settings-toggle:checked {
+  background: var(--accent);
+}
+.settings-toggle:checked::after {
+  transform: translateX(18px);
+}
+
 
 /* ===== COMPACT LAYOUT FIX (last = highest priority) ===== */
 .game-sticky-top.is-collapsed .game-header {
