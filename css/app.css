@@ -130,17 +130,21 @@ textarea {
   width: 100%;
   height: 100%;
   display: block;
-  opacity: 0.55;
-  transition: opacity 0.5s ease;
+  opacity: 0.5;
+  transition: opacity 0.55s var(--ease);
 }
 
 body.is-playing .bg-kawarp-canvas {
-  opacity: 0.7;
+  opacity: 0.72;
 }
 
+/* Fullscreen: brighter / more present */
 body.fs-open .bg-kawarp-canvas {
-  opacity: 0.85;
+  opacity: 0.78;
 }
+body.fs-open.is-playing .bg-kawarp-canvas {
+  opacity: 0.95;
+} 
 
 /* CSS fallback (when Kawarp off / failed) */
 .bg-layer {
@@ -197,6 +201,17 @@ body.bg-mode-kawarp .bg-layer {
   );
   z-index: 1;
   pointer-events: none;
+  transition: background 0.45s ease, opacity 0.45s ease;
+}
+
+/* Fullscreen: lighter veil so Kawarp pops */
+body.fs-open .bg-overlay {
+  background: linear-gradient(
+    180deg,
+    rgba(10, 10, 10, 0.12) 0%,
+    rgba(10, 10, 10, 0.28) 40%,
+    rgba(10, 10, 10, 0.55) 100%
+  );
 }
 
 @keyframes bgDrift {
@@ -219,14 +234,7 @@ body.fs-open.bg-mode-css .bg-layer {
   filter: blur(80px) saturate(1.9) brightness(0.9);
   transform: scale(1.25);
 }
-body.fs-open .bg-overlay {
-  background: linear-gradient(
-    180deg,
-    rgba(10, 10, 10, 0.2) 0%,
-    rgba(10, 10, 10, 0.45) 50%,
-    rgba(10, 10, 10, 0.8) 100%
-  );
-}
+
 body.fs-open.bg-mode-css.is-playing .bg-layer {
   opacity: 0.85;
   animation: bgPulseStrong 6s ease-in-out infinite alternate;

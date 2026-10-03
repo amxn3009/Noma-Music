@@ -144,32 +144,41 @@ async function initKawarp() {
       warpIntensity: 1.0,
       blurPasses: 8,
       animationSpeed: 1.0,
-      transitionDuration: 1000,
+      transitionDuration: 700,
       saturation: 1.5,
       tintColor: [0.04, 0.04, 0.06],
       tintIntensity: 0.2,
       dithering: 0.008,
       scale: 1.15,
     });
-    // placeholder until first cover
-    await kawarp.loadGradient(["#1a1a22", "#0a0a0a", "#12121a"], 135);
-    kawarp.start();
+    // Idle look = same PlaceholderImage as empty player cover (frozen until play)
+    await kawarp.loadImage(PLACEHOLDER);
     kawarpReady = true;
+    try {
+      kawarp.start(); // idle placeholder animates until a track is paused
+    } catch (_) {}
   } catch (err) {
     console.warn("[Noma] Kawarp init failed — CSS background fallback", err);
     kawarp = null;
     kawarpReady = false;
   }
   applyBgModeClass();
+  syncKawarpPlayback();
 }
 
-/** Update ambient background from album cover (or placeholder). */
-async function setAmbientBackground(url) {
-  const src = url || PLACEHOLDER;
-  if (src === lastBgUrl) return;
-  lastBgUrl = src;
+/** Ambient: PlaceholderImage when idle (static); album cover when playing (Kawarp moves). */
+async function setAmbientBackground(url, { force = false } = {}) {
+  const idle =
+    !url ||
+    url === PLACEHOLDER ||
+    state.queueIndex < 0 ||
+    state.queue.length === 0;
 
-  // Always keep CSS layer in sync (fallback / mode switch)
+  const src = idle ? PLACEHOLDER : url;
+  const key = idle ? "__idle__" : src;
+  if (!force && key === lastBgUrl) return;
+  lastBgUrl = key;
+
   if (bgLayer) {
     bgLayer.style.backgroundImage = `url("${src}")`;
   }
@@ -181,11 +190,30 @@ async function setAmbientBackground(url) {
       console.warn("[Noma] Kawarp loadImage failed", err);
     }
   }
+
+  syncKawarpPlayback();
 }
 
 function onBgResize() {
   try {
     kawarp?.resize();
+  } catch (_) {}
+}
+
+/** Kawarp motion: run while playing OR idle (placeholder); freeze only when paused mid-track. */
+function syncKawarpPlayback() {
+  if (!kawarp || !kawarpReady || settings.bgMode !== "kawarp") return;
+
+  const idle = state.queueIndex < 0 || state.queue.length === 0;
+  const shouldRun =
+    document.visibilityState === "visible" && (state.playing || idle);
+
+  try {
+    if (shouldRun) {
+      kawarp.start();
+    } else {
+      kawarp.stop(); // paused with a track loaded — freeze last frame
+    }
   } catch (_) {}
 }
 
@@ -300,7 +328,8 @@ function resetPlayerToIdle() {
   $("#fs-title").textContent = "Nichts läuft";
   $("#fs-game").textContent = "Keinen Song ausgewählt";
 
-  setAmbientBackground(PLACEHOLDER);
+  lastBgUrl = ""; // force clear old album
+  setAmbientBackground(PLACEHOLDER, { force: true });
 
   const fill = $("#progress-fill");
   if (fill) fill.style.width = "0%";
@@ -311,6 +340,7 @@ function resetPlayerToIdle() {
 
   markPlayingTrack(null);
   updatePlayerUI();
+  syncKawarpPlayback();
   renderQueue();
 }
 
@@ -708,6 +738,7 @@ async function playMediaUrl(url, track, offsetSec = 0) {
   updatePlayerUI();
   markPlayingTrack(getCurrentTrackId());
   updateMediaProgress();
+  syncKawarpPlayback();
 }
 
 function getPlaybackMode(track) {
@@ -908,6 +939,7 @@ async function playMediaUrlStreamLoop(url, track, offsetSec = 0) {
   updatePlayerUI();
   markPlayingTrack(getCurrentTrackId());
   bindStreamProgress();
+  syncKawarpPlayback();
 }
 
 function updateProgressUI() {
@@ -1114,6 +1146,7 @@ function playBuffer(audioBuffer, offsetSeconds = 0) {
   updatePlayerUI();
   markPlayingTrack(getCurrentTrackId());
   updateProgressUI();
+  syncKawarpPlayback();
 }
 
 function startTransition() {
@@ -1334,15 +1367,27 @@ function toggleFullscreen() {
   const fs = $("#fullscreen-player");
   const btnFs = $("#btn-fullscreen");
   const btnMin = $("#btn-minimize");
-  
+
   if (!fs) return;
 
   const open = fs.classList.contains("hidden");
   if (open) {
-    // Leave settings if open, then go fullscreen
     if (!$("#settings-view")?.classList.contains("hidden")) {
       closeSettings();
     }
+
+    // Always mirror bottom player (works for idle + playing)
+    const nowTitle = $("#now-title")?.textContent?.trim() || "Nichts läuft";
+    const nowGame = $("#now-game")?.textContent?.trim() || "Keinen Song ausgewählt";
+    const nowCover = $("#now-cover")?.getAttribute("src") || PLACEHOLDER;
+
+    const fsTitle = $("#fs-title");
+    const fsGame = $("#fs-game");
+    const fsCover = $("#fs-cover");
+    if (fsTitle) fsTitle.textContent = nowTitle;
+    if (fsGame) fsGame.textContent = nowGame;
+    if (fsCover) fsCover.src = nowCover;
+
     fs.classList.remove("hidden");
     document.body.classList.add("fs-open");
     btnFs?.classList.add("hidden");
@@ -1460,17 +1505,7 @@ async function init() {
   masterVolume = settings.volume ?? 1;
   const volSlider = $("#volume-slider");
   if (volSlider) volSlider.value = String(masterVolume);
-  await initKawarp();
-  applyBgModeClass();
-  setAmbientBackground(PLACEHOLDER);
   window.addEventListener("resize", onBgResize, { passive: true });
-  document.addEventListener("visibilitychange", () => {
-    if (!kawarp) return;
-    try {
-      if (document.visibilityState === "hidden") kawarp.stop();
-      else kawarp.start();
-    } catch (_) {}
-  });
   bindSettings();
   bindSleepTimer();
   updateSleepUI();
@@ -1478,19 +1513,30 @@ async function init() {
   $("#fs-cover").src = PLACEHOLDER;
   $("#now-title").textContent = "Nichts läuft";
   $("#now-game").textContent = "Keinen Song ausgewählt";
-  setAmbientBackground(PLACEHOLDER);
+  await initKawarp();
+  applyBgModeClass();
+  lastBgUrl = ""; // force idle paint
+  await setAmbientBackground(PLACEHOLDER, { force: true });
+  window.addEventListener("resize", onBgResize, { passive: true });
   document.addEventListener("dragstart", (e) => {
     if (e.target instanceof HTMLImageElement) {
       e.preventDefault();
     }
   });
   mountDurationDevTool();
-   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState !== "visible") return;
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState !== "visible") {
+      syncSoftEndFromClock();
+      try {
+        kawarp?.stop();
+      } catch (_) {}
+      return;
+    }
     syncSoftEndFromClock();
     if (state.playing && decodedBuffer && !scrubbing) {
       updateProgressUI();
     }
+    syncKawarpPlayback();
   });
 }
 
@@ -1736,7 +1782,10 @@ async function playCurrent() {
   $("#fs-cover").src = game?.cover || PLACEHOLDER;
   $("#fs-title").textContent = track.title;
   $("#fs-game").textContent = game?.short || "";
-  setAmbientBackground(game?.cover || PLACEHOLDER);
+  // set cover only once we know the track — avoids idle→placeholder→cover flash
+  if (game?.cover) {
+    setAmbientBackground(game.cover);
+  }
   document.body.classList.add("is-playing");
   markPlayingTrack(track.id);
 
@@ -1934,6 +1983,7 @@ async function togglePlay() {
       document.body.classList.remove("is-playing");
       markPlayingTrack(getCurrentTrackId());
       updatePlayerUI();
+      syncKawarpPlayback()
       return;
     }
 
@@ -1950,6 +2000,7 @@ async function togglePlay() {
       document.body.classList.remove("is-playing");
       markPlayingTrack(getCurrentTrackId());
       updatePlayerUI();
+      syncKawarpPlayback()
       return;
     }
 
@@ -1959,6 +2010,7 @@ async function togglePlay() {
     document.body.classList.remove("is-playing");
     markPlayingTrack(getCurrentTrackId());
     updatePlayerUI();
+    syncKawarpPlayback()
     return;
   }
 
@@ -1974,6 +2026,7 @@ async function togglePlay() {
       document.body.classList.add("is-playing");
       markPlayingTrack(getCurrentTrackId());
       updatePlayerUI();
+      syncKawarpPlayback()
       if (mediaA && mediaB) {
         bindStreamProgress(); // dual
       } else {
