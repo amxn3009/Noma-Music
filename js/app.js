@@ -1,4 +1,5 @@
 import { Bfstm } from './bfstm.js';
+import { Kawarp } from 'https://cdn.jsdelivr.net/npm/@kawarp/core@1.3.1/+esm';
 
 let LIBRARY = [];
 
@@ -22,6 +23,7 @@ const DEFAULT_SETTINGS = {
   transitionSec: 10,   // 0 | 5 | 10
   volume: 0.5,          // 0-1
   queueLoop: true,      // after last track: restart queue vs stop
+  bgMode: "kawarp", // "kawarp" | "css" — switch later in settings
 };
 
 let settings = { ...DEFAULT_SETTINGS };
@@ -41,6 +43,10 @@ function loadSettings() {
       typeof parsed.queueLoop === "boolean"
         ? parsed.queueLoop
         : DEFAULT_SETTINGS.queueLoop;
+    settings.bgMode =
+      parsed.bgMode === "css" || parsed.bgMode === "kawarp"
+        ? parsed.bgMode
+        : DEFAULT_SETTINGS.bgMode;
   } catch (_) {}
 }
 
@@ -87,8 +93,13 @@ const gameDetail = $("#game-detail");
 const tabGames = $("#tab-games");
 const tabPlaylists = $("#tab-playlists");
 const trackListEl = $("#track-list");
-const bgLayer = $("#bg-layer");
 const contextMenu = $("#context-menu");
+const bgLayer = $("#bg-layer");
+const bgKawarpCanvas = $("#bg-kawarp");
+
+let kawarp = null;
+let kawarpReady = false;
+let lastBgUrl = "";
 
 let contextTrack = null;
 
@@ -116,6 +127,67 @@ let useMediaEl = false;   // true = not using AudioBuffer
 let mediaRaf = null;
 let mediaLoopStart = 0;   // seconds
 let mediaForceFullLoop = false;
+
+function applyBgModeClass() {
+  document.body.classList.toggle("bg-mode-kawarp", settings.bgMode === "kawarp" && kawarpReady);
+  document.body.classList.toggle("bg-mode-css", settings.bgMode !== "kawarp" || !kawarpReady);
+}
+
+async function initKawarp() {
+  if (!bgKawarpCanvas) {
+    kawarpReady = false;
+    applyBgModeClass();
+    return;
+  }
+  try {
+    kawarp = new Kawarp(bgKawarpCanvas, {
+      warpIntensity: 1.0,
+      blurPasses: 8,
+      animationSpeed: 1.0,
+      transitionDuration: 1000,
+      saturation: 1.5,
+      tintColor: [0.04, 0.04, 0.06],
+      tintIntensity: 0.2,
+      dithering: 0.008,
+      scale: 1.15,
+    });
+    // placeholder until first cover
+    await kawarp.loadGradient(["#1a1a22", "#0a0a0a", "#12121a"], 135);
+    kawarp.start();
+    kawarpReady = true;
+  } catch (err) {
+    console.warn("[Noma] Kawarp init failed — CSS background fallback", err);
+    kawarp = null;
+    kawarpReady = false;
+  }
+  applyBgModeClass();
+}
+
+/** Update ambient background from album cover (or placeholder). */
+async function setAmbientBackground(url) {
+  const src = url || PLACEHOLDER;
+  if (src === lastBgUrl) return;
+  lastBgUrl = src;
+
+  // Always keep CSS layer in sync (fallback / mode switch)
+  if (bgLayer) {
+    bgLayer.style.backgroundImage = `url("${src}")`;
+  }
+
+  if (settings.bgMode === "kawarp" && kawarp && kawarpReady) {
+    try {
+      await kawarp.loadImage(src);
+    } catch (err) {
+      console.warn("[Noma] Kawarp loadImage failed", err);
+    }
+  }
+}
+
+function onBgResize() {
+  try {
+    kawarp?.resize();
+  } catch (_) {}
+}
 
 // One element, unlocked by the first user gesture — reused for all stream plays (critical on iOS)
 let persistentMediaEl = null;
@@ -228,7 +300,7 @@ function resetPlayerToIdle() {
   $("#fs-title").textContent = "Nichts läuft";
   $("#fs-game").textContent = "Keinen Song ausgewählt";
 
-  if (bgLayer) bgLayer.style.backgroundImage = `url("${PLACEHOLDER}")`;
+  setAmbientBackground(PLACEHOLDER);
 
   const fill = $("#progress-fill");
   if (fill) fill.style.width = "0%";
@@ -1388,6 +1460,17 @@ async function init() {
   masterVolume = settings.volume ?? 1;
   const volSlider = $("#volume-slider");
   if (volSlider) volSlider.value = String(masterVolume);
+  await initKawarp();
+  applyBgModeClass();
+  setAmbientBackground(PLACEHOLDER);
+  window.addEventListener("resize", onBgResize, { passive: true });
+  document.addEventListener("visibilitychange", () => {
+    if (!kawarp) return;
+    try {
+      if (document.visibilityState === "hidden") kawarp.stop();
+      else kawarp.start();
+    } catch (_) {}
+  });
   bindSettings();
   bindSleepTimer();
   updateSleepUI();
@@ -1395,7 +1478,7 @@ async function init() {
   $("#fs-cover").src = PLACEHOLDER;
   $("#now-title").textContent = "Nichts läuft";
   $("#now-game").textContent = "Keinen Song ausgewählt";
-  bgLayer.style.backgroundImage = `url("${PLACEHOLDER}")`;
+  setAmbientBackground(PLACEHOLDER);
   document.addEventListener("dragstart", (e) => {
     if (e.target instanceof HTMLImageElement) {
       e.preventDefault();
@@ -1653,7 +1736,7 @@ async function playCurrent() {
   $("#fs-cover").src = game?.cover || PLACEHOLDER;
   $("#fs-title").textContent = track.title;
   $("#fs-game").textContent = game?.short || "";
-  bgLayer.style.backgroundImage = game?.cover ? `url("${game.cover}")` : "none";
+  setAmbientBackground(game?.cover || PLACEHOLDER);
   document.body.classList.add("is-playing");
   markPlayingTrack(track.id);
 
