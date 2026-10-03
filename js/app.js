@@ -935,7 +935,7 @@ function updateProgressUI() {
 }
 
 function playBuffer(audioBuffer, offsetSeconds = 0) {
-  stopSource({ keepMediaAlive: isIOS() || isMobileLike() });
+  stopSource(); // full stop — no silence under BFSTM (avoids crackle)
   clearSoftEndTimers();
 
   const ctx = ensureAudioContext();
@@ -992,17 +992,6 @@ function playBuffer(audioBuffer, offsetSeconds = 0) {
   pauseOffset = offset;
   startTime = ctx.currentTime;
   currentSource.start(0, offset);
-
-    // Keep HTMLAudio session warm for iOS auto-advance to opus/m4a
-  if (isIOS() || isMobileLike()) {
-    unlockMediaElement().then(() => {
-      const el = getPersistentMedia();
-      if (el.dataset.unlocked === "1" && el.paused) {
-        el.volume = 0;
-        el.play().catch(() => {});
-      }
-    });
-  }
 
   // Pre-schedule soft-end fade in the audio graph (runs even if tab is minimized).
   // loopMode "off": after first full playthrough. "count": after last remaining loop.
@@ -1106,7 +1095,12 @@ function finishTransition() {
   } catch (_) {}
 
   cancelTransition(false);
-  stopSource({ keepMediaAlive: isIOS() || isMobileLike() });
+
+  // BFSTM is done — stop Web Audio fully, then briefly warm HTMLAudio for next stream track
+  stopSource();
+  if (isIOS() || isMobileLike()) {
+    unlockMediaElement().catch(() => {});
+  }
 
   if (sleepMode === "end") {
     fireSleepTimer();
@@ -1330,9 +1324,8 @@ function toggleShuffle() {
 }
 
 function releaseDecodedBuffer() {
-  stopSource({ keepMediaAlive: isIOS() || isMobileLike() }); // also stops media via stopMediaEl()
+  stopSource(); // was: keepMediaAlive on iOS
   decodedBuffer = null;
-  // help Safari drop the large ArrayBuffer sooner
   if (typeof window.gc === "function") {
     try { window.gc(); } catch (_) {}
   }
