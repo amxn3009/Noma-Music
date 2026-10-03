@@ -133,20 +133,30 @@ function getPersistentMedia() {
 /** Unlock HTMLAudio on first user gesture (call from play paths that had a click). */
 async function unlockMediaElement() {
   const el = getPersistentMedia();
-  try {
-    // silent blip if never started
-    if (el.dataset.unlocked === "1") return;
-    const prev = el.volume;
-    el.volume = 0;
-    if (!el.src) {
-      // tiny silent data uri optional — skip if already has src from earlier
-      el.src = "data:audio/mp4;base64,"; // may fail; fallback below
+  if (el.dataset.unlocked === "1") {
+    // re-assert play if iOS paused it
+    if (el.paused && el.dataset.keepAlive === "1") {
+      try {
+        el.volume = 0;
+        await el.play();
+      } catch (_) {}
     }
-    await el.play().catch(() => {});
-    el.pause();
-    el.volume = prev;
+    return;
+  }
+  try {
+    // Prefer real silence file so decode/play succeeds on iOS
+    const silenceUrl = new URL("Assets/Audio/silence.m4a", location.href).href;
+    if (!el.src || el.dataset.keepAlive !== "1") {
+      el.src = silenceUrl;
+      el.loop = true;
+      el.dataset.keepAlive = "1";
+    }
+    el.volume = 0;
+    await el.play();
     el.dataset.unlocked = "1";
-  } catch (_) {}
+  } catch (err) {
+    console.warn("[Noma] media unlock failed", err);
+  }
 }
 
 function isMobileLike() {
@@ -154,23 +164,27 @@ function isMobileLike() {
     (navigator.maxTouchPoints > 1 && window.innerWidth < 900);
 }
 
+function hardPausePersistentMedia() {
+  if (!persistentMediaEl) return;
+  try {
+    persistentMediaEl.onended = null;
+    persistentMediaEl.ontimeupdate = null;
+    persistentMediaEl.pause();
+  } catch (_) {}
+}
+
 function stopMediaEl() {
   if (mediaRaf) {
     cancelAnimationFrame(mediaRaf);
     mediaRaf = null;
   }
-  if (mediaEl) {
+  hardPausePersistentMedia();
+  if (mediaEl && mediaEl !== persistentMediaEl) {
     try {
       mediaEl.onended = null;
       mediaEl.ontimeupdate = null;
       mediaEl.pause();
-      // keep src — reuse unlock; playMediaUrl will change src when needed
     } catch (_) {}
-  }
-  // keep mediaEl pointing at persistent if it is that element
-  if (mediaEl === persistentMediaEl) {
-    useMediaEl = false;
-    return;
   }
   mediaEl = null;
   useMediaEl = false;
@@ -318,7 +332,10 @@ function syncSoftEndFromClock() {
   }
 }
 
-function stopSource() {
+function stopSource(opts = {}) {
+  // keepMediaAlive: leave silent HTMLAudio running (needed for iOS auto-advance)
+  const keepMediaAlive = !!opts.keepMediaAlive;
+
   if (animFrame) {
     cancelAnimationFrame(animFrame);
     animFrame = null;
@@ -332,8 +349,57 @@ function stopSource() {
     currentSource.disconnect();
     currentSource = null;
   }
-  stopStreamPair(); // clears A/B + mediaEl + useMediaEl + raf
-  stopMediaEl();    // safe no-op if already cleared
+
+  // dual stream always stops
+  streamHandoffArmed = false;
+  for (const el of [mediaA, mediaB]) {
+    if (!el) continue;
+    try {
+      el.onended = null;
+      el.ontimeupdate = null;
+      el.pause();
+      el.removeAttribute("src");
+      el.load();
+    } catch (_) {}
+  }
+  mediaA = mediaB = null;
+  mediaActive = "A";
+
+  if (mediaRaf) {
+    cancelAnimationFrame(mediaRaf);
+    mediaRaf = null;
+  }
+
+  if (!keepMediaAlive) {
+    hardPausePersistentMedia();
+    mediaEl = null;
+    useMediaEl = false;
+  } else {
+    // keep persistent silence running; clear "current track" pointer only
+    if (mediaEl && mediaEl !== persistentMediaEl) {
+      try {
+        mediaEl.pause();
+      } catch (_) {}
+    }
+    // if we were playing a real track on persistent, pause it but restart silence
+    if (persistentMediaEl && persistentMediaEl.dataset.keepAlive !== "1") {
+      try {
+        persistentMediaEl.onended = null;
+        persistentMediaEl.pause();
+      } catch (_) {}
+      // re-arm silence in background (no user gesture needed if already unlocked)
+      if (persistentMediaEl.dataset.unlocked === "1") {
+        const silenceUrl = new URL("Assets/Audio/silence.m4a", location.href).href;
+        persistentMediaEl.src = silenceUrl;
+        persistentMediaEl.loop = true;
+        persistentMediaEl.volume = 0;
+        persistentMediaEl.dataset.keepAlive = "1";
+        persistentMediaEl.play().catch(() => {});
+      }
+    }
+    mediaEl = null;
+    useMediaEl = false;
+  }
 }
 
 function formatTime(sec) {
@@ -448,8 +514,21 @@ function updateMediaProgress() {
 }
 
 async function playMediaUrl(url, track, offsetSec = 0) {
-  stopStreamPair(); // don't leave dual pair alive
-  // do NOT destroy persistent element — only detach handlers
+  // Stop dual A/B only — do NOT wipe the persistent element via stopStreamPair’s nulling
+  streamHandoffArmed = false;
+  for (const el of [mediaA, mediaB]) {
+    if (!el) continue;
+    try {
+      el.onended = null;
+      el.ontimeupdate = null;
+      el.pause();
+      el.removeAttribute("src");
+      el.load();
+    } catch (_) {}
+  }
+  mediaA = mediaB = null;
+  mediaActive = "A";
+
   if (mediaRaf) {
     cancelAnimationFrame(mediaRaf);
     mediaRaf = null;
@@ -460,7 +539,6 @@ async function playMediaUrl(url, track, offsetSec = 0) {
   mediaEl = getPersistentMedia();
   mediaEl.onended = null;
   mediaEl.ontimeupdate = null;
-  mediaEl.loop = false;
   mediaEl.preload = "auto";
   mediaEl.volume = masterVolume;
   useMediaEl = true;
@@ -472,15 +550,23 @@ async function playMediaUrl(url, track, offsetSec = 0) {
       ? track.loopStart
       : 0;
 
+  // Real track — leave keep-alive silence mode
+  mediaEl.dataset.keepAlive = "0";
   mediaEl.loop = state.loopMode === "one" && !(mediaLoopStart > 0);
 
-  // Change src only if needed (faster when same file)
-  if (mediaEl.src !== new URL(url, location.href).href) {
-    mediaEl.src = url;
+  const abs = new URL(url, location.href).href;
+  const needLoad = mediaEl.getAttribute("src") !== abs && mediaEl.src !== abs;
+
+  if (needLoad) {
+    try {
+      mediaEl.pause();
+    } catch (_) {}
+    mediaEl.src = abs;
   }
 
   await new Promise((resolve, reject) => {
-    if (mediaEl.readyState >= 1) {
+    // Only skip waiting if THIS file is already loaded
+    if (!needLoad && mediaEl.readyState >= 1) {
       resolve();
       return;
     }
@@ -507,7 +593,7 @@ async function playMediaUrl(url, track, offsetSec = 0) {
       : mediaEl.duration;
   decodedBuffer = null;
 
-  const startAt = Math.max(0, Math.min(offsetSec, state.duration - 0.05));
+  const startAt = Math.max(0, Math.min(offsetSec, (state.duration || 1) - 0.05));
   try {
     mediaEl.currentTime = startAt;
   } catch (_) {}
@@ -524,20 +610,20 @@ async function playMediaUrl(url, track, offsetSec = 0) {
   };
 
   try {
+    mediaEl.volume = masterVolume;
     await mediaEl.play();
     mediaEl.dataset.unlocked = "1";
   } catch (err) {
-    // iOS autoplay block after Web Audio → HTMLAudio handoff
     if (err && (err.name === "NotAllowedError" || err.name === "AbortError")) {
       await resumeAudio();
       try {
         await mediaEl.play();
+        mediaEl.dataset.unlocked = "1";
       } catch (err2) {
         console.warn("[Noma] media play blocked:", err2);
         state.playing = false;
         document.body.classList.remove("is-playing");
         updatePlayerUI();
-        // no alert — user can press play
         return;
       }
     } else {
@@ -586,7 +672,7 @@ function stopStreamPair() {
   }
   mediaA = mediaB = null;
   mediaActive = "A";
-  // keep single mediaEl path in sync
+  hardPausePersistentMedia();
   mediaEl = null;
   useMediaEl = false;
   if (mediaRaf) {
@@ -849,7 +935,7 @@ function updateProgressUI() {
 }
 
 function playBuffer(audioBuffer, offsetSeconds = 0) {
-  stopSource();
+  stopSource({ keepMediaAlive: isIOS() || isMobileLike() });
   clearSoftEndTimers();
 
   const ctx = ensureAudioContext();
@@ -906,6 +992,17 @@ function playBuffer(audioBuffer, offsetSeconds = 0) {
   pauseOffset = offset;
   startTime = ctx.currentTime;
   currentSource.start(0, offset);
+
+    // Keep HTMLAudio session warm for iOS auto-advance to opus/m4a
+  if (isIOS() || isMobileLike()) {
+    unlockMediaElement().then(() => {
+      const el = getPersistentMedia();
+      if (el.dataset.unlocked === "1" && el.paused) {
+        el.volume = 0;
+        el.play().catch(() => {});
+      }
+    });
+  }
 
   // Pre-schedule soft-end fade in the audio graph (runs even if tab is minimized).
   // loopMode "off": after first full playthrough. "count": after last remaining loop.
@@ -1009,7 +1106,7 @@ function finishTransition() {
   } catch (_) {}
 
   cancelTransition(false);
-  stopSource();
+  stopSource({ keepMediaAlive: isIOS() || isMobileLike() });
 
   if (sleepMode === "end") {
     fireSleepTimer();
@@ -1233,7 +1330,7 @@ function toggleShuffle() {
 }
 
 function releaseDecodedBuffer() {
-  stopSource(); // also stops media via stopMediaEl()
+  stopSource({ keepMediaAlive: isIOS() || isMobileLike() }); // also stops media via stopMediaEl()
   decodedBuffer = null;
   // help Safari drop the large ArrayBuffer sooner
   if (typeof window.gc === "function") {
@@ -1433,6 +1530,7 @@ function openGame(id) {
   if (currentId) markPlayingTrack(currentId);
 
   $("#play-all-btn").onclick = () => {
+    unlockMediaElement().catch(() => {});
     unshuffledQueue = null;
     state.queue = game.tracks.map((t) => ({
       gameId: game.id,
@@ -1452,6 +1550,7 @@ function openGame(id) {
   };
 
    $("#shuffle-all-btn").onclick = () => {
+    unlockMediaElement().catch(() => {});
     unshuffledQueue = game.tracks.map((t) => ({
       gameId: game.id,
       track: t,
@@ -1520,6 +1619,7 @@ function bindTabs() {
 }
 
 function playFromGame(game, track) {
+  unlockMediaElement().catch(() => {});
   unshuffledQueue = null;
   const idx = game.tracks.findIndex((t) => t.id === track.id);
   state.queue = game.tracks.map((t) => ({
@@ -1739,6 +1839,7 @@ function smoothPauseEq(row) {
 
 
 async function togglePlay() {
+  await unlockMediaElement();
   if (state.queueIndex < 0 && state.queue.length === 0) return;
 
   // ── Pause ──
