@@ -65,6 +65,7 @@ function getTransitionSec() {
 }
 
 const RESTART_THRESHOLD = 10; // seconds
+const CLICK_RAMP = 0.018; // ~18ms fade in/out — kills iOS clicks
 
 let transitioning = false;
 let transitionStartedAt = 0; // audioCtx.currentTime
@@ -1055,9 +1056,14 @@ function playBuffer(audioBuffer, offsetSeconds = 0) {
   currentSource = ctx.createBufferSource();
   currentSource.buffer = audioBuffer;
   currentGain = ctx.createGain();
-  currentGain.gain.value = masterVolume;
   currentSource.connect(currentGain);
   currentGain.connect(ctx.destination);
+
+  const now = ctx.currentTime;
+  // never start at full volume — iOS click
+  currentGain.gain.cancelScheduledValues(now);
+  currentGain.gain.setValueAtTime(0, now);
+  currentGain.gain.linearRampToValueAtTime(masterVolume, now + CLICK_RAMP);
 
   const wantInfiniteLoop = state.loopMode === "one";
   const wantSoftEnd =
@@ -1114,8 +1120,9 @@ function playBuffer(audioBuffer, offsetSeconds = 0) {
     softEndFadeAt = startTime + timeToFadeStart;
     softEndFadeSec = fadeSec;
 
-    currentGain.gain.cancelScheduledValues(startTime);
-    currentGain.gain.setValueAtTime(masterVolume, startTime);
+    // keep the short fade-in; only schedule the later outro
+    currentGain.gain.cancelScheduledValues(startTime + CLICK_RAMP);
+    currentGain.gain.setValueAtTime(masterVolume, startTime + CLICK_RAMP);
     if (fadeSec <= 0) {
       currentGain.gain.setValueAtTime(0, softEndFadeAt);
     } else {
@@ -2005,7 +2012,30 @@ async function togglePlay() {
     }
 
     pauseOffset = getPlaybackPosition();
-    stopSource();
+
+    if (currentGain && audioCtx) {
+      const t = audioCtx.currentTime;
+      currentGain.gain.cancelScheduledValues(t);
+      currentGain.gain.setValueAtTime(currentGain.gain.value, t);
+      currentGain.gain.linearRampToValueAtTime(0, t + CLICK_RAMP);
+      const src = currentSource;
+      const g = currentGain;
+      setTimeout(() => {
+        try {
+          if (src) {
+            src.onended = null;
+            src.stop();
+            src.disconnect();
+          }
+        } catch (_) {}
+        if (currentSource === src) currentSource = null;
+        if (currentGain === g) currentGain = null;
+        stopSource({ keepMediaAlive: isIOS() || isMobileLike() });
+      }, Math.ceil(CLICK_RAMP * 1000) + 4);
+    } else {
+      stopSource({ keepMediaAlive: isIOS() || isMobileLike() });
+    }
+
     state.playing = false;
     document.body.classList.remove("is-playing");
     markPlayingTrack(getCurrentTrackId());
@@ -2020,8 +2050,19 @@ async function togglePlay() {
       unlockMediaElement().catch(() => {});
       const cur = activeMedia() || mediaEl;
       cur.currentTime = pauseOffset;
-      cur.volume = masterVolume;
+      cur.volume = 0;
       await cur.play();
+      // short volume ramp
+      const target = masterVolume;
+      const steps = 6;
+      let i = 0;
+      const tick = () => {
+        i++;
+        cur.volume = target * (i / steps);
+        if (i < steps) requestAnimationFrame(tick);
+        else cur.volume = target;
+      };
+      requestAnimationFrame(tick);
       state.playing = true;
       document.body.classList.add("is-playing");
       markPlayingTrack(getCurrentTrackId());
