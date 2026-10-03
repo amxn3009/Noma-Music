@@ -117,6 +117,38 @@ let mediaRaf = null;
 let mediaLoopStart = 0;   // seconds
 let mediaForceFullLoop = false;
 
+// One element, unlocked by the first user gesture — reused for all stream plays (critical on iOS)
+let persistentMediaEl = null;
+
+function getPersistentMedia() {
+  if (!persistentMediaEl) {
+    persistentMediaEl = new Audio();
+    persistentMediaEl.preload = "auto";
+    persistentMediaEl.setAttribute("playsinline", "");
+    persistentMediaEl.setAttribute("webkit-playsinline", "");
+  }
+  return persistentMediaEl;
+}
+
+/** Unlock HTMLAudio on first user gesture (call from play paths that had a click). */
+async function unlockMediaElement() {
+  const el = getPersistentMedia();
+  try {
+    // silent blip if never started
+    if (el.dataset.unlocked === "1") return;
+    const prev = el.volume;
+    el.volume = 0;
+    if (!el.src) {
+      // tiny silent data uri optional — skip if already has src from earlier
+      el.src = "data:audio/mp4;base64,"; // may fail; fallback below
+    }
+    await el.play().catch(() => {});
+    el.pause();
+    el.volume = prev;
+    el.dataset.unlocked = "1";
+  } catch (_) {}
+}
+
 function isMobileLike() {
   return isIOS() || /Android/i.test(navigator.userAgent || "") ||
     (navigator.maxTouchPoints > 1 && window.innerWidth < 900);
@@ -132,11 +164,15 @@ function stopMediaEl() {
       mediaEl.onended = null;
       mediaEl.ontimeupdate = null;
       mediaEl.pause();
-      mediaEl.removeAttribute("src");
-      mediaEl.load();
+      // keep src — reuse unlock; playMediaUrl will change src when needed
     } catch (_) {}
-    mediaEl = null;
   }
+  // keep mediaEl pointing at persistent if it is that element
+  if (mediaEl === persistentMediaEl) {
+    useMediaEl = false;
+    return;
+  }
+  mediaEl = null;
   useMediaEl = false;
 }
 
@@ -412,59 +448,103 @@ function updateMediaProgress() {
 }
 
 async function playMediaUrl(url, track, offsetSec = 0) {
-  stopMediaEl();
-  releaseDecodedBuffer();
+  stopStreamPair(); // don't leave dual pair alive
+  // do NOT destroy persistent element — only detach handlers
+  if (mediaRaf) {
+    cancelAnimationFrame(mediaRaf);
+    mediaRaf = null;
+  }
 
-  await resumeAudio(); // keeps unlock on iOS
+  await resumeAudio();
 
-  mediaEl = new Audio();
+  mediaEl = getPersistentMedia();
+  mediaEl.onended = null;
+  mediaEl.ontimeupdate = null;
+  mediaEl.loop = false;
   mediaEl.preload = "auto";
-  mediaEl.src = url;
   mediaEl.volume = masterVolume;
   useMediaEl = true;
 
   mediaForceFullLoop = !!track.LoopFromStoE;
-  mediaLoopStart =
-    mediaForceFullLoop
-      ? 0
-      : Number.isFinite(track.loopStart) && track.loopStart > 0
-        ? track.loopStart
-        : 0;
+  mediaLoopStart = mediaForceFullLoop
+    ? 0
+    : Number.isFinite(track.loopStart) && track.loopStart > 0
+      ? track.loopStart
+      : 0;
 
-  // infinite loop mode
-  // ∞ = full-file repeat (Credits, etc.). Custom loopStart is handled in updateMediaProgress.
   mediaEl.loop = state.loopMode === "one" && !(mediaLoopStart > 0);
-  // if custom loopStart, we handle wrap in updateMediaProgress (loop=false)
+
+  // Change src only if needed (faster when same file)
+  if (mediaEl.src !== new URL(url, location.href).href) {
+    mediaEl.src = url;
+  }
 
   await new Promise((resolve, reject) => {
-    mediaEl.onloadedmetadata = () => resolve();
-    mediaEl.onerror = () => reject(new Error("Media load failed"));
+    if (mediaEl.readyState >= 1) {
+      resolve();
+      return;
+    }
+    const onMeta = () => {
+      cleanup();
+      resolve();
+    };
+    const onErr = () => {
+      cleanup();
+      reject(new Error("Media load failed"));
+    };
+    const cleanup = () => {
+      mediaEl.removeEventListener("loadedmetadata", onMeta);
+      mediaEl.removeEventListener("error", onErr);
+    };
+    mediaEl.addEventListener("loadedmetadata", onMeta);
+    mediaEl.addEventListener("error", onErr);
+    mediaEl.load();
   });
 
   state.duration =
     Number.isFinite(track.duration) && track.duration > 0
       ? track.duration
       : mediaEl.duration;
-  decodedBuffer = null; // no PCM buffer
+  decodedBuffer = null;
 
   const startAt = Math.max(0, Math.min(offsetSec, state.duration - 0.05));
-  mediaEl.currentTime = startAt;
+  try {
+    mediaEl.currentTime = startAt;
+  } catch (_) {}
   pauseOffset = startAt;
 
   mediaEl.onended = () => {
     if (!state.playing || transitioning) return;
-
     if (state.loopMode === "one") {
-      // Safety net if .loop didn't fire (some browsers)
       mediaEl.currentTime = mediaLoopStart > 0 ? mediaLoopStart : 0;
       mediaEl.play().catch(() => {});
       return;
     }
-
     nextTrack(true);
   };
 
-  await mediaEl.play();
+  try {
+    await mediaEl.play();
+    mediaEl.dataset.unlocked = "1";
+  } catch (err) {
+    // iOS autoplay block after Web Audio → HTMLAudio handoff
+    if (err && (err.name === "NotAllowedError" || err.name === "AbortError")) {
+      await resumeAudio();
+      try {
+        await mediaEl.play();
+      } catch (err2) {
+        console.warn("[Noma] media play blocked:", err2);
+        state.playing = false;
+        document.body.classList.remove("is-playing");
+        updatePlayerUI();
+        // no alert — user can press play
+        return;
+      }
+    } else {
+      throw err;
+    }
+  }
+
   state.playing = true;
   document.body.classList.add("is-playing");
   updatePlayerUI();
@@ -1492,6 +1572,12 @@ async function playCurrent() {
   const url = typeof getTrackUrl === "function" ? getTrackUrl(track) : track.file;
 
   try {
+    await resumeAudio();
+    // mark unlock opportunity when this call is still in a click stack
+    if (persistentMediaEl) persistentMediaEl.dataset.unlocked = persistentMediaEl.dataset.unlocked || "";
+  } catch (_) {}
+
+  try {
     if (typeof resumeAudio === "function") {
       await resumeAudio();
     } else {
@@ -1526,8 +1612,14 @@ async function playCurrent() {
 
         playBuffer(decodedBuffer, 0);
       } else {
-        await playMediaUrlStreamLoop(url, track, 0);
-        if (gen !== playGen) return;
+        // Dual A/B is heavy + breaks auto-advance on iOS (NotAllowedError).
+        // Single element is faster and keeps the autoplay “session” more reliably.
+        if (isIOS() || isMobileLike()) {
+          await playMediaUrl(url, track, 0);
+        } else {
+          await playMediaUrlStreamLoop(url, track, 0);
+          if (gen !== playGen) return;
+        }
       }
 
       if (!$("#queue-panel")?.classList.contains("hidden")) renderQueue();
@@ -1562,7 +1654,15 @@ async function playCurrent() {
   } catch (err) {
     if (gen !== playGen) return; // ignore errors from cancelled loads
     console.error("[Noma] decode/play failed:", err);
-    alert(`Konnte Track nicht abspielen:\n${track.title}\n\n${err.message}`);
+    const blocked =
+      err &&
+      (err.name === "NotAllowedError" ||
+        /not allowed by the user agent/i.test(String(err.message || "")));
+    if (!blocked) {
+      alert(`Konnte Track nicht abspielen:\n${track.title}\n\n${err.message}`);
+    } else {
+      console.warn("[Noma] autoplay blocked — press play:", track.title, err);
+    }
     document.body.classList.remove("is-playing");
     state.playing = false;
     updatePlayerUI();
@@ -1688,6 +1788,7 @@ async function togglePlay() {
   // ── Resume / start ──
   if (useMediaEl && mediaEl) {
     try {
+      unlockMediaElement().catch(() => {});
       const cur = activeMedia() || mediaEl;
       cur.currentTime = pauseOffset;
       cur.volume = masterVolume;
