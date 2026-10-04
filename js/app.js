@@ -65,7 +65,7 @@ function getTransitionSec() {
 }
 
 const RESTART_THRESHOLD = 10; // seconds
-const CLICK_RAMP = 0.018; // ~18ms fade in/out — kills iOS clicks
+const CLICK_RAMP = isIOS() ? 0.035 : 0.018; // ~18ms fade in/out — kills iOS clicks
 
 let transitioning = false;
 let transitionStartedAt = 0; // audioCtx.currentTime
@@ -80,6 +80,7 @@ let softEndTimer = null; // wall-clock backup for fade → next
 let softEndFadeAt = 0;   // audioCtx.currentTime when fade should start
 let softEndFadeSec = 0;
 let softEndStartTimer = null; // sets transitioning when fade begins
+let pauseStopGen = 0; // invalidates delayed pause cleanup after resume
 
 // ── Sleep / Ruhemodus ──
 let sleepEndsAt = 0;       // Date.now() deadline (duration mode)
@@ -364,9 +365,26 @@ function ensureAudioContext() {
 }
 
 // at start of playCurrent / togglePlay when starting sound:
+let audioWarmed = false;
+
 async function resumeAudio() {
   const ctx = ensureAudioContext();
   if (ctx.state === "suspended") await ctx.resume();
+
+  // One silent buffer tick — stabilizes iOS output on first session
+  if (!audioWarmed && isIOS()) {
+    audioWarmed = true;
+    try {
+      const buf = ctx.createBuffer(1, 1, ctx.sampleRate);
+      const src = ctx.createBufferSource();
+      const g = ctx.createGain();
+      g.gain.value = 0;
+      src.buffer = buf;
+      src.connect(g);
+      g.connect(ctx.destination);
+      src.start(0);
+    } catch (_) {}
+  }
   return ctx;
 }
 
@@ -1040,7 +1058,8 @@ function updateProgressUI() {
 }
 
 function playBuffer(audioBuffer, offsetSeconds = 0) {
-  stopSource(); // full stop — no silence under BFSTM (avoids crackle)
+  pauseStopGen++; // cancel any delayed pause stopSource / silence re-arm
+  stopSource();   // full stop — no silence under BFSTM
   clearSoftEndTimers();
 
   const ctx = ensureAudioContext();
@@ -2015,32 +2034,43 @@ async function togglePlay() {
 
     if (currentGain && audioCtx) {
       const t = audioCtx.currentTime;
+      const src = currentSource;
+      const g = currentGain;
+      const myGen = ++pauseStopGen;
+
       currentGain.gain.cancelScheduledValues(t);
       currentGain.gain.setValueAtTime(currentGain.gain.value, t);
       currentGain.gain.linearRampToValueAtTime(0, t + CLICK_RAMP);
-      const src = currentSource;
-      const g = currentGain;
+
+      // Only tear down THIS source after the fade — never re-arm silence under BFSTM
       setTimeout(() => {
+        if (myGen !== pauseStopGen) return; // resumed / new play already
         try {
           if (src) {
             src.onended = null;
             src.stop();
             src.disconnect();
           }
+          if (g) g.disconnect();
         } catch (_) {}
         if (currentSource === src) currentSource = null;
         if (currentGain === g) currentGain = null;
-        stopSource({ keepMediaAlive: isIOS() || isMobileLike() });
-      }, Math.ceil(CLICK_RAMP * 1000) + 4);
+        // BFSTM only — do NOT keepMediaAlive (silence under Web Audio = crackle)
+        if (animFrame) {
+          cancelAnimationFrame(animFrame);
+          animFrame = null;
+        }
+        clearSoftEndTimers();
+      }, Math.ceil(CLICK_RAMP * 1000) + 8);
     } else {
-      stopSource({ keepMediaAlive: isIOS() || isMobileLike() });
+      stopSource(); // no keepMediaAlive for buffer path
     }
 
     state.playing = false;
     document.body.classList.remove("is-playing");
     markPlayingTrack(getCurrentTrackId());
     updatePlayerUI();
-    syncKawarpPlayback()
+    syncKawarpPlayback();
     return;
   }
 
