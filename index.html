@@ -323,6 +323,18 @@
 </div>
   </div>
 
+    <!-- Confirm: clear queue -->
+  <div id="confirm-overlay" class="confirm-overlay hidden" aria-hidden="true">
+    <div class="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+      <h3 id="confirm-title">Warteschlange leeren?</h3>
+      <p class="confirm-text">Alle Songs werden entfernt und die Wiedergabe gestoppt.</p>
+      <div class="confirm-actions">
+        <button type="button" id="confirm-cancel" class="confirm-btn confirm-cancel">Abbrechen</button>
+        <button type="button" id="confirm-ok" class="confirm-btn confirm-ok">Leeren</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Fullscreen stage (cover only – controls stay in bottom bar) -->
   <div id="fullscreen-player" class="fullscreen-player hidden">
     <img id="fs-cover" class="fs-cover" src="" alt="">

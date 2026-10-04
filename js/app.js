@@ -1569,6 +1569,7 @@ async function init() {
   bindTabs();
   bindPlayerChrome();
   bindQueuePanel();
+  bindClearQueueConfirm();
   bindFullscreen();
   bindContextMenu();
   bindGameHeaderToggle();
@@ -1698,17 +1699,23 @@ function openGame(id) {
   requestAnimationFrame(updateTrackFade);
 
   trackListEl.querySelectorAll(".track-row").forEach((row) => {
+      if (row.dataset.suppressClick === "1") {
+        delete row.dataset.suppressClick;
+        return;
+      }
     row.addEventListener("click", (e) => {
       if (e.target.closest(".track-actions")) {
         e.preventDefault();
         e.stopPropagation();
         const track = game.tracks[+row.dataset.index];
-        const rect = e.target.closest(".track-actions").getBoundingClientRect();
-        showContextMenu(rect.left, rect.bottom + 4, {
-          game,
-          track,
-          fromQueue: false,
-        });
+        const actionsBtn = e.target.closest(".track-actions");
+        const rect = actionsBtn.getBoundingClientRect();
+        showContextMenu(
+          rect.left,
+          rect.bottom + 4,
+          { game, track, fromQueue: false },
+          actionsBtn
+        );
         return;
       }
       const track = game.tracks[+row.dataset.index];
@@ -1720,6 +1727,48 @@ function openGame(id) {
       const track = game.tracks[+row.dataset.index];
       showContextMenu(e.clientX, e.clientY, { game, track, fromQueue: false });
     });
+
+    let lpTimer = null;
+    let lpMoved = false;
+    row.addEventListener(
+      "pointerdown",
+      (e) => {
+      if (e.pointerType === "mouse") return;
+        if (e.target.closest(".track-actions")) return;
+        lpMoved = false;
+        const x = e.clientX;
+        const y = e.clientY;
+        lpTimer = setTimeout(() => {
+          lpTimer = null;
+          if (lpMoved) return;
+          const track = game.tracks[+row.dataset.index];
+          if (!track) return;
+          showContextMenu(x, y, { game, track, fromQueue: false });
+          row.dataset.suppressClick = "1";
+        }, 480);
+      },
+      { passive: true }
+    );
+    row.addEventListener(
+      "pointermove",
+      (e) => {
+        if (!lpTimer) return;
+        if (Math.abs(e.movementX) + Math.abs(e.movementY) > 6) {
+          lpMoved = true;
+          clearTimeout(lpTimer);
+          lpTimer = null;
+        }
+      },
+      { passive: true }
+    );
+    const cancelLp = () => {
+      if (lpTimer) {
+        clearTimeout(lpTimer);
+        lpTimer = null;
+      }
+    };
+    row.addEventListener("pointerup", cancelLp);
+    row.addEventListener("pointercancel", cancelLp);
   });
 
   const currentId = getCurrentTrackId();
@@ -2597,6 +2646,10 @@ function bindQueueItemEvents(list) {
   // Click row → play / toggle
   list.querySelectorAll(".queue-item").forEach((row) => {
     row.addEventListener("click", (e) => {
+      if (row.dataset.suppressClick === "1") {
+          delete row.dataset.suppressClick;
+        return;
+      }
       if (
         e.target.closest(".q-drag") ||
         e.target.closest(".q-remove") ||
@@ -2632,9 +2685,72 @@ function bindQueueItemEvents(list) {
         fromQueue: true,
       });
     });
+
+        // Long-press → context menu (mobile)
+    let lpTimer = null;
+    let lpMoved = false;
+    const LP_MS = 480;
+
+    row.addEventListener(
+      "pointerdown",
+      (e) => {
+        // PC: use right-click / ⋮ only — no long-press on mouse
+        if (e.pointerType === "mouse") return;
+        if (e.button != null && e.button !== 0) return;
+        if (
+          e.target.closest(".q-drag") ||
+          e.target.closest(".q-remove") ||
+          e.target.closest(".track-actions")
+        ) {
+          return;
+        }
+        lpMoved = false;
+        const x = e.clientX;
+        const y = e.clientY;
+        lpTimer = setTimeout(() => {
+          lpTimer = null;
+          if (lpMoved) return;
+          const item = state.queue[+row.dataset.index];
+          if (!item) return;
+          const game = LIBRARY.find((g) => g.id === item.gameId);
+          if (!game) return;
+          showContextMenu(x, y, {
+            game,
+            track: item.track,
+            fromQueue: true,
+          });
+          row.dataset.suppressClick = "1";
+        }, 480);
+      },
+      { passive: true }
+    );
+
+    row.addEventListener(
+      "pointermove",
+      (e) => {
+        if (!lpTimer) return;
+        // cancel if finger moved (scrolling / drag intent)
+        if (Math.abs(e.movementX) + Math.abs(e.movementY) > 6) {
+          lpMoved = true;
+          clearTimeout(lpTimer);
+          lpTimer = null;
+        }
+      },
+      { passive: true }
+    );
+
+    const cancelLp = () => {
+      if (lpTimer) {
+        clearTimeout(lpTimer);
+        lpTimer = null;
+      }
+    };
+    row.addEventListener("pointerup", cancelLp);
+    row.addEventListener("pointercancel", cancelLp);
+    row.addEventListener("lostpointercapture", cancelLp);
   });
 
-  // ⋮ button
+  // ⋮ button (toggle)
   list.querySelectorAll(".track-actions").forEach((btn) => {
     btn.addEventListener("click", (e) => {
       e.preventDefault();
@@ -2645,11 +2761,12 @@ function bindQueueItemEvents(list) {
       const game = LIBRARY.find((g) => g.id === item.gameId);
       if (!game) return;
       const rect = btn.getBoundingClientRect();
-      showContextMenu(rect.left, rect.bottom + 4, {
-        game,
-        track: item.track,
-        fromQueue: true,
-      });
+      showContextMenu(
+        rect.left,
+        rect.bottom + 4,
+        { game, track: item.track, fromQueue: true },
+        btn
+      );
     });
   });
 
@@ -2671,6 +2788,12 @@ function bindQueuePointerDrag(list) {
   let ghost = null;
   let startY = 0;
   let moved = false;
+  let lastClientY = 0;
+  let lastClientX = 0;
+  let dropIndex = -1; // insert-before index in state.queue
+  let lastDropIndex = -2;
+  let scrollRaf = null;
+  let slotEl = null;
 
   function makeGhost(row) {
     const item = state.queue[+row.dataset.index];
@@ -2696,9 +2819,120 @@ function bindQueuePointerDrag(list) {
     ghost.style.top = `${clientY}px`;
   }
 
-  function clearDrag() {
+  function ensureSlot() {
+    if (slotEl && slotEl.parentNode === list) return slotEl;
+    slotEl = document.createElement("li");
+    slotEl.className = "queue-drop-slot";
+    slotEl.setAttribute("aria-hidden", "true");
+    return slotEl;
+  }
+
+  function clearGapVisual() {
     list.querySelectorAll(".queue-item").forEach((el) => {
-      el.classList.remove("dragging", "drag-over");
+      el.classList.remove("drag-gap-before", "drag-gap-after", "drag-over");
+    });
+    if (slotEl && slotEl.parentNode) {
+      slotEl.classList.remove("active");
+      slotEl.remove();
+    }
+  }
+
+  /** dropIndex = index in state.queue to insert BEFORE (0..length) */
+  function computeDropIndex(clientY) {
+    const rows = [...list.querySelectorAll(".queue-item:not(.dragging)")];
+    if (!rows.length) return 0;
+
+    const first = rows[0].getBoundingClientRect();
+    if (clientY < first.top + first.height * 0.4) {
+      return +rows[0].dataset.index;
+    }
+
+    const last = rows[rows.length - 1].getBoundingClientRect();
+    if (clientY > last.bottom - last.height * 0.4) {
+      return +rows[rows.length - 1].dataset.index + 1;
+    }
+
+    for (const row of rows) {
+      const r = row.getBoundingClientRect();
+      if (clientY >= r.top && clientY <= r.bottom) {
+        const mid = r.top + r.height / 2;
+        return clientY < mid ? +row.dataset.index : +row.dataset.index + 1;
+      }
+    }
+
+    // nearest
+    let best = rows[0];
+    let bestDist = Infinity;
+    for (const row of rows) {
+      const r = row.getBoundingClientRect();
+      const cy = (r.top + r.bottom) / 2;
+      const d = Math.abs(clientY - cy);
+      if (d < bestDist) {
+        bestDist = d;
+        best = row;
+      }
+    }
+    const r = best.getBoundingClientRect();
+    return clientY < r.top + r.height / 2
+      ? +best.dataset.index
+      : +best.dataset.index + 1;
+  }
+
+  function placeSlot(insertBeforeIndex) {
+    // Only touch DOM when the index actually changes → no jitter
+    if (insertBeforeIndex === lastDropIndex) return;
+    lastDropIndex = insertBeforeIndex;
+    dropIndex = insertBeforeIndex;
+
+    clearGapVisual();
+    const slot = ensureSlot();
+    slot.classList.add("active");
+
+    const rows = [...list.querySelectorAll(".queue-item:not(.dragging)")];
+    // find first row whose data-index >= insertBeforeIndex
+    let anchor = null;
+    for (const row of rows) {
+      if (+row.dataset.index >= insertBeforeIndex) {
+        anchor = row;
+        break;
+      }
+    }
+    if (anchor) {
+      list.insertBefore(slot, anchor);
+    } else {
+      list.appendChild(slot);
+    }
+  }
+
+  function stopAutoScroll() {
+    if (scrollRaf) {
+      cancelAnimationFrame(scrollRaf);
+      scrollRaf = null;
+    }
+  }
+
+  function startAutoScroll() {
+    stopAutoScroll();
+    const tick = () => {
+      if (dragFrom < 0) {
+        stopAutoScroll();
+        return;
+      }
+      const scrolled = autoScrollQueue(lastClientY);
+      // only recompute drop target after scroll moved the list
+      if (scrolled) {
+        placeSlot(computeDropIndex(lastClientY));
+      }
+      scrollRaf = requestAnimationFrame(tick);
+    };
+    scrollRaf = requestAnimationFrame(tick);
+  }
+
+  function clearDrag() {
+    stopAutoScroll();
+    clearGapVisual();
+    list.querySelectorAll(".queue-item").forEach((el) => {
+      el.classList.remove("dragging");
     });
     if (ghost) {
       ghost.remove();
@@ -2709,6 +2943,8 @@ function bindQueuePointerDrag(list) {
     queueDragging = false;
     draggingEl = null;
     moved = false;
+    dropIndex = -1;
+    lastDropIndex = -2;
   }
 
   list.querySelectorAll(".q-drag").forEach((handle) => {
@@ -2716,17 +2952,24 @@ function bindQueuePointerDrag(list) {
       const row = handle.closest(".queue-item");
       if (!row) return;
 
+      hideContextMenu?.();
       contextMenu?.classList.add("hidden");
+
       dragFrom = +row.dataset.index;
       queueDragFrom = dragFrom;
       queueDragging = true;
       draggingEl = row;
       startY = e.clientY;
+      lastClientY = e.clientY;
+      lastClientX = e.clientX;
       moved = false;
+      dropIndex = -1;
+      lastDropIndex = -2;
       row.classList.add("dragging");
 
       ghost = makeGhost(row);
       moveGhost(e.clientX, e.clientY);
+      startAutoScroll();
 
       handle.setPointerCapture?.(e.pointerId);
       e.preventDefault();
@@ -2736,16 +2979,10 @@ function bindQueuePointerDrag(list) {
       if (dragFrom < 0 || !draggingEl) return;
       if (Math.abs(e.clientY - startY) > 4) moved = true;
 
+      lastClientX = e.clientX;
+      lastClientY = e.clientY;
       moveGhost(e.clientX, e.clientY);
-      autoScrollQueue(e.clientY);
-
-      list.querySelectorAll(".queue-item").forEach((el) => el.classList.remove("drag-over"));
-      // Ignore the ghost under the cursor
-      if (ghost) ghost.style.visibility = "hidden";
-      const el = document.elementFromPoint(e.clientX, e.clientY);
-      if (ghost) ghost.style.visibility = "visible";
-      const over = el?.closest?.(".queue-item");
-      if (over && over !== draggingEl) over.classList.add("drag-over");
+      placeSlot(computeDropIndex(e.clientY));
     });
 
     handle.addEventListener("pointerup", (e) => {
@@ -2755,31 +2992,56 @@ function bindQueuePointerDrag(list) {
       let to = -1;
 
       if (moved) {
-        if (ghost) ghost.style.visibility = "hidden";
-        const el = document.elementFromPoint(e.clientX, e.clientY);
-        if (ghost) ghost.style.visibility = "visible";
-        const over = el?.closest?.(".queue-item");
-        if (over) to = +over.dataset.index;
+        placeSlot(computeDropIndex(e.clientY));
+        to = dropIndex;
       }
 
-      // Clear drag FIRST so renderQueue can do a full rebuild
       clearDrag();
 
-      if (to >= 0 && to !== from) {
-        reorderQueue(from, to);
+      if (to >= 0 && to !== from && to !== from + 1) {
+        let insertAt = to;
+        if (from < to) insertAt = to - 1;
+        reorderQueue(from, insertAt, true);
       } else {
-        // still refresh numbers / current highlight
         renderQueue();
       }
     });
 
     handle.addEventListener("pointercancel", () => {
       clearDrag();
+      renderQueue();
     });
   });
 }
 
-function reorderQueue(from, to) {
+function autoScrollQueue(clientY) {
+  const list = $("#queue-list");
+  if (!list) return false;
+  const rect = list.getBoundingClientRect();
+  const edge = 48;
+  const maxStep = 14;
+  let delta = 0;
+
+  if (clientY < rect.top + edge) {
+    const t = 1 - (clientY - rect.top) / edge;
+    delta = -Math.max(3, Math.round(maxStep * Math.min(1, Math.max(0, t))));
+  } else if (clientY > rect.bottom - edge) {
+    const t = 1 - (rect.bottom - clientY) / edge;
+    delta = Math.max(3, Math.round(maxStep * Math.min(1, Math.max(0, t))));
+  }
+
+  if (!delta) return false;
+  const before = list.scrollTop;
+  list.scrollTop += delta;
+  return list.scrollTop !== before;
+}
+
+
+function reorderQueue(from, to, flash = false) {
+  if (from === to || from < 0 || to < 0) {
+    renderQueue();
+    return;
+  }
   const item = state.queue.splice(from, 1)[0];
   state.queue.splice(to, 0, item);
 
@@ -2787,12 +3049,28 @@ function reorderQueue(from, to) {
   else if (from < state.queueIndex && to >= state.queueIndex) state.queueIndex--;
   else if (from > state.queueIndex && to <= state.queueIndex) state.queueIndex++;
 
-  // This order is now the truth (also while shuffled)
   if (state.shuffle) {
     unshuffledQueue = cloneQueue(state.queue);
   }
 
   renderQueue();
+
+  if (flash) {
+    requestAnimationFrame(() => {
+      const row = document.querySelector(
+        `#queue-list .queue-item[data-index="${to}"]`
+      );
+      if (!row) return;
+      row.classList.remove("drop-flash");
+      void row.offsetWidth; // restart animation
+      row.classList.add("drop-flash");
+      row.addEventListener(
+        "animationend",
+        () => row.classList.remove("drop-flash"),
+        { once: true }
+      );
+    });
+  }
 }
 
 function removeFromQueue(index) {
@@ -2821,15 +3099,6 @@ function removeFromQueue(index) {
   renderQueue();
 }
 
-function autoScrollQueue(clientY) {
-  const panel = $("#queue-panel");
-  const list = $("#queue-list");
-  if (!panel || !list) return;
-  const rect = list.getBoundingClientRect();
-  const edge = 40;
-  if (clientY < rect.top + edge) list.scrollTop -= 12;
-  else if (clientY > rect.bottom - edge) list.scrollTop += 12;
-}
 
 function bindQueuePanel() {
   $("#btn-queue")?.addEventListener("click", () => {
@@ -2851,11 +3120,45 @@ function bindQueuePanel() {
 
   $("#queue-clear")?.addEventListener("click", () => {
     if (!state.queue.length) return;
+    openClearQueueConfirm();
+  });
+}
+
+function openClearQueueConfirm() {
+  const overlay = $("#confirm-overlay");
+  if (!overlay) return;
+  overlay.classList.remove("hidden");
+  overlay.setAttribute("aria-hidden", "false");
+}
+
+function closeClearQueueConfirm() {
+  const overlay = $("#confirm-overlay");
+  if (!overlay) return;
+  overlay.classList.add("hidden");
+  overlay.setAttribute("aria-hidden", "true");
+}
+
+function bindClearQueueConfirm() {
+  const overlay = $("#confirm-overlay");
+  if (!overlay || overlay.dataset.bound) return;
+  overlay.dataset.bound = "1";
+
+  $("#confirm-cancel")?.addEventListener("click", () => closeClearQueueConfirm());
+  $("#confirm-ok")?.addEventListener("click", () => {
+    closeClearQueueConfirm();
     state.queue = [];
     state.queueIndex = -1;
     unshuffledQueue = null;
     resetPlayerToIdle();
     renderQueue();
+  });
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) closeClearQueueConfirm();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !overlay.classList.contains("hidden")) {
+      closeClearQueueConfirm();
+    }
   });
 }
 
@@ -3052,11 +3355,34 @@ function bindTrackListFade() {
   updateTrackFade();
 }
 
-function showContextMenu(x, y, payload) {
+let contextMenuAnchor = null;
+let suppressDocClickUntil = 0;
+
+function hideContextMenu() {
+  contextMenu?.classList.add("hidden");
+  contextMenuAnchor = null;
+  contextTrack = null;
+}
+
+function showContextMenu(x, y, payload, anchorEl = null) {
+  if (
+    anchorEl &&
+    contextMenuAnchor === anchorEl &&
+    contextMenu &&
+    !contextMenu.classList.contains("hidden")
+  ) {
+    hideContextMenu();
+    return;
+  }
+
   contextTrack = payload;
+  contextMenuAnchor = anchorEl || null;
   contextMenu.classList.remove("hidden");
   contextMenu.style.left = `${Math.min(x, window.innerWidth - 220)}px`;
   contextMenu.style.top = `${Math.min(y, window.innerHeight - 120)}px`;
+
+  // ignore the click that fires right after pointer-up / long-press
+  suppressDocClickUntil = performance.now() + 450;
 }
 
 function bindContextMenu() {
@@ -3067,17 +3393,30 @@ function bindContextMenu() {
       const action = btn.dataset.action;
       if (action === "play-next") addPlayNext(game, track);
       if (action === "add-end") addToEnd(game, track);
-      contextMenu.classList.add("hidden");
+      hideContextMenu();
     });
   });
 
-  // Delay so the opening click doesn’t immediately close it
   document.addEventListener("click", (e) => {
-    if (e.target.closest("#context-menu") || e.target.closest(".track-actions")) {
-      return;
-    }
-    contextMenu?.classList.add("hidden");
+    if (performance.now() < suppressDocClickUntil) return;
+    if (e.target.closest("#context-menu")) return;
+    if (e.target.closest(".track-actions")) return;
+    hideContextMenu();
   });
+
+  const closeOnScroll = () => {
+    if (contextMenu && !contextMenu.classList.contains("hidden")) {
+      hideContextMenu();
+    }
+  };
+  $("#queue-list")?.addEventListener("scroll", closeOnScroll, { passive: true });
+  document
+    .querySelector(".track-list-scroll")
+    ?.addEventListener("scroll", closeOnScroll, { passive: true });
+  document
+    .querySelector(".content")
+    ?.addEventListener("scroll", closeOnScroll, { passive: true });
+  window.addEventListener("scroll", closeOnScroll, { passive: true, capture: true });
 }
 
 function bindPlayerChrome() {
