@@ -81,6 +81,9 @@ let softEndFadeAt = 0;   // audioCtx.currentTime when fade should start
 let softEndFadeSec = 0;
 let softEndStartTimer = null; // sets transitioning when fade begins
 let pauseStopGen = 0; // invalidates delayed pause cleanup after resume
+let bufferCtxSuspended = false; // true = BFSTM paused via AudioContext.suspend()
+let softEndRemainMs = 0;        // wall-clock soft-end left when suspended
+let softEndStartRemainMs = 0;
 
 // ── Sleep / Ruhemodus ──
 let sleepEndsAt = 0;       // Date.now() deadline (duration mode)
@@ -422,6 +425,44 @@ async function getTrackDuration(url, track) {
   }
 }
 
+function rescheduleSoftEndAfterResume() {
+  if (!audioCtx || !decodedBuffer || softEndFadeAt <= 0) return;
+  const now = audioCtx.currentTime;
+  const fadeSec = softEndFadeSec;
+  const timeToFadeStart = Math.max(0, softEndFadeAt - now);
+
+  clearSoftEndTimers();
+  softEndFadeAt = now + timeToFadeStart;
+  softEndFadeSec = fadeSec;
+
+  if (currentGain) {
+    currentGain.gain.cancelScheduledValues(now);
+    currentGain.gain.setValueAtTime(masterVolume, now);
+    if (fadeSec <= 0) {
+      currentGain.gain.setValueAtTime(0, softEndFadeAt);
+    } else {
+      currentGain.gain.setValueAtTime(masterVolume, softEndFadeAt);
+      currentGain.gain.linearRampToValueAtTime(0, softEndFadeAt + fadeSec);
+    }
+  }
+
+  softEndStartTimer = setTimeout(() => {
+    softEndStartTimer = null;
+    if (!state.playing || !currentGain) return;
+    transitioning = true;
+    transitionStartedAt = softEndFadeAt;
+    document.body.classList.add("is-transitioning");
+    lastLoopCycle = Math.max(0, lastLoopCycle);
+    updateProgressUI();
+  }, timeToFadeStart * 1000);
+
+  softEndTimer = setTimeout(() => {
+    softEndTimer = null;
+    if (!state.playing) return;
+    finishTransition();
+  }, (timeToFadeStart + Math.max(0, fadeSec)) * 1000 + 40);
+}
+
 function clearSoftEndTimers() {
   if (softEndTimer) {
     clearTimeout(softEndTimer);
@@ -455,6 +496,13 @@ function syncSoftEndFromClock() {
 
 function stopSource(opts = {}) {
   // keepMediaAlive: leave silent HTMLAudio running (needed for iOS auto-advance)
+  bufferCtxSuspended = false;
+  softEndRemainMs = 0;
+  softEndStartRemainMs = 0;
+  // If we had suspended for pause, wake context so the next play works
+  if (audioCtx && audioCtx.state === "suspended") {
+    audioCtx.resume().catch(() => {});
+  }
   const keepMediaAlive = !!opts.keepMediaAlive;
 
   if (animFrame) {
@@ -1990,7 +2038,6 @@ function smoothPauseEq(row) {
 
 
 async function togglePlay() {
-  await unlockMediaElement();
   if (state.queueIndex < 0 && state.queue.length === 0) return;
 
   // ── Pause ──
@@ -2030,40 +2077,28 @@ async function togglePlay() {
       return;
     }
 
+    // BFSTM: suspend context — no stop/restart click on iOS
     pauseOffset = getPlaybackPosition();
 
-    if (currentGain && audioCtx) {
-      const t = audioCtx.currentTime;
-      const src = currentSource;
-      const g = currentGain;
-      const myGen = ++pauseStopGen;
+    if (animFrame) {
+      cancelAnimationFrame(animFrame);
+      animFrame = null;
+    }
 
-      currentGain.gain.cancelScheduledValues(t);
-      currentGain.gain.setValueAtTime(currentGain.gain.value, t);
-      currentGain.gain.linearRampToValueAtTime(0, t + CLICK_RAMP);
+    // Freeze wall-clock soft-end timers (audio clock freezes with suspend)
+    if (softEndFadeAt > 0 && audioCtx) {
+      const now = audioCtx.currentTime;
+      softEndRemainMs = Math.max(0, (softEndFadeAt + softEndFadeSec - now) * 1000);
+      softEndStartRemainMs = Math.max(0, (softEndFadeAt - now) * 1000);
+    }
+    clearSoftEndTimers();
 
-      // Only tear down THIS source after the fade — never re-arm silence under BFSTM
-      setTimeout(() => {
-        if (myGen !== pauseStopGen) return; // resumed / new play already
-        try {
-          if (src) {
-            src.onended = null;
-            src.stop();
-            src.disconnect();
-          }
-          if (g) g.disconnect();
-        } catch (_) {}
-        if (currentSource === src) currentSource = null;
-        if (currentGain === g) currentGain = null;
-        // BFSTM only — do NOT keepMediaAlive (silence under Web Audio = crackle)
-        if (animFrame) {
-          cancelAnimationFrame(animFrame);
-          animFrame = null;
-        }
-        clearSoftEndTimers();
-      }, Math.ceil(CLICK_RAMP * 1000) + 8);
+    if (audioCtx && audioCtx.state === "running") {
+      bufferCtxSuspended = true;
+      audioCtx.suspend().catch(() => {});
     } else {
-      stopSource(); // no keepMediaAlive for buffer path
+      // fallback if no live context
+      stopSource();
     }
 
     state.playing = false;
@@ -2130,9 +2165,47 @@ async function togglePlay() {
     return;
   }
 
+  // BFSTM resume: wake same source (no new BufferSource → no click)
+  if (decodedBuffer && currentSource && bufferCtxSuspended && audioCtx) {
+    bufferCtxSuspended = false;
+    try {
+      await audioCtx.resume();
+    } catch (_) {}
+    // realign startTime so getPlaybackPosition stays correct after suspend
+    startTime = audioCtx.currentTime - (pauseOffset - (pauseOffset /* kept */));
+    // simpler: treat pauseOffset as absolute position already stored
+    startTime = audioCtx.currentTime;
+    // wait — getPlaybackPosition when playing is pauseOffset + (now - startTime).
+    // We stored pauseOffset at suspend; set startTime so elapsed starts from 0 addition:
+    startTime = audioCtx.currentTime;
+    // Actually: elapsed = pauseOffset + (currentTime - startTime). Want elapsed === pauseOffset at resume:
+    // → startTime = currentTime. Yes.
+
+    if (softEndFadeAt > 0 || softEndRemainMs > 0) {
+      // restore soft-end times relative to new clock
+      const now = audioCtx.currentTime;
+      softEndFadeAt = now + softEndStartRemainMs / 1000;
+      softEndFadeSec = Math.max(0, (softEndRemainMs - softEndStartRemainMs) / 1000);
+      softEndRemainMs = 0;
+      softEndStartRemainMs = 0;
+      rescheduleSoftEndAfterResume();
+    }
+
+    state.playing = true;
+    document.body.classList.add("is-playing");
+    markPlayingTrack(getCurrentTrackId());
+    updatePlayerUI();
+    updateProgressUI();
+    syncKawarpPlayback();
+    return;
+  }
+
   if (decodedBuffer) {
+    bufferCtxSuspended = false;
+    await resumeAudio();
     playBuffer(decodedBuffer, pauseOffset);
   } else {
+    await unlockMediaElement();
     playCurrent();
   }
   updatePlayerUI();
