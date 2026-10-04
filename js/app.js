@@ -2077,9 +2077,10 @@ async function togglePlay() {
       return;
     }
 
-     // BFSTM: fade out, then suspend (avoids hardware click)
+    // BFSTM: fade out, stop source, keep context RUNNING (no suspend lag)
     pauseOffset = getPlaybackPosition();
     const myPauseGen = ++pauseStopGen;
+    bufferCtxSuspended = false;
 
     if (animFrame) {
       cancelAnimationFrame(animFrame);
@@ -2091,7 +2092,6 @@ async function togglePlay() {
       softEndRemainMs = Math.max(0, (softEndFadeAt + softEndFadeSec - now) * 1000);
       softEndStartRemainMs = Math.max(0, (softEndFadeAt - now) * 1000);
     }
-    // Don't zero softEndFadeAt yet — rescheduleSoftEndAfterResume uses remain ms
     if (softEndTimer) {
       clearTimeout(softEndTimer);
       softEndTimer = null;
@@ -2100,12 +2100,17 @@ async function togglePlay() {
       clearTimeout(softEndStartTimer);
       softEndStartTimer = null;
     }
+    softEndFadeAt = 0;
+    softEndFadeSec = 0;
 
-    if (currentGain && audioCtx) {
+    const src = currentSource;
+    const g = currentGain;
+
+    if (g && audioCtx) {
       const t = audioCtx.currentTime;
-      currentGain.gain.cancelScheduledValues(t);
-      currentGain.gain.setValueAtTime(currentGain.gain.value, t);
-      currentGain.gain.linearRampToValueAtTime(0, t + CLICK_RAMP);
+      g.gain.cancelScheduledValues(t);
+      g.gain.setValueAtTime(g.gain.value, t);
+      g.gain.linearRampToValueAtTime(0, t + CLICK_RAMP);
     }
 
     state.playing = false;
@@ -2114,14 +2119,20 @@ async function togglePlay() {
     updatePlayerUI();
     syncKawarpPlayback();
 
-    const waitMs = Math.ceil(CLICK_RAMP * 1000) + 8;
     setTimeout(() => {
-      if (myPauseGen !== pauseStopGen) return; // resumed during fade
-      if (audioCtx && audioCtx.state === "running") {
-        bufferCtxSuspended = true;
-        audioCtx.suspend().catch(() => {});
-      }
-    }, waitMs);
+      if (myPauseGen !== pauseStopGen) return;
+      try {
+        if (src) {
+          src.onended = null;
+          src.stop();
+          src.disconnect();
+        }
+        if (g) g.disconnect();
+      } catch (_) {}
+      if (currentSource === src) currentSource = null;
+      if (currentGain === g) currentGain = null;
+      // do NOT suspend, do NOT keepMediaAlive
+    }, Math.ceil(CLICK_RAMP * 1000) + 8);
     return;
   }
 
@@ -2181,37 +2192,26 @@ async function togglePlay() {
     return;
   }
 
-    if (decodedBuffer && currentSource && bufferCtxSuspended && audioCtx) {
-    pauseStopGen++; // cancel pending suspend from pause fade
+  // BFSTM resume: context still running → instant start at pauseOffset
+  if (decodedBuffer) {
+    pauseStopGen++; // cancel any delayed stop from pause fade
     bufferCtxSuspended = false;
-    try {
-      await audioCtx.resume();
-    } catch (_) {}
+    await resumeAudio(); // only resumes if something else suspended it
+    playBuffer(decodedBuffer, pauseOffset);
 
-    startTime = audioCtx.currentTime; // elapsed = pauseOffset + 0
-
-    if (currentGain) {
-      const t = audioCtx.currentTime;
-      currentGain.gain.cancelScheduledValues(t);
-      currentGain.gain.setValueAtTime(0, t);
-      currentGain.gain.linearRampToValueAtTime(masterVolume, t + CLICK_RAMP);
-    }
-
+    // restore soft-end after playBuffer if we had one
     if (softEndRemainMs > 0 || softEndStartRemainMs > 0) {
       const now = audioCtx.currentTime;
       softEndFadeAt = now + softEndStartRemainMs / 1000;
       softEndFadeSec = Math.max(0, (softEndRemainMs - softEndStartRemainMs) / 1000);
       softEndRemainMs = 0;
       softEndStartRemainMs = 0;
-      rescheduleSoftEndAfterResume();
+      // playBuffer already scheduled soft-end for "off/count"; if you need exact
+      // remain times, call rescheduleSoftEndAfterResume() instead of playBuffer's own —
+      // simplest: let playBuffer recalculate from pauseOffset (preferred)
+      softEndRemainMs = 0;
+      softEndStartRemainMs = 0;
     }
-
-    state.playing = true;
-    document.body.classList.add("is-playing");
-    markPlayingTrack(getCurrentTrackId());
-    updatePlayerUI();
-    updateProgressUI();
-    syncKawarpPlayback();
     return;
   }
 
