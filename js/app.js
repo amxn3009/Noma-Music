@@ -65,7 +65,7 @@ function getTransitionSec() {
 }
 
 const RESTART_THRESHOLD = 10; // seconds
-const CLICK_RAMP = isIOS() ? 0.035 : 0.018; // ~18ms fade in/out — kills iOS clicks
+const CLICK_RAMP = 0.03; // ~30ms, all devices
 
 let transitioning = false;
 let transitionStartedAt = 0; // audioCtx.currentTime
@@ -2077,28 +2077,35 @@ async function togglePlay() {
       return;
     }
 
-    // BFSTM: suspend context — no stop/restart click on iOS
+     // BFSTM: fade out, then suspend (avoids hardware click)
     pauseOffset = getPlaybackPosition();
+    const myPauseGen = ++pauseStopGen;
 
     if (animFrame) {
       cancelAnimationFrame(animFrame);
       animFrame = null;
     }
 
-    // Freeze wall-clock soft-end timers (audio clock freezes with suspend)
     if (softEndFadeAt > 0 && audioCtx) {
       const now = audioCtx.currentTime;
       softEndRemainMs = Math.max(0, (softEndFadeAt + softEndFadeSec - now) * 1000);
       softEndStartRemainMs = Math.max(0, (softEndFadeAt - now) * 1000);
     }
-    clearSoftEndTimers();
+    // Don't zero softEndFadeAt yet — rescheduleSoftEndAfterResume uses remain ms
+    if (softEndTimer) {
+      clearTimeout(softEndTimer);
+      softEndTimer = null;
+    }
+    if (softEndStartTimer) {
+      clearTimeout(softEndStartTimer);
+      softEndStartTimer = null;
+    }
 
-    if (audioCtx && audioCtx.state === "running") {
-      bufferCtxSuspended = true;
-      audioCtx.suspend().catch(() => {});
-    } else {
-      // fallback if no live context
-      stopSource();
+    if (currentGain && audioCtx) {
+      const t = audioCtx.currentTime;
+      currentGain.gain.cancelScheduledValues(t);
+      currentGain.gain.setValueAtTime(currentGain.gain.value, t);
+      currentGain.gain.linearRampToValueAtTime(0, t + CLICK_RAMP);
     }
 
     state.playing = false;
@@ -2106,6 +2113,15 @@ async function togglePlay() {
     markPlayingTrack(getCurrentTrackId());
     updatePlayerUI();
     syncKawarpPlayback();
+
+    const waitMs = Math.ceil(CLICK_RAMP * 1000) + 8;
+    setTimeout(() => {
+      if (myPauseGen !== pauseStopGen) return; // resumed during fade
+      if (audioCtx && audioCtx.state === "running") {
+        bufferCtxSuspended = true;
+        audioCtx.suspend().catch(() => {});
+      }
+    }, waitMs);
     return;
   }
 
@@ -2165,24 +2181,23 @@ async function togglePlay() {
     return;
   }
 
-  // BFSTM resume: wake same source (no new BufferSource → no click)
-  if (decodedBuffer && currentSource && bufferCtxSuspended && audioCtx) {
+    if (decodedBuffer && currentSource && bufferCtxSuspended && audioCtx) {
+    pauseStopGen++; // cancel pending suspend from pause fade
     bufferCtxSuspended = false;
     try {
       await audioCtx.resume();
     } catch (_) {}
-    // realign startTime so getPlaybackPosition stays correct after suspend
-    startTime = audioCtx.currentTime - (pauseOffset - (pauseOffset /* kept */));
-    // simpler: treat pauseOffset as absolute position already stored
-    startTime = audioCtx.currentTime;
-    // wait — getPlaybackPosition when playing is pauseOffset + (now - startTime).
-    // We stored pauseOffset at suspend; set startTime so elapsed starts from 0 addition:
-    startTime = audioCtx.currentTime;
-    // Actually: elapsed = pauseOffset + (currentTime - startTime). Want elapsed === pauseOffset at resume:
-    // → startTime = currentTime. Yes.
 
-    if (softEndFadeAt > 0 || softEndRemainMs > 0) {
-      // restore soft-end times relative to new clock
+    startTime = audioCtx.currentTime; // elapsed = pauseOffset + 0
+
+    if (currentGain) {
+      const t = audioCtx.currentTime;
+      currentGain.gain.cancelScheduledValues(t);
+      currentGain.gain.setValueAtTime(0, t);
+      currentGain.gain.linearRampToValueAtTime(masterVolume, t + CLICK_RAMP);
+    }
+
+    if (softEndRemainMs > 0 || softEndStartRemainMs > 0) {
       const now = audioCtx.currentTime;
       softEndFadeAt = now + softEndStartRemainMs / 1000;
       softEndFadeSec = Math.max(0, (softEndRemainMs - softEndStartRemainMs) / 1000);
@@ -2353,22 +2368,96 @@ function toggleLoop() {
 
   updatePlayerUI();
 
-  // During outro: only update mode/UI
   if (transitioning) return;
 
-  // ── Stream path (Opus / m4a) ──
+  // Stream: only flip HTMLAudio.loop
   if (useMediaEl && mediaEl) {
     mediaEl.loop = state.loopMode === "one" && !(mediaLoopStart > 0);
     lastLoopCycle = -1;
     return;
   }
 
-  // ── Buffer path (BFSTM) — rebuild source at current position ──
-  if (decodedBuffer) {
-    const pos = getPlaybackPosition();
-    if (state.playing) {
-      playBuffer(decodedBuffer, pos);
+  // BFSTM: change loop flags on the LIVE source — no stop/restart
+  if (!decodedBuffer || !currentSource) return;
+
+  const duration = decodedBuffer.duration;
+  const loopStart = getLoopStartSec();
+  const wantInfinite = state.loopMode === "one";
+  const wantSoftEnd =
+    (state.loopMode === "off" || state.loopMode === "count") &&
+    (loopStart > 0 || forceFullLoop);
+
+  if (wantInfinite || wantSoftEnd) {
+    currentSource.loop = true;
+    if (forceFullLoop) {
+      currentSource.loopStart = 0;
+      currentSource.loopEnd = duration;
+    } else if (loopStart > 0) {
+      currentSource.loopStart = loopStart;
+      currentSource.loopEnd = duration;
+    } else {
+      currentSource.loopStart = 0;
+      currentSource.loopEnd = duration;
     }
+  } else {
+    currentSource.loop = false;
+  }
+
+  lastLoopCycle = -1;
+
+  // Rebuild soft-end schedule from current position (no new BufferSource)
+  if (softEndTimer) {
+    clearTimeout(softEndTimer);
+    softEndTimer = null;
+  }
+  if (softEndStartTimer) {
+    clearTimeout(softEndStartTimer);
+    softEndStartTimer = null;
+  }
+  softEndFadeAt = 0;
+  softEndFadeSec = 0;
+
+  if (wantSoftEnd && state.playing && audioCtx && currentGain && !bufferCtxSuspended) {
+    const offset = getPlaybackPosition();
+    const fadeSec = getTransitionSec();
+    let loopsAfterFirst = 0;
+    if (state.loopMode === "count") {
+      loopsAfterFirst = Math.max(0, state.loopsRemaining);
+    }
+    const loopLen = forceFullLoop
+      ? Math.max(0.001, duration)
+      : Math.max(0.001, duration - loopStart);
+    const timeToFadeStart =
+      Math.max(0.01, duration - offset) + loopsAfterFirst * loopLen;
+
+    softEndFadeAt = audioCtx.currentTime + timeToFadeStart;
+    softEndFadeSec = fadeSec;
+
+    const now = audioCtx.currentTime;
+    currentGain.gain.cancelScheduledValues(now);
+    currentGain.gain.setValueAtTime(masterVolume, now);
+    if (fadeSec <= 0) {
+      currentGain.gain.setValueAtTime(0, softEndFadeAt);
+    } else {
+      currentGain.gain.setValueAtTime(masterVolume, softEndFadeAt);
+      currentGain.gain.linearRampToValueAtTime(0, softEndFadeAt + fadeSec);
+    }
+
+    softEndStartTimer = setTimeout(() => {
+      softEndStartTimer = null;
+      if (!state.playing || !currentGain) return;
+      transitioning = true;
+      transitionStartedAt = softEndFadeAt;
+      document.body.classList.add("is-transitioning");
+      lastLoopCycle = Math.max(0, lastLoopCycle);
+      updateProgressUI();
+    }, timeToFadeStart * 1000);
+
+    softEndTimer = setTimeout(() => {
+      softEndTimer = null;
+      if (!state.playing) return;
+      finishTransition();
+    }, (timeToFadeStart + Math.max(0, fadeSec)) * 1000 + 40);
   }
 }
 
