@@ -296,11 +296,20 @@ function stopMediaEl() {
 }
 
 async function decodeWebAudio(url) {
+  const hit = decodeCacheGet(url);
+  if (hit?.audioBuffer) return hit.audioBuffer;
+
   const ctx = await resumeAudio();
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Failed to load ${url}: ${res.status}`);
   const buf = await res.arrayBuffer();
-  return ctx.decodeAudioData(buf.slice(0));
+  const audioBuffer = await ctx.decodeAudioData(buf.slice(0));
+  decodeCacheSet(url, {
+    audioBuffer,
+    loopStartSample: 0,
+    sampleRate: audioBuffer.sampleRate,
+  });
+  return audioBuffer;
 }
 
 function resetPlayerToIdle() {
@@ -392,6 +401,28 @@ async function resumeAudio() {
 }
 
 const durationCache = new Map(); // url → seconds
+
+// Decode cache (BFSTM / web audio). Cap memory — long tracks are heavy.
+const DECODE_CACHE_MAX = isIOS() ? 4 : 8;
+const decodeCache = new Map(); // url → { audioBuffer, loopStartSample, sampleRate, loopFlag? }
+
+function decodeCacheGet(url) {
+  if (!decodeCache.has(url)) return null;
+  const entry = decodeCache.get(url);
+  // LRU: re-insert
+  decodeCache.delete(url);
+  decodeCache.set(url, entry);
+  return entry;
+}
+
+function decodeCacheSet(url, entry) {
+  if (decodeCache.has(url)) decodeCache.delete(url);
+  decodeCache.set(url, entry);
+  while (decodeCache.size > DECODE_CACHE_MAX) {
+    const oldest = decodeCache.keys().next().value;
+    decodeCache.delete(oldest);
+  }
+}
 
 async function getTrackDuration(url, track) {
   if (track && Number.isFinite(track.duration) && track.duration > 0) {
@@ -1188,8 +1219,10 @@ function playBuffer(audioBuffer, offsetSeconds = 0) {
     softEndFadeSec = fadeSec;
 
     // keep the short fade-in; only schedule the later outro
-    currentGain.gain.cancelScheduledValues(startTime + CLICK_RAMP);
-    currentGain.gain.setValueAtTime(masterVolume, startTime + CLICK_RAMP);
+    // Don't touch the fade-in window — only schedule after it
+    const afterIn = startTime + CLICK_RAMP + 0.001;
+    currentGain.gain.cancelScheduledValues(afterIn);
+    currentGain.gain.setValueAtTime(masterVolume, afterIn);
     if (fadeSec <= 0) {
       currentGain.gain.setValueAtTime(0, softEndFadeAt);
     } else {
@@ -1523,6 +1556,16 @@ function releaseDecodedBuffer() {
 }
 
 async function decodeBfstm(url) {
+  const hit = decodeCacheGet(url);
+  if (hit?.audioBuffer) {
+    return {
+      audioBuffer: hit.audioBuffer,
+      loopStartSample: hit.loopStartSample,
+      sampleRate: hit.sampleRate,
+      loopFlag: !!hit.loopFlag,
+    };
+  }
+
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Failed to load ${url}: ${res.status}`);
   const arrayBuffer = await res.arrayBuffer();
@@ -1545,12 +1588,14 @@ async function decodeBfstm(url) {
     }
   }
 
-  return {
+  const out = {
     audioBuffer,
     loopStartSample: meta.loopFlag ? meta.loopStartSample : 0,
     sampleRate: meta.sampleRate,
     loopFlag: !!meta.loopFlag,
   };
+  decodeCacheSet(url, out);
+  return out;
 }
 
 // ─── App UI ────────────────────────────────────────────────────
@@ -2264,14 +2309,19 @@ async function togglePlay() {
     return;
   }
 
+  // BFSTM resume: context stays running → one playBuffer only
   if (decodedBuffer) {
+    pauseStopGen++; // cancel delayed pause stopSource
     bufferCtxSuspended = false;
+    softEndRemainMs = 0;
+    softEndStartRemainMs = 0;
     await resumeAudio();
     playBuffer(decodedBuffer, pauseOffset);
-  } else {
-    await unlockMediaElement();
-    playCurrent();
+    return; // critical — never fall through into a second playBuffer
   }
+
+  await unlockMediaElement();
+  playCurrent();
   updatePlayerUI();
 }
 
@@ -2996,6 +3046,9 @@ function bindQueuePointerDrag(list) {
         to = dropIndex;
       }
 
+      // freeze scroll so removing the slot doesn't jump the list
+      const savedScroll = list.scrollTop;
+
       clearDrag();
 
       if (to >= 0 && to !== from && to !== from + 1) {
@@ -3005,6 +3058,12 @@ function bindQueuePointerDrag(list) {
       } else {
         renderQueue();
       }
+
+      // restore after DOM rebuild
+      list.scrollTop = savedScroll;
+      requestAnimationFrame(() => {
+        list.scrollTop = savedScroll;
+      });
     });
 
     handle.addEventListener("pointercancel", () => {
@@ -3042,6 +3101,9 @@ function reorderQueue(from, to, flash = false) {
     renderQueue();
     return;
   }
+  const list = $("#queue-list");
+  const savedScroll = list ? list.scrollTop : 0;
+
   const item = state.queue.splice(from, 1)[0];
   state.queue.splice(to, 0, item);
 
@@ -3055,6 +3117,13 @@ function reorderQueue(from, to, flash = false) {
 
   renderQueue();
 
+  if (list) {
+    list.scrollTop = savedScroll;
+    requestAnimationFrame(() => {
+      list.scrollTop = savedScroll;
+    });
+  }
+
   if (flash) {
     requestAnimationFrame(() => {
       const row = document.querySelector(
@@ -3062,7 +3131,7 @@ function reorderQueue(from, to, flash = false) {
       );
       if (!row) return;
       row.classList.remove("drop-flash");
-      void row.offsetWidth; // restart animation
+      void row.offsetWidth;
       row.classList.add("drop-flash");
       row.addEventListener(
         "animationend",
