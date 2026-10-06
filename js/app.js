@@ -1702,12 +1702,43 @@ async function init() {
       try {
         kawarp?.stop();
       } catch (_) {}
+      // still push "playing" so lock screen doesn't flip to paused while audio continues
+      if (state.playing) {
+        try {
+          navigator.mediaSession.playbackState = "playing";
+        } catch (_) {}
+      }
       return;
     }
+
+    // Back to foreground
+    ensurePlaybackAudioSession();
     syncSoftEndFromClock();
-    if (state.playing && decodedBuffer && !scrubbing) {
-      updateProgressUI();
+
+    if (state.playing) {
+      // BFSTM: silence element may have been paused by iOS — re-arm
+      if (!useMediaEl && decodedBuffer) {
+        startSilentShield();
+      }
+      // Stream: ensure element is still playing
+      if (useMediaEl && mediaEl) {
+        const cur = (typeof activeMedia === "function" && activeMedia()) || mediaEl;
+        if (cur && cur.paused) {
+          cur.play().catch(() => {});
+        }
+      }
+      if (decodedBuffer && !scrubbing) {
+        updateProgressUI();
+      }
+      if (useMediaEl) {
+        if (mediaA && mediaB) bindStreamProgress();
+        else updateMediaProgress();
+      }
     }
+
+    // Re-bind actions (iOS sometimes restores ±10s) + force correct state/position
+    bindMediaSession();
+    updateMediaSession();
     syncKawarpPlayback();
   });
 }
@@ -2667,6 +2698,7 @@ function bindMediaSession() {
     } catch (_) {}
   };
 
+  // iOS re-enables these after background — clear, then override if it ignores null
   try {
     navigator.mediaSession.setActionHandler("seekbackward", null);
   } catch (_) {}
@@ -2674,17 +2706,23 @@ function bindMediaSession() {
     navigator.mediaSession.setActionHandler("seekforward", null);
   } catch (_) {}
 
+  // If the OS still shows ± controls, make them skip tracks (not ±10s)
+  set("seekbackward", () => {
+    prevTrack();
+    updateMediaSession();
+  });
+  set("seekforward", () => {
+    nextTrack();
+    updateMediaSession();
+  });
+
   set("play", async () => {
-    if (!state.playing) {
-      await togglePlay();
-    }
+    if (!state.playing) await togglePlay();
     updateMediaSession();
   });
 
   set("pause", async () => {
-    if (state.playing) {
-      await togglePlay();
-    }
+    if (state.playing) await togglePlay();
     updateMediaSession();
   });
 
@@ -2701,7 +2739,8 @@ function bindMediaSession() {
   set("seekto", (details) => {
     if (!details || !Number.isFinite(details.seekTime)) return;
     if (transitioning) return;
-    const t = details.seekTime;
+    const t = Math.max(0, details.seekTime);
+
     if (useMediaEl && mediaEl) {
       const cur = activeMedia() || mediaEl;
       cur.currentTime = t;
@@ -2715,8 +2754,7 @@ function bindMediaSession() {
       else {
         pauseOffset = t;
         const fill = $("#progress-fill");
-        if (fill)
-          fill.style.width = `${(t / decodedBuffer.duration) * 100}%`;
+        if (fill) fill.style.width = `${(t / decodedBuffer.duration) * 100}%`;
         const tCur = $("#time-current");
         if (tCur) tCur.textContent = formatTime(t);
       }
@@ -2756,7 +2794,6 @@ function updateMediaSession() {
     console.warn("[Noma] MediaMetadata failed", err);
   }
 
-  // Always push state — this is what keeps pause/play in sync
   navigator.mediaSession.playbackState = state.playing ? "playing" : "paused";
 
   const duration = Math.max(
@@ -2767,28 +2804,37 @@ function updateMediaSession() {
       0
   );
 
-  // Don't report 0 while a track is loaded but buffer was released mid-skip
-  let position = 0;
-  if (duration > 0) {
-    if (transitioning) {
-      // outro: stay at end of song (not transition timer)
-      position = duration;
-    } else {
-      position = getPlaybackPosition();
-    }
-    // clamp; avoid NaN
-    if (!Number.isFinite(position)) position = 0;
-    position = Math.min(Math.max(0, position), duration);
+  if (!(duration > 0.5)) return;
+
+  let position;
+  if (transitioning) {
+    position = duration; // hold end during outro
+  } else if (decodedBuffer || (useMediaEl && mediaEl)) {
+    position = getPlaybackPosition();
+  } else {
+    // mid-skip: buffer cleared — do NOT report 0
+    return;
+  }
+
+  if (!Number.isFinite(position)) return;
+  position = Math.min(Math.max(0, position), duration);
+
+  // Ignore bogus 0 while we already had progress (avoids lock-screen jump to start)
+  if (
+    position < 0.25 &&
+    state.currentTime > 1 &&
+    !scrubbing &&
+    state.playing
+  ) {
+    position = Math.min(state.currentTime, duration);
   }
 
   try {
-    if (duration > 0.5 && Number.isFinite(position)) {
-      navigator.mediaSession.setPositionState({
-        duration,
-        playbackRate: 1,
-        position,
-      });
-    }
+    navigator.mediaSession.setPositionState({
+      duration,
+      playbackRate: 1,
+      position,
+    });
   } catch (_) {}
 }
 
