@@ -1121,6 +1121,7 @@ function updateProgressUI() {
     }
     if (state.playing) {
       animFrame = requestAnimationFrame(updateProgressUI);
+      maybeUpdateMediaSessionPosition();
     }
     return;
   }
@@ -2016,7 +2017,14 @@ async function playCurrent() {
   releaseDecodedBuffer();
   state.playing = false;
   pauseOffset = 0;
-  updatePlayerUI();
+  // Update in-app chrome only — skip media session until we actually start
+  const playIcon = $("#icon-play");
+  const pauseIcon = $("#icon-pause");
+  if (playIcon && pauseIcon) {
+    playIcon.classList.remove("hidden");
+    pauseIcon.classList.add("hidden");
+  }
+  // keep previous metadata until new track is ready
 
   const url = typeof getTrackUrl === "function" ? getTrackUrl(track) : track.file;
 
@@ -2265,6 +2273,8 @@ async function togglePlay() {
 
     state.playing = false;
     document.body.classList.remove("is-playing");
+    // so iOS doesn't keep treating silence.m4a as "still playing"
+    stopSilentShield();
     markPlayingTrack(getCurrentTrackId());
     updatePlayerUI();
     syncKawarpPlayback();
@@ -2346,8 +2356,11 @@ async function togglePlay() {
   if (decodedBuffer) {
     pauseStopGen++; // cancel any delayed stop from pause fade
     bufferCtxSuspended = false;
-    await resumeAudio(); // only resumes if something else suspended it
+    ensurePlaybackAudioSession();
+    await resumeAudio();
+    startSilentShield(); // re-arm for mute switch
     playBuffer(decodedBuffer, pauseOffset);
+    updateMediaSession();
 
     // restore soft-end after playBuffer if we had one
     if (softEndRemainMs > 0 || softEndStartRemainMs > 0) {
@@ -2363,18 +2376,6 @@ async function togglePlay() {
       softEndStartRemainMs = 0;
     }
     return;
-  }
-
-  // BFSTM resume: context stays running → one playBuffer only
-  if (decodedBuffer) {
-    pauseStopGen++; // cancel delayed pause stopSource
-    bufferCtxSuspended = false;
-    softEndRemainMs = 0;
-    softEndStartRemainMs = 0;
-    ensurePlaybackAudioSession();
-    await resumeAudio();
-    playBuffer(decodedBuffer, pauseOffset);
-    return; // critical — never fall through into a second playBuffer
   }
 
   await unlockMediaElement();
@@ -2643,7 +2644,9 @@ function updatePlayerUI() {
       badge.classList.add("hidden");
     }
   }
-  bindMediaSession();
+
+  // sync lock screen / Control Center — NOT bindMediaSession()
+  updateMediaSession();
 }
 
 function absoluteAssetUrl(path) {
@@ -2655,11 +2658,78 @@ function absoluteAssetUrl(path) {
   }
 }
 
+function bindMediaSession() {
+  if (!("mediaSession" in navigator)) return;
+
+  const set = (action, handler) => {
+    try {
+      navigator.mediaSession.setActionHandler(action, handler);
+    } catch (_) {}
+  };
+
+  try {
+    navigator.mediaSession.setActionHandler("seekbackward", null);
+  } catch (_) {}
+  try {
+    navigator.mediaSession.setActionHandler("seekforward", null);
+  } catch (_) {}
+
+  set("play", async () => {
+    if (!state.playing) {
+      await togglePlay();
+    }
+    updateMediaSession();
+  });
+
+  set("pause", async () => {
+    if (state.playing) {
+      await togglePlay();
+    }
+    updateMediaSession();
+  });
+
+  set("previoustrack", () => {
+    prevTrack();
+    updateMediaSession();
+  });
+
+  set("nexttrack", () => {
+    nextTrack();
+    updateMediaSession();
+  });
+
+  set("seekto", (details) => {
+    if (!details || !Number.isFinite(details.seekTime)) return;
+    if (transitioning) return;
+    const t = details.seekTime;
+    if (useMediaEl && mediaEl) {
+      const cur = activeMedia() || mediaEl;
+      cur.currentTime = t;
+      pauseOffset = t;
+      if (state.playing) {
+        if (mediaA && mediaB) bindStreamProgress();
+        else updateMediaProgress();
+      }
+    } else if (decodedBuffer) {
+      if (state.playing) playBuffer(decodedBuffer, t);
+      else {
+        pauseOffset = t;
+        const fill = $("#progress-fill");
+        if (fill)
+          fill.style.width = `${(t / decodedBuffer.duration) * 100}%`;
+        const tCur = $("#time-current");
+        if (tCur) tCur.textContent = formatTime(t);
+      }
+    }
+    updateMediaSession();
+  });
+}
+
 function updateMediaSession() {
   if (!("mediaSession" in navigator)) return;
 
   const item = state.queue[state.queueIndex];
-  if (!item) {
+  if (!item || state.queueIndex < 0) {
     try {
       navigator.mediaSession.metadata = null;
       navigator.mediaSession.playbackState = "none";
@@ -2686,91 +2756,46 @@ function updateMediaSession() {
     console.warn("[Noma] MediaMetadata failed", err);
   }
 
+  // Always push state — this is what keeps pause/play in sync
   navigator.mediaSession.playbackState = state.playing ? "playing" : "paused";
 
-  const duration =
-    state.duration ||
-    decodedBuffer?.duration ||
-    (mediaEl && mediaEl.duration) ||
-    0;
-  const position = Math.min(
-    Math.max(0, getPlaybackPosition()),
-    duration || 0
+  const duration = Math.max(
+    0,
+    Number(state.duration) ||
+      decodedBuffer?.duration ||
+      (mediaEl && Number.isFinite(mediaEl.duration) ? mediaEl.duration : 0) ||
+      0
   );
 
+  // Don't report 0 while a track is loaded but buffer was released mid-skip
+  let position = 0;
+  if (duration > 0) {
+    if (transitioning) {
+      // outro: stay at end of song (not transition timer)
+      position = duration;
+    } else {
+      position = getPlaybackPosition();
+    }
+    // clamp; avoid NaN
+    if (!Number.isFinite(position)) position = 0;
+    position = Math.min(Math.max(0, position), duration);
+  }
+
   try {
-    if (duration > 0 && Number.isFinite(position)) {
+    if (duration > 0.5 && Number.isFinite(position)) {
       navigator.mediaSession.setPositionState({
         duration,
         playbackRate: 1,
         position,
       });
     }
-  } catch (_) {
-    // some browsers throw if duration is 0
-  }
-}
-
-function bindMediaSession() {
-  if (!("mediaSession" in navigator)) return;
-
-  const set = (action, handler) => {
-    try {
-      navigator.mediaSession.setActionHandler(action, handler);
-    } catch (_) {}
-  };
-
-  // Clear seek ±10s if the browser had defaults
-  try {
-    navigator.mediaSession.setActionHandler("seekbackward", null);
   } catch (_) {}
-  try {
-    navigator.mediaSession.setActionHandler("seekforward", null);
-  } catch (_) {}
-
-  set("play", () => {
-    if (!state.playing) togglePlay();
-  });
-
-  set("pause", () => {
-    if (state.playing) togglePlay();
-  });
-
-  set("previoustrack", () => prevTrack());
-  set("nexttrack", () => nextTrack());
-
-  // Optional: lock-screen scrubber
-  set("seekto", (details) => {
-    if (!details || !Number.isFinite(details.seekTime)) return;
-    const t = details.seekTime;
-    if (useMediaEl && mediaEl) {
-      const cur = activeMedia() || mediaEl;
-      cur.currentTime = t;
-      pauseOffset = t;
-      if (state.playing) {
-        if (mediaA && mediaB) bindStreamProgress();
-        else updateMediaProgress();
-      }
-    } else if (decodedBuffer) {
-      if (state.playing) playBuffer(decodedBuffer, t);
-      else {
-        pauseOffset = t;
-        const fill = $("#progress-fill");
-        if (fill)
-          fill.style.width = `${(t / decodedBuffer.duration) * 100}%`;
-        const tCur = $("#time-current");
-        if (tCur) tCur.textContent = formatTime(t);
-      }
-    }
-    updateMediaSession();
-  });
 }
 
 let lastMediaSessionPosAt = 0;
 function maybeUpdateMediaSessionPosition() {
-  if (!state.playing) return;
   const now = performance.now();
-  if (now - lastMediaSessionPosAt < 1000) return;
+  if (now - lastMediaSessionPosAt < 800) return;
   lastMediaSessionPosAt = now;
   updateMediaSession();
 }
