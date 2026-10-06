@@ -1760,7 +1760,7 @@ async function init() {
     console.error("[Noma] Failed to load games.json:", err);
     LIBRARY = [];
   }
-
+  teardownOnAppKill();
   renderGames();
   bindTabs();
   bindPlayerChrome();
