@@ -127,6 +127,15 @@ function isIOS() {
     (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 }
 
+/** Route Web Audio like music apps — ignore ringer mute on iOS 17+. */
+function ensurePlaybackAudioSession() {
+  try {
+    if ("audioSession" in navigator && navigator.audioSession) {
+      navigator.audioSession.type = "playback";
+    }
+  } catch (_) {}
+}
+
 let mediaEl = null;       // HTMLAudioElement when streaming
 let useMediaEl = false;   // true = not using AudioBuffer
 let mediaRaf = null;
@@ -235,6 +244,37 @@ function getPersistentMedia() {
   return persistentMediaEl;
 }
 
+/** Keep silent <audio> looping so Web Audio (BFSTM) is audible under mute. */
+async function startSilentShield() {
+  if (!isIOS()) return;
+  ensurePlaybackAudioSession();
+  const el = getPersistentMedia();
+  // Only use silence when we're not streaming a real track on this element
+  if (useMediaEl && mediaEl === el && el.dataset.keepAlive !== "1") return;
+
+  try {
+    const silenceUrl = new URL("Assets/Audio/silence.m4a", location.href).href;
+    if (el.dataset.keepAlive !== "1" || !el.src.includes("silence.m4a")) {
+      el.src = silenceUrl;
+      el.loop = true;
+      el.dataset.keepAlive = "1";
+    }
+    el.volume = 0;
+    el.setAttribute("playsinline", "");
+    el.setAttribute("webkit-playsinline", "");
+    await el.play();
+    el.dataset.unlocked = "1";
+  } catch (_) {}
+}
+
+function stopSilentShield() {
+  // only stop if we were in keep-alive mode (don't kill a real stream)
+  if (!persistentMediaEl || persistentMediaEl.dataset.keepAlive !== "1") return;
+  try {
+    persistentMediaEl.pause();
+  } catch (_) {}
+}
+
 /** Unlock HTMLAudio on first user gesture (call from play paths that had a click). */
 async function unlockMediaElement() {
   const el = getPersistentMedia();
@@ -259,6 +299,7 @@ async function unlockMediaElement() {
     el.volume = 0;
     await el.play();
     el.dataset.unlocked = "1";
+    ensurePlaybackAudioSession();
   } catch (err) {
     console.warn("[Noma] media unlock failed", err);
   }
@@ -314,6 +355,7 @@ async function decodeWebAudio(url) {
 
 function resetPlayerToIdle() {
   stopSource();
+  stopSilentShield();
   playGen++;
   clearSoftEndTimers();
   if (typeof cancelTransition === "function") cancelTransition(false);
@@ -370,6 +412,7 @@ function isWebAudioFile(url) {
 }
 
 function ensureAudioContext() {
+  ensurePlaybackAudioSession();
   if (!audioCtx) {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   }
@@ -380,6 +423,7 @@ function ensureAudioContext() {
 let audioWarmed = false;
 
 async function resumeAudio() {
+  ensurePlaybackAudioSession();
   const ctx = ensureAudioContext();
   if (ctx.state === "suspended") await ctx.resume();
 
@@ -1138,8 +1182,11 @@ function updateProgressUI() {
 
 function playBuffer(audioBuffer, offsetSeconds = 0) {
   pauseStopGen++; // cancel any delayed pause stopSource / silence re-arm
-  stopSource();   // full stop — no silence under BFSTM
+  stopSource({ keepMediaAlive: true });   // full stop — no silence under BFSTM
   clearSoftEndTimers();
+
+  // iOS mute switch: open playback channel via silent HTMLAudio
+  startSilentShield();
 
   const ctx = ensureAudioContext();
 
@@ -1929,7 +1976,12 @@ function playFromGame(game, track) {
 
 async function playCurrent() {
   const gen = ++playGen;
+  // iOS mute switch: unlock HTMLAudio + set session to "playback"
+  try {
+    await unlockMediaElement();
+  } catch (_) {}
 
+  ensurePlaybackAudioSession();
   cancelTransition(false);
   clearSoftEndTimers();
 
@@ -2315,6 +2367,7 @@ async function togglePlay() {
     bufferCtxSuspended = false;
     softEndRemainMs = 0;
     softEndStartRemainMs = 0;
+    ensurePlaybackAudioSession();
     await resumeAudio();
     playBuffer(decodedBuffer, pauseOffset);
     return; // critical — never fall through into a second playBuffer
