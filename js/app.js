@@ -754,6 +754,7 @@ function updateMediaProgress() {
 
   if (state.playing) {
     mediaRaf = requestAnimationFrame(updateMediaProgress);
+    maybeUpdateMediaSessionPosition();
   }
 }
 
@@ -979,6 +980,7 @@ function bindStreamProgress() {
     if (state.playing) mediaRaf = requestAnimationFrame(tick);
   };
   mediaRaf = requestAnimationFrame(tick);
+  maybeUpdateMediaSessionPosition();
 }
 
 function handoffStreamLoop(duration) {
@@ -1177,6 +1179,7 @@ function updateProgressUI() {
 
   if (state.playing) {
     animFrame = requestAnimationFrame(updateProgressUI);
+    maybeUpdateMediaSessionPosition();
   }
 }
 
@@ -1660,6 +1663,7 @@ async function init() {
   renderGames();
   bindTabs();
   bindPlayerChrome();
+  bindMediaSession();
   bindQueuePanel();
   bindClearQueueConfirm();
   bindFullscreen();
@@ -2639,6 +2643,136 @@ function updatePlayerUI() {
       badge.classList.add("hidden");
     }
   }
+  bindMediaSession();
+}
+
+function absoluteAssetUrl(path) {
+  if (!path) return new URL(PLACEHOLDER, location.href).href;
+  try {
+    return new URL(path, location.href).href;
+  } catch (_) {
+    return path;
+  }
+}
+
+function updateMediaSession() {
+  if (!("mediaSession" in navigator)) return;
+
+  const item = state.queue[state.queueIndex];
+  if (!item) {
+    try {
+      navigator.mediaSession.metadata = null;
+      navigator.mediaSession.playbackState = "none";
+    } catch (_) {}
+    return;
+  }
+
+  const game = LIBRARY.find((g) => g.id === item.gameId);
+  const track = item.track;
+  const cover = absoluteAssetUrl(game?.cover || PLACEHOLDER);
+
+  try {
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: track.title || "Noma Music",
+      artist: game?.composer || "Noma Music",
+      album: game?.short || game?.title || "",
+      artwork: [
+        { src: cover, sizes: "96x96", type: "image/jpeg" },
+        { src: cover, sizes: "256x256", type: "image/jpeg" },
+        { src: cover, sizes: "512x512", type: "image/jpeg" },
+      ],
+    });
+  } catch (err) {
+    console.warn("[Noma] MediaMetadata failed", err);
+  }
+
+  navigator.mediaSession.playbackState = state.playing ? "playing" : "paused";
+
+  const duration =
+    state.duration ||
+    decodedBuffer?.duration ||
+    (mediaEl && mediaEl.duration) ||
+    0;
+  const position = Math.min(
+    Math.max(0, getPlaybackPosition()),
+    duration || 0
+  );
+
+  try {
+    if (duration > 0 && Number.isFinite(position)) {
+      navigator.mediaSession.setPositionState({
+        duration,
+        playbackRate: 1,
+        position,
+      });
+    }
+  } catch (_) {
+    // some browsers throw if duration is 0
+  }
+}
+
+function bindMediaSession() {
+  if (!("mediaSession" in navigator)) return;
+
+  const set = (action, handler) => {
+    try {
+      navigator.mediaSession.setActionHandler(action, handler);
+    } catch (_) {}
+  };
+
+  // Clear seek ±10s if the browser had defaults
+  try {
+    navigator.mediaSession.setActionHandler("seekbackward", null);
+  } catch (_) {}
+  try {
+    navigator.mediaSession.setActionHandler("seekforward", null);
+  } catch (_) {}
+
+  set("play", () => {
+    if (!state.playing) togglePlay();
+  });
+
+  set("pause", () => {
+    if (state.playing) togglePlay();
+  });
+
+  set("previoustrack", () => prevTrack());
+  set("nexttrack", () => nextTrack());
+
+  // Optional: lock-screen scrubber
+  set("seekto", (details) => {
+    if (!details || !Number.isFinite(details.seekTime)) return;
+    const t = details.seekTime;
+    if (useMediaEl && mediaEl) {
+      const cur = activeMedia() || mediaEl;
+      cur.currentTime = t;
+      pauseOffset = t;
+      if (state.playing) {
+        if (mediaA && mediaB) bindStreamProgress();
+        else updateMediaProgress();
+      }
+    } else if (decodedBuffer) {
+      if (state.playing) playBuffer(decodedBuffer, t);
+      else {
+        pauseOffset = t;
+        const fill = $("#progress-fill");
+        if (fill)
+          fill.style.width = `${(t / decodedBuffer.duration) * 100}%`;
+        const tCur = $("#time-current");
+        if (tCur) tCur.textContent = formatTime(t);
+      }
+    }
+    updateMediaSession();
+  });
+}
+
+let lastMediaSessionPosAt = 0;
+function maybeUpdateMediaSessionPosition() {
+  if (!state.playing) return;
+  const now = performance.now();
+  if (now - lastMediaSessionPosAt < 1000) return;
+  lastMediaSessionPosAt = now;
+  updateMediaSession();
 }
 
 function addPlayNext(game, track) {
