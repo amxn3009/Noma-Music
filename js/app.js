@@ -275,6 +275,106 @@ function stopSilentShield() {
   } catch (_) {}
 }
 
+/** Full teardown when the tab/PWA is closed or killed — not on mere lock/minimize. */
+function teardownOnAppKill() {
+  try {
+    playGen++; // cancel in-flight playCurrent
+    clearSoftEndTimers();
+    if (typeof cancelTransition === "function") cancelTransition(false);
+    transitioning = false;
+
+    // Stop Web Audio
+    if (currentSource) {
+      try {
+        currentSource.onended = null;
+        currentSource.stop();
+        currentSource.disconnect();
+      } catch (_) {}
+      currentSource = null;
+    }
+    if (currentGain) {
+      try {
+        currentGain.disconnect();
+      } catch (_) {}
+      currentGain = null;
+    }
+    if (animFrame) {
+      cancelAnimationFrame(animFrame);
+      animFrame = null;
+    }
+    if (mediaRaf) {
+      cancelAnimationFrame(mediaRaf);
+      mediaRaf = null;
+    }
+
+    // Dual stream
+    streamHandoffArmed = false;
+    for (const el of [mediaA, mediaB]) {
+      if (!el) continue;
+      try {
+        el.onended = null;
+        el.ontimeupdate = null;
+        el.pause();
+        el.removeAttribute("src");
+        el.load();
+      } catch (_) {}
+    }
+    mediaA = mediaB = null;
+
+    // Silent shield + any HTMLAudio
+    stopSilentShield();
+    hardPausePersistentMedia();
+    if (persistentMediaEl) {
+      try {
+        persistentMediaEl.onended = null;
+        persistentMediaEl.ontimeupdate = null;
+        persistentMediaEl.pause();
+        persistentMediaEl.removeAttribute("src");
+        persistentMediaEl.load();
+        persistentMediaEl.dataset.keepAlive = "0";
+        // keep unlocked flag if you want; doesn't matter after kill
+      } catch (_) {}
+    }
+    mediaEl = null;
+    useMediaEl = false;
+
+    // Kill AudioContext so nothing keeps the process alive
+    if (audioCtx) {
+      try {
+        audioCtx.close();
+      } catch (_) {}
+      audioCtx = null;
+      audioWarmed = false;
+    }
+
+    state.playing = false;
+    document.body.classList.remove("is-playing", "is-transitioning");
+
+    // Clear lock-screen / Control Center session completely
+    if ("mediaSession" in navigator) {
+      try {
+        navigator.mediaSession.playbackState = "none";
+      } catch (_) {}
+      try {
+        navigator.mediaSession.metadata = null;
+      } catch (_) {}
+      for (const action of [
+        "play",
+        "pause",
+        "previoustrack",
+        "nexttrack",
+        "seekto",
+        "seekbackward",
+        "seekforward",
+      ]) {
+        try {
+          navigator.mediaSession.setActionHandler(action, null);
+        } catch (_) {}
+      }
+    }
+  } catch (_) {}
+}
+
 /** Unlock HTMLAudio on first user gesture (call from play paths that had a click). */
 async function unlockMediaElement() {
   const el = getPersistentMedia();
@@ -1740,6 +1840,19 @@ async function init() {
     bindMediaSession();
     updateMediaSession();
     syncKawarpPlayback();
+  });
+  // App kill / tab close — stop audio + clear Media Session
+  // (visibilitychange alone is lock/minimize — do NOT use that for teardown)
+  window.addEventListener("pagehide", (e) => {
+    // Always tear down on leave; bfcache restore will re-init on next open
+    teardownOnAppKill();
+  });
+  window.addEventListener("beforeunload", () => {
+    teardownOnAppKill();
+  });
+  // Page Lifecycle (Chromium / some WebViews)
+  document.addEventListener("freeze", () => {
+    teardownOnAppKill();
   });
 }
 
