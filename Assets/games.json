@@ -4,6 +4,8 @@
     "title": "The Legend of Zelda: Ocarina of Time",
     "short": "Ocarina of Time",
     "composer": "Koji Kondo",
+    "console": "n64",
+    "franchise": "zelda",
     "cover": "Assets/Games/OOT/AlbumCover/AlbumCover_OOT.jpg",
     "tracks": [
       {

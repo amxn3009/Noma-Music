@@ -445,6 +445,27 @@ html.ipad-standalone .topbar {
     background 0.2s;
 }
 
+/* Play-all icon scales with the button */
+#play-all-btn svg {
+  width: 1.25em;
+  height: 1.25em;
+  flex-shrink: 0;
+  display: block;
+}
+
+/* Expanded: a bit larger than the label text */
+#play-all-btn:not(.circle-only) svg {
+  width: 25px;
+  height: 25px;
+}
+
+/* Compact circle: fill more of the 40px button */
+.game-sticky-top.is-collapsed #play-all-btn svg {
+  width: 30px !important;
+  height: 30px !important;
+  margin: 0;
+}
+
 #shuffle-all-btn {
   transition:
     width 0.4s cubic-bezier(0.22, 1, 0.36, 1),
@@ -535,8 +556,8 @@ html.ipad-standalone .topbar {
 
 /* Play-all = icon-only circle */
 .game-sticky-top.is-collapsed #play-all-btn {
-  width: 40px !important;
-  height: 40px !important;
+  width: 51px !important;
+  height: 51px !important;
   min-width: 40px;
   padding: 0 !important;
   border-radius: 50% !important;
@@ -569,6 +590,8 @@ html.ipad-standalone .topbar {
 
 .play-all-label {
   display: inline-block;
+  size: .9rem;
+  font-weight: 800;
 }
 
 
@@ -2556,4 +2579,142 @@ body.fs-open .progress-row {
 
 .game-sticky-top.is-collapsed {
   padding-bottom: 0 !important;
+}
+
+/* ===== Context menu header ===== */
+.context-menu-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 4px;
+}
+.ctx-cover {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: var(--surface-2);
+}
+.ctx-text {
+  min-width: 0;
+  flex: 1;
+}
+.ctx-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ctx-sub {
+  font-size: 0.78rem;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.context-menu {
+  width: 260px;
+}
+.ctx-album-only.hidden {
+  display: none !important;
+}
+
+/* ===== Sleep +5 bigger ===== */
+.sleep-chip-add {
+  width: auto !important;
+  min-width: 64px;
+  padding: 0 12px !important;
+  height: 30px !important;
+  font-size: 0.8rem !important;
+  white-space: nowrap;
+}
+.sleep-countdown {
+  min-width: 4.2em;
+}
+
+/* ===== FS back (mobile only) ===== */
+.fs-back-btn {
+  display: none;
+  position: absolute;
+  top: max(12px, env(safe-area-inset-top));
+  left: max(12px, env(safe-area-inset-left));
+  z-index: 5;
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  cursor: pointer;
+  place-items: center;
+  padding: 0;
+  transition: transform 0.12s ease, background 0.15s;
+}
+.fs-back-btn:active {
+  transform: scale(0.92);
+  background: rgba(255, 255, 255, 0.2);
+}
+.fs-back-icon {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  filter: brightness(0) invert(1);
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+@media (max-width: 900px), (hover: none) and (pointer: coarse) {
+  .fs-back-btn {
+    display: grid;
+  }
+}
+
+/* ===== Play-all = same press/hover language as circle-btn ===== */
+.primary-btn:hover {
+  background: #eee;
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.25);
+}
+.primary-btn:active {
+  transform: scale(0.92) !important;
+}
+
+/* Mobile: no hover lift, only press */
+@media (hover: none) {
+  .primary-btn:hover,
+  .circle-btn:hover,
+  .circle-btn:hover:not(:active) {
+    transform: none;
+    box-shadow: none;
+  }
+  .primary-btn:hover {
+    background: white;
+  }
+  .circle-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
+  .primary-btn:active,
+  .circle-btn:active {
+    transform: scale(0.92) !important;
+  }
+}
+
+/* Compact: album ⋯ same circle as shuffle */
+.game-sticky-top.is-collapsed #album-menu-btn {
+  width: 40px !important;
+  height: 40px !important;
+  min-width: 36px !important;
+  padding: 0 !important;
+  flex-shrink: 0;
+}
+
+
+.game-sticky-top.is-collapsed #album-menu-btn svg {
+  width: 18px;
+  height: 18px;
 }

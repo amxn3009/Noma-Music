@@ -815,9 +815,26 @@ function stopSource(opts = {}) {
 
 function formatTime(sec) {
   if (!Number.isFinite(sec) || sec < 0) return "0:00";
-  const m = Math.floor(sec / 60);
-  const s = Math.floor(sec % 60);
+  const total = Math.floor(sec);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  if (h > 0) {
+    return `${h}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+  }
   return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+/** Album total only — e.g. "1h 12min", "45min", "2h". No seconds. */
+function formatAlbumDuration(sec) {
+  if (!Number.isFinite(sec) || sec < 0) return "";
+  const total = Math.floor(sec);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  if (h > 0 && m > 0) return `${h}h ${m}min`;
+  if (h > 0) return `${h}h`;
+  if (m > 0) return `${m}min`;
+  return "0min";
 }
 
 function getLoopStartSec() {
@@ -1958,9 +1975,6 @@ function openGame(id) {
 
   $("#game-cover").src = game.cover;
   $("#game-title").textContent = game.title;
-  $("#game-track-count").textContent = `${game.tracks.length} Titel`;
-
-  $("#game-cover").src = game.cover;
 
   const titleEl = $("#game-title");
   if (titleEl) {
@@ -1970,7 +1984,17 @@ function openGame(id) {
     titleEl.textContent = compact ? titleEl.dataset.short : titleEl.dataset.full;
   }
 
-  $("#game-track-count").textContent = `${game.tracks.length} Titel`;
+  const totalSec = (game.tracks || []).reduce(
+    (sum, t) => sum + (Number.isFinite(t.duration) ? t.duration : 0),
+    0
+  );
+  const countEl = $("#game-track-count");
+  if (countEl) {
+    const albumDur = formatAlbumDuration(totalSec);
+    countEl.textContent = albumDur
+      ? `${game.tracks.length} Titel · ${albumDur}`
+      : `${game.tracks.length} Titel`;
+  }
 
   const composerName = $("#game-composer-name");
   if (composerName) composerName.textContent = game.composer || "";
@@ -2107,7 +2131,7 @@ function openGame(id) {
     updatePlayerUI();
   };
 
-   $("#shuffle-all-btn").onclick = () => {
+  $("#shuffle-all-btn").onclick = () => {
     unlockMediaElement().catch(() => {});
     unshuffledQueue = game.tracks.map((t) => ({
       gameId: game.id,
@@ -2136,6 +2160,22 @@ function openGame(id) {
     renderQueue();
     updatePlayerUI();
   };
+
+  // Album ⋯ — OUTSIDE shuffle, every time openGame runs
+  const albumBtn = $("#album-menu-btn");
+  if (albumBtn) {
+    albumBtn.onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const r = albumBtn.getBoundingClientRect();
+      showContextMenu(
+        r.left,
+        r.bottom + 6,
+        { game, album: true },
+        albumBtn
+      );
+    };
+  }
 
   // ── these must run every time you open a game (NOT inside shuffle) ──
   setupGameTrackSearch();
@@ -3090,6 +3130,70 @@ function addToEnd(game, track) {
   renderQueue();
 }
 
+function albumQueueItems(game) {
+  return (game.tracks || []).map((t) => ({
+    gameId: game.id,
+    track: t,
+    insert: null,
+  }));
+}
+
+function addAlbumPlayNext(game) {
+  const items = albumQueueItems(game);
+  if (!items.length) return;
+  if (state.queueIndex < 0 || !state.queue.length) {
+    state.queue = items;
+    state.queueIndex = 0;
+    playCurrent();
+  } else {
+    state.queue.splice(state.queueIndex + 1, 0, ...items);
+  }
+  if (state.shuffle && unshuffledQueue) {
+    unshuffledQueue = cloneQueue(state.queue);
+  }
+  renderQueue();
+  updatePlayerUI();
+}
+
+function addAlbumToEnd(game) {
+  const items = albumQueueItems(game);
+  if (!items.length) return;
+  if (!state.queue.length) {
+    state.queue = items;
+    state.queueIndex = 0;
+    playCurrent();
+  } else {
+    state.queue.push(...items);
+  }
+  if (state.shuffle && unshuffledQueue) {
+    unshuffledQueue = cloneQueue(state.queue);
+  }
+  renderQueue();
+  updatePlayerUI();
+}
+
+function shuffleAlbumIntoQueue(game) {
+  const items = albumQueueItems(game);
+  if (!items.length) return;
+  // Fisher–Yates
+  for (let i = items.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [items[i], items[j]] = [items[j], items[i]];
+  }
+  if (state.queueIndex < 0 || !state.queue.length) {
+    state.queue = items;
+    state.queueIndex = 0;
+    playCurrent();
+  } else {
+    state.queue.splice(state.queueIndex + 1, 0, ...items);
+  }
+  if (state.shuffle && unshuffledQueue) {
+    unshuffledQueue = cloneQueue(state.queue);
+  }
+  renderQueue();
+  updatePlayerUI();
+}
+
 function renderQueue() {
   const list = $("#queue-list");
   if (!list) return;
@@ -3910,22 +4014,69 @@ function showContextMenu(x, y, payload, anchorEl = null) {
 
   contextTrack = payload;
   contextMenuAnchor = anchorEl || null;
-  contextMenu.classList.remove("hidden");
-  contextMenu.style.left = `${Math.min(x, window.innerWidth - 220)}px`;
-  contextMenu.style.top = `${Math.min(y, window.innerHeight - 120)}px`;
 
-  // ignore the click that fires right after pointer-up / long-press
+  // Header: cover + title + subtitle
+  const isAlbum = !!payload?.album;
+  const game = payload?.game;
+  const track = payload?.track;
+  const coverEl = $("#ctx-cover");
+  const titleEl = $("#ctx-title");
+  const subEl = $("#ctx-sub");
+  if (coverEl) coverEl.src = game?.cover || PLACEHOLDER;
+  if (isAlbum) {
+    if (titleEl) titleEl.textContent = game?.short || game?.title || "";
+    if (subEl) subEl.textContent = game?.composer || `${game?.tracks?.length || 0} Titel`;
+  } else {
+    if (titleEl) titleEl.textContent = track?.title || "";
+    if (subEl) {
+      subEl.textContent = [game?.short || game?.title, game?.composer]
+        .filter(Boolean)
+        .join(" · ");
+    }
+  }
+
+  // Album-only action visibility
+  contextMenu?.querySelectorAll(".ctx-album-only").forEach((btn) => {
+    btn.classList.toggle("hidden", !isAlbum);
+  });
+  // For album menu, relabel the two shared actions
+  const playNextBtn = contextMenu?.querySelector('[data-action="play-next"]');
+  const addEndBtn = contextMenu?.querySelector('[data-action="add-end"]');
+  if (playNextBtn) {
+    playNextBtn.lastChild.textContent = isAlbum
+      ? " Album als Nächstes"
+      : " Als Nächstes spielen";
+  }
+  if (addEndBtn) {
+    addEndBtn.lastChild.textContent = isAlbum
+      ? " Album ans Ende"
+      : " Ans Ende der Queue";
+  }
+
+  contextMenu.classList.remove("hidden");
+  const menuW = contextMenu.offsetWidth || 260;
+  const menuH = contextMenu.offsetHeight || 160;
+  contextMenu.style.left = `${Math.min(x, window.innerWidth - menuW - 8)}px`;
+  contextMenu.style.top = `${Math.min(y, window.innerHeight - menuH - 8)}px`;
+
   suppressDocClickUntil = performance.now() + 450;
 }
 
 function bindContextMenu() {
-  contextMenu?.querySelectorAll("button").forEach((btn) => {
+  contextMenu?.querySelectorAll("button[data-action]").forEach((btn) => {
     btn.addEventListener("click", () => {
       if (!contextTrack) return;
-      const { game, track } = contextTrack;
+      const { game, track, album } = contextTrack;
       const action = btn.dataset.action;
-      if (action === "play-next") addPlayNext(game, track);
-      if (action === "add-end") addToEnd(game, track);
+
+      if (album && game) {
+        if (action === "play-next") addAlbumPlayNext(game);
+        if (action === "add-end") addAlbumToEnd(game);
+        if (action === "shuffle-into") shuffleAlbumIntoQueue(game);
+      } else if (game && track) {
+        if (action === "play-next") addPlayNext(game, track);
+        if (action === "add-end") addToEnd(game, track);
+      }
       hideContextMenu();
     });
   });
@@ -3934,6 +4085,7 @@ function bindContextMenu() {
     if (performance.now() < suppressDocClickUntil) return;
     if (e.target.closest("#context-menu")) return;
     if (e.target.closest(".track-actions")) return;
+    if (e.target.closest(".track-actions") || e.target.closest("#album-menu-btn")) return;
     hideContextMenu();
   });
 
@@ -3958,6 +4110,12 @@ function bindPlayerChrome() {
   $("#btn-next")?.addEventListener("click", nextTrack);
   $("#btn-loop")?.addEventListener("click", toggleLoop);
   $("#btn-shuffle")?.addEventListener("click", toggleShuffle);
+
+  $("#fs-back")?.addEventListener("click", () => {
+    if (!$("#fullscreen-player")?.classList.contains("hidden")) {
+      toggleFullscreen();
+    }
+  });
 
   const bar = $("#progress-bar");
   if (!bar) return;
@@ -4305,8 +4463,12 @@ function mountDurationDevTool() {
 
 function formatSleepCountdown(ms) {
   const total = Math.max(0, Math.ceil(ms / 1000));
-  const m = Math.floor(total / 60);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
   const s = total % 60;
+  if (h > 0) {
+    return `${h}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+  }
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
