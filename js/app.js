@@ -1915,6 +1915,7 @@ async function init() {
   updatePlayerUI();
   bindVolume();
   bindHotkeys();
+  bindPressMinHold();
   loadSettings();
   masterVolume = settings.volume ?? 1;
   const volSlider = $("#volume-slider");
@@ -2112,10 +2113,16 @@ function renderGames(opts = {}) {
     card.addEventListener("click", () => openGame(card.dataset.id));
   });
 
-  browse.querySelectorAll(".games-row-expand").forEach((btn) => {
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      openCategoryFullscreen(btn.dataset.cat, gamesViewMode);
+  // was: only .games-row-expand
+  browse.querySelectorAll(".games-row-title").forEach((title) => {
+    const cat =
+      title.querySelector("[data-cat]")?.dataset.cat ||
+      title.closest(".games-row")?.dataset.cat;
+    if (!cat) return;
+
+    title.addEventListener("click", (e) => {
+      e.preventDefault();
+      openCategoryFullscreen(cat, gamesViewMode);
     });
   });
 
@@ -2124,6 +2131,9 @@ function renderGames(opts = {}) {
   if (opts.animate) {
     animateGamesRowsEnter(browse);
   }
+
+   // was: bindPressMinHold(gamesGrid);
+  bindPressMinHold(browse);
 }
 
 function markPlayingGameCards() {
@@ -2207,7 +2217,10 @@ function openCategoryFullscreen(catKey, mode) {
       card.addEventListener("click", () => openGame(card.dataset.id));
     });
     markPlayingGameCards();
+    bindPressMinHold(browse); // ← add this
   };
+
+
 
   const top = document.querySelector(".games-page-top");
   let finished = false;
@@ -4155,6 +4168,13 @@ function bindClearQueueConfirm() {
 function bindFullscreen() {
   $("#btn-fullscreen")?.addEventListener("click", () => toggleFullscreen());
   $("#btn-minimize")?.addEventListener("click", () => toggleFullscreen());
+  $("#fs-back")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!$("#fullscreen-player")?.classList.contains("hidden")) {
+      toggleFullscreen();
+    }
+  });
 }
 
 function setupGameTrackSearch() {
@@ -4455,6 +4475,61 @@ function bindContextMenu() {
     .querySelector(".content")
     ?.addEventListener("scroll", closeOnScroll, { passive: true });
   window.addEventListener("scroll", closeOnScroll, { passive: true, capture: true });
+}
+
+const PRESS_MIN_MS_MOUSE = 120;
+const PRESS_MIN_MS_TOUCH = 300; // higher on touchscreen
+
+function pressMinMs(e) {
+  // pointerType: "touch" | "pen" | "mouse"
+  if (e?.pointerType === "touch" || e?.pointerType === "pen") {
+    return PRESS_MIN_MS_TOUCH;
+  }
+  // fallback: coarse pointer (phones/tablets without reliable pointerType)
+  if (window.matchMedia("(hover: none) and (pointer: coarse)").matches) {
+    return PRESS_MIN_MS_TOUCH;
+  }
+  return PRESS_MIN_MS_MOUSE;
+}
+
+function bindPressMinHold(root = document) {
+ const selector =
+  ".ctrl-btn, .play-btn, .primary-btn, .tab, .back-btn, .settings-btn, .circle-btn, .header-toggle-btn, .fs-back-btn, .confirm-btn, .game-card, .games-view-btn, .games-row-title";
+
+  root.querySelectorAll(selector).forEach((btn) => {
+    if (btn.dataset.pressBound === "1") return;
+    btn.dataset.pressBound = "1";
+
+    let downAt = 0;
+    let minHold = PRESS_MIN_MS_MOUSE;
+    let clearTimer = null;
+
+    const clear = () => {
+      const elapsed = performance.now() - downAt;
+      const wait = Math.max(0, minHold - elapsed);
+      clearTimeout(clearTimer);
+      clearTimer = setTimeout(() => {
+        btn.classList.remove("is-pressed");
+      }, wait);
+    };
+
+    btn.addEventListener(
+      "pointerdown",
+      (e) => {
+        if (e.button != null && e.button !== 0) return;
+        clearTimeout(clearTimer);
+        downAt = performance.now();
+        minHold = pressMinMs(e);
+        btn.classList.add("is-pressed");
+      },
+      { passive: true }
+    );
+
+    btn.addEventListener("pointerup", clear, { passive: true });
+    btn.addEventListener("pointercancel", clear, { passive: true });
+    btn.addEventListener("pointerleave", clear, { passive: true });
+    btn.addEventListener("lostpointercapture", clear, { passive: true });
+  });
 }
 
 function bindPlayerChrome() {
