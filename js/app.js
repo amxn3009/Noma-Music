@@ -2503,6 +2503,8 @@ function openGame(id) {
       insert: null,
     }));
 
+    bindPressMinHold(document.querySelector(".game-sticky-top") || document);
+
     const items = game.tracks.map((t) => ({
       gameId: game.id,
       track: t,
@@ -4477,8 +4479,8 @@ function bindContextMenu() {
   window.addEventListener("scroll", closeOnScroll, { passive: true, capture: true });
 }
 
-const PRESS_MIN_MS_MOUSE = 100;
-const PRESS_MIN_MS_TOUCH = 180; // higher on touchscreen
+const PRESS_MIN_MS_MOUSE = 145;
+const PRESS_MIN_MS_TOUCH = 175; // higher on touchscreen
 
 function pressMinMs(e) {
   // pointerType: "touch" | "pen" | "mouse"
@@ -4493,8 +4495,8 @@ function pressMinMs(e) {
 }
 
 function bindPressMinHold(root = document) {
- const selector =
-  ".ctrl-btn, .play-btn, .primary-btn, .tab, .back-btn, .settings-btn, .circle-btn, .header-toggle-btn, .fs-back-btn, .confirm-btn, .game-card, .games-view-btn, .games-row-title";
+  const selector =
+    ".ctrl-btn, .play-btn, #btn-play, .primary-btn, .tab, .back-btn, .settings-btn, .circle-btn, .header-toggle-btn, .fs-back-btn, .confirm-btn, .game-card, .games-view-btn, .games-row-title, #play-all-btn, #shuffle-all-btn, #album-menu-btn";
 
   root.querySelectorAll(selector).forEach((btn) => {
     if (btn.dataset.pressBound === "1") return;
@@ -4503,6 +4505,7 @@ function bindPressMinHold(root = document) {
     let downAt = 0;
     let minHold = PRESS_MIN_MS_MOUSE;
     let clearTimer = null;
+    let pointerId = null;
 
     const clear = () => {
       const elapsed = performance.now() - downAt;
@@ -4510,6 +4513,7 @@ function bindPressMinHold(root = document) {
       clearTimeout(clearTimer);
       clearTimer = setTimeout(() => {
         btn.classList.remove("is-pressed");
+        pointerId = null;
       }, wait);
     };
 
@@ -4520,15 +4524,45 @@ function bindPressMinHold(root = document) {
         clearTimeout(clearTimer);
         downAt = performance.now();
         minHold = pressMinMs(e);
+        pointerId = e.pointerId;
         btn.classList.add("is-pressed");
+        try {
+          btn.setPointerCapture(e.pointerId);
+        } catch (_) {}
       },
       { passive: true }
     );
 
-    btn.addEventListener("pointerup", clear, { passive: true });
-    btn.addEventListener("pointercancel", clear, { passive: true });
-    btn.addEventListener("pointerleave", clear, { passive: true });
-    btn.addEventListener("lostpointercapture", clear, { passive: true });
+    // Only end press on up/cancel — NOT pointerleave
+    // (play button swaps icons → would kill is-pressed instantly)
+    btn.addEventListener(
+      "pointerup",
+      (e) => {
+        if (pointerId != null && e.pointerId !== pointerId) return;
+        try {
+          btn.releasePointerCapture?.(e.pointerId);
+        } catch (_) {}
+        clear();
+      },
+      { passive: true }
+    );
+
+    btn.addEventListener(
+      "pointercancel",
+      (e) => {
+        if (pointerId != null && e.pointerId !== pointerId) return;
+        clear();
+      },
+      { passive: true }
+    );
+
+    btn.addEventListener(
+      "lostpointercapture",
+      () => {
+        if (btn.classList.contains("is-pressed")) clear();
+      },
+      { passive: true }
+    );
   });
 }
 

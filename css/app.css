@@ -990,8 +990,42 @@ html.ipad-standalone .topbar {
 .circle-btn:active,
 .header-toggle-btn:active,
 .fs-back-btn:active,
-.confirm-btn:active {
+.confirm-btn:active
+{
   transform: scale(0.92);
+}
+
+/* Press glow (desktop + mobile) */
+.ctrl-btn.is-pressed,
+.play-btn.is-pressed,
+.primary-btn.is-pressed,
+.circle-btn.is-pressed,
+#play-all-btn.is-pressed,
+#shuffle-all-btn.is-pressed,
+#album-menu-btn.is-pressed {
+  transform: scale(0.92);
+}
+
+/* Press glow — only controls that already glowed on hover + play/pause */
+.play-btn.is-pressed {
+  transform: scale(0.92);
+  background: #eee;
+  box-shadow: 0 0 22px rgba(255, 255, 255, 0.35);
+}
+
+.primary-btn.is-pressed,
+#play-all-btn.is-pressed {
+  transform: scale(0.92);
+  background: #eee;
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.25);
+}
+
+.circle-btn.is-pressed,
+#shuffle-all-btn.is-pressed,
+#album-menu-btn.is-pressed {
+  transform: scale(0.92);
+  background: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 16px rgba(255, 255, 255, 0.15);
 }
 
 /* FS back: disc only while pressed */
@@ -1359,6 +1393,7 @@ body.fs-open .volume-wrap {
   color: #111;
   transform: scale(1.06);
 }
+
 .play-btn:active {
   transform: scale(0.92) !important;
 }
@@ -2907,6 +2942,97 @@ body.fs-open .progress-row {
 @media (hover: none), (pointer: coarse) {
   .games-row-expand {
     opacity: 1;
+  }
+  /* Mobile / touch: no hover states — press + glow only */
+  .ctrl-btn:hover,
+  .play-btn:hover,
+  .primary-btn:hover,
+  .circle-btn:hover,
+  .circle-btn:hover:not(:active),
+  .tab:hover,
+  .back-btn:hover,
+  .settings-btn:hover,
+  .header-toggle-btn:hover,
+  .games-view-btn:hover,
+  .track-actions:hover,
+  .q-actions:hover,
+  .q-remove:hover,
+  .q-drag:hover,
+  .volume-wrap:hover {
+    transform: none !important;
+    box-shadow: none !important;
+  }
+
+  .ctrl-btn:hover {
+    color: var(--muted);
+    background: transparent;
+  }
+
+  .play-btn:hover {
+    background: white;
+    color: #111;
+    transform: none !important;
+  }
+
+  .primary-btn:hover {
+    background: white;
+    transform: none !important;
+    box-shadow: none !important;
+  }
+
+  .circle-btn:hover,
+  #shuffle-all-btn:hover,
+  #album-menu-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    box-shadow: none !important;
+    transform: none !important;
+  }
+
+  .tab:hover {
+    color: var(--muted);
+    background: transparent;
+  }
+
+  .back-btn:hover {
+    color: var(--muted);
+    background: transparent;
+  }
+
+  .settings-btn:hover {
+    color: var(--muted);
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+
+  .header-toggle-btn:hover {
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  .volume-wrap:hover {
+    color: var(--muted);
+    background: transparent;
+  }
+
+  /* keep press glow on touch */
+  .play-btn.is-pressed {
+    background: #eee;
+    box-shadow: 0 0 22px rgba(255, 255, 255, 0.35);
+    transform: scale(0.92) !important;
+  }
+
+  .primary-btn.is-pressed,
+  #play-all-btn.is-pressed {
+    background: #eee;
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.25);
+    transform: scale(0.92) !important;
+  }
+
+  .circle-btn.is-pressed,
+  #shuffle-all-btn.is-pressed,
+  #album-menu-btn.is-pressed {
+    background: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 0 16px rgba(255, 255, 255, 0.15);
+    transform: scale(0.92) !important;
   }
 }
 
