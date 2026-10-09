@@ -329,6 +329,32 @@ function teardownOnAppKill() {
     transitioning = false;
     state.playing = false;
 
+    // Media Session wipe first
+    if (typeof clearMediaSessionHard === "function") {
+      clearMediaSessionHard();
+    } else if ("mediaSession" in navigator) {
+      try {
+        navigator.mediaSession.playbackState = "none";
+      } catch (_) {}
+      try {
+        navigator.mediaSession.metadata = null;
+      } catch (_) {}
+      for (const action of [
+        "play",
+        "pause",
+        "previoustrack",
+        "nexttrack",
+        "seekto",
+        "seekbackward",
+        "seekforward",
+      ]) {
+        try {
+          navigator.mediaSession.setActionHandler(action, null);
+        } catch (_) {}
+      }
+    }
+
+    // Web Audio graph
     if (currentSource) {
       try {
         currentSource.onended = null;
@@ -352,6 +378,7 @@ function teardownOnAppKill() {
       mediaRaf = null;
     }
 
+    // Dual-stream elements
     streamHandoffArmed = false;
     for (const el of [mediaA, mediaB]) {
       if (!el) continue;
@@ -365,15 +392,26 @@ function teardownOnAppKill() {
     }
     mediaA = mediaB = null;
 
-    // Kill silence + persistent media hard
+    // Silence shield — destroy, not just pause
     if (silentShieldEl) {
       try {
+        silentShieldEl.onended = null;
         silentShieldEl.pause();
         silentShieldEl.removeAttribute("src");
         silentShieldEl.load();
       } catch (_) {}
+      silentShieldEl = null;
     }
-    hardPausePersistentMedia();
+    if (typeof stopSilentShield === "function") {
+      try {
+        stopSilentShield();
+      } catch (_) {}
+    }
+
+    // Persistent media
+    if (typeof hardPausePersistentMedia === "function") {
+      hardPausePersistentMedia();
+    }
     if (persistentMediaEl) {
       try {
         persistentMediaEl.onended = null;
@@ -387,6 +425,7 @@ function teardownOnAppKill() {
     mediaEl = null;
     useMediaEl = false;
 
+    // Close AudioContext so iOS can drop the process
     if (audioCtx) {
       try {
         audioCtx.suspend();
@@ -399,28 +438,6 @@ function teardownOnAppKill() {
     }
 
     document.body.classList.remove("is-playing", "is-transitioning");
-
-    if ("mediaSession" in navigator) {
-      try {
-        navigator.mediaSession.playbackState = "none";
-      } catch (_) {}
-      try {
-        navigator.mediaSession.metadata = null;
-      } catch (_) {}
-      for (const action of [
-        "play",
-        "pause",
-        "previoustrack",
-        "nexttrack",
-        "seekto",
-        "seekbackward",
-        "seekforward",
-      ]) {
-        try {
-          navigator.mediaSession.setActionHandler(action, null);
-        } catch (_) {}
-      }
-    }
   } catch (_) {}
 }
 
@@ -547,6 +564,7 @@ function resetPlayerToIdle() {
   updatePlayerUI();
   syncKawarpPlayback();
   renderQueue();
+  clearMediaSessionHard();
 }
 
 /** Best playable URL for this track on this device */
@@ -1031,6 +1049,8 @@ async function playMediaUrl(url, track, offsetSec = 0) {
   markPlayingTrack(getCurrentTrackId());
   updateMediaProgress();
   syncKawarpPlayback();
+  bindMediaSession();
+  updateMediaSession();
 }
 
 function getPlaybackMode(track) {
@@ -1455,6 +1475,8 @@ function playBuffer(audioBuffer, offsetSeconds = 0) {
   markPlayingTrack(getCurrentTrackId());
   updateProgressUI();
   syncKawarpPlayback();
+  bindMediaSession();
+  updateMediaSession();
 }
 
 function startTransition() {
@@ -1855,22 +1877,29 @@ async function init() {
         try {
           navigator.mediaSession.playbackState = "playing";
         } catch (_) {}
-        // Keep silence + session alive while locked / backgrounded
         if (!useMediaEl) startSilentShield();
         startBgSessionKeepAlive();
       }
       return;
     }
 
-    // Foreground again
+    // ── Foreground ──
     clearBgSessionKeepAlive();
     ensurePlaybackAudioSession();
     syncSoftEndFromClock();
 
-    if (state.playing) {
-      if (!useMediaEl && decodedBuffer) {
-        startSilentShield();
-      }
+    // App was killed / reloaded while audio was "ghosting": force idle UI + session
+    if (!state.playing) {
+      clearMediaSessionHard();
+      // If silence or a stream element is still running, hard-stop it
+      stopSilentShield();
+      try {
+        if (persistentMediaEl && !useMediaEl) {
+          persistentMediaEl.pause();
+        }
+      } catch (_) {}
+    } else {
+      if (!useMediaEl && decodedBuffer) startSilentShield();
       if (useMediaEl && mediaEl) {
         const cur = (typeof activeMedia === "function" && activeMedia()) || mediaEl;
         if (cur && cur.paused) cur.play().catch(() => {});
@@ -1880,10 +1909,10 @@ async function init() {
         if (mediaA && mediaB) bindStreamProgress();
         else updateMediaProgress();
       }
+      bindMediaSession();
+      updateMediaSession();
     }
 
-    bindMediaSession();
-    updateMediaSession();
     syncKawarpPlayback();
   });
 
@@ -2926,26 +2955,31 @@ function updateMediaSession() {
   if (!("mediaSession" in navigator)) return;
 
   const item = state.queue[state.queueIndex];
-  if (!item || state.queueIndex < 0) {
+  if (!item || state.queueIndex < 0 || !item.track) {
     try {
-      navigator.mediaSession.metadata = null;
       navigator.mediaSession.playbackState = "none";
+      navigator.mediaSession.metadata = null;
     } catch (_) {}
     return;
   }
 
   const game = LIBRARY.find((g) => g.id === item.gameId);
   const track = item.track;
-  const cover = absoluteAssetUrl(game?.cover || PLACEHOLDER);
+  // Always absolute https URL — iOS drops relative artwork
+  const coverPath = game?.cover || PLACEHOLDER;
+  const cover = absoluteAssetUrl(coverPath);
 
   try {
     navigator.mediaSession.metadata = new MediaMetadata({
       title: track.title || "Noma Music",
       artist: game?.composer || "Noma Music",
-      album: game?.short || game?.title || "",
+      album: game?.short || game?.title || "Noma Music",
       artwork: [
         { src: cover, sizes: "96x96", type: "image/jpeg" },
+        { src: cover, sizes: "128x128", type: "image/jpeg" },
+        { src: cover, sizes: "192x192", type: "image/jpeg" },
         { src: cover, sizes: "256x256", type: "image/jpeg" },
+        { src: cover, sizes: "384x384", type: "image/jpeg" },
         { src: cover, sizes: "512x512", type: "image/jpeg" },
       ],
     });
@@ -2953,7 +2987,9 @@ function updateMediaSession() {
     console.warn("[Noma] MediaMetadata failed", err);
   }
 
-  navigator.mediaSession.playbackState = state.playing ? "playing" : "paused";
+  try {
+    navigator.mediaSession.playbackState = state.playing ? "playing" : "paused";
+  } catch (_) {}
 
   const duration = Math.max(
     0,
@@ -2962,31 +2998,18 @@ function updateMediaSession() {
       (mediaEl && Number.isFinite(mediaEl.duration) ? mediaEl.duration : 0) ||
       0
   );
-
   if (!(duration > 0.5)) return;
 
   let position;
   if (transitioning) {
-    position = duration; // hold end during outro
+    position = duration;
   } else if (decodedBuffer || (useMediaEl && mediaEl)) {
     position = getPlaybackPosition();
   } else {
-    // mid-skip: buffer cleared — do NOT report 0
     return;
   }
-
   if (!Number.isFinite(position)) return;
   position = Math.min(Math.max(0, position), duration);
-
-  // Ignore bogus 0 while we already had progress (avoids lock-screen jump to start)
-  if (
-    position < 0.25 &&
-    state.currentTime > 1 &&
-    !scrubbing &&
-    state.playing
-  ) {
-    position = Math.min(state.currentTime, duration);
-  }
 
   try {
     navigator.mediaSession.setPositionState({
@@ -2995,6 +3018,30 @@ function updateMediaSession() {
       position,
     });
   } catch (_) {}
+}
+
+/** Wipe lock-screen session completely (idle / after kill / desync). */
+function clearMediaSessionHard() {
+  if (!("mediaSession" in navigator)) return;
+  try {
+    navigator.mediaSession.playbackState = "none";
+  } catch (_) {}
+  try {
+    navigator.mediaSession.metadata = null;
+  } catch (_) {}
+  for (const action of [
+    "play",
+    "pause",
+    "previoustrack",
+    "nexttrack",
+    "seekto",
+    "seekbackward",
+    "seekforward",
+  ]) {
+    try {
+      navigator.mediaSession.setActionHandler(action, null);
+    } catch (_) {}
+  }
 }
 
 let lastMediaSessionPosAt = 0;
