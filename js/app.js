@@ -231,7 +231,7 @@ function syncKawarpPlayback() {
   } catch (_) {}
 }
 
-// One element, unlocked by the first user gesture — reused for all stream plays (critical on iOS)
+// One element for real stream plays (opus/m4a) — separate from silent shield
 let persistentMediaEl = null;
 
 function getPersistentMedia() {
@@ -244,46 +244,91 @@ function getPersistentMedia() {
   return persistentMediaEl;
 }
 
-/** Keep silent <audio> looping so Web Audio (BFSTM) is audible under mute. */
+/** Dedicated silence element — must NOT share persistentMediaEl (Media Session tracks HTMLAudio). */
+let silentShieldEl = null;
+let bgSessionKeepAliveId = null;
+
+function getSilentShieldEl() {
+  if (!silentShieldEl) {
+    silentShieldEl = new Audio();
+    silentShieldEl.preload = "auto";
+    silentShieldEl.loop = true;
+    silentShieldEl.volume = 0.001; // not 0 — some iOS builds treat 0 as "not playing"
+    silentShieldEl.setAttribute("playsinline", "");
+    silentShieldEl.setAttribute("webkit-playsinline", "");
+  }
+  return silentShieldEl;
+}
+
+/** Keep silent <audio> looping so Web Audio (BFSTM) is audible under mute + Media Session stays "playing". */
 async function startSilentShield() {
   if (!isIOS()) return;
   ensurePlaybackAudioSession();
-  const el = getPersistentMedia();
-  // Only use silence when we're not streaming a real track on this element
-  if (useMediaEl && mediaEl === el && el.dataset.keepAlive !== "1") return;
-
+  const el = getSilentShieldEl();
   try {
     const silenceUrl = new URL("Assets/Audio/silence.m4a", location.href).href;
-    if (el.dataset.keepAlive !== "1" || !el.src.includes("silence.m4a")) {
+    if (!el.src || !el.src.includes("silence.m4a")) {
       el.src = silenceUrl;
       el.loop = true;
-      el.dataset.keepAlive = "1";
     }
-    el.volume = 0;
-    el.setAttribute("playsinline", "");
-    el.setAttribute("webkit-playsinline", "");
+    el.volume = 0.001;
     await el.play();
-    el.dataset.unlocked = "1";
   } catch (_) {}
 }
 
 function stopSilentShield() {
-  // only stop if we were in keep-alive mode (don't kill a real stream)
-  if (!persistentMediaEl || persistentMediaEl.dataset.keepAlive !== "1") return;
+  if (!silentShieldEl) return;
   try {
-    persistentMediaEl.pause();
+    silentShieldEl.pause();
   } catch (_) {}
+}
+
+function clearBgSessionKeepAlive() {
+  if (bgSessionKeepAliveId) {
+    clearInterval(bgSessionKeepAliveId);
+    bgSessionKeepAliveId = null;
+  }
+}
+
+/** While backgrounded + playing: keep silence alive and force Media Session = playing. */
+function startBgSessionKeepAlive() {
+  clearBgSessionKeepAlive();
+  if (!state.playing) return;
+  bgSessionKeepAliveId = setInterval(() => {
+    if (!state.playing || document.visibilityState === "visible") {
+      clearBgSessionKeepAlive();
+      return;
+    }
+    ensurePlaybackAudioSession();
+    // Re-assert session so lock screen never sticks on "paused"
+    try {
+      navigator.mediaSession.playbackState = "playing";
+    } catch (_) {}
+    // Silence element often gets paused by iOS on lock — restart it
+    if (!useMediaEl) {
+      const el = getSilentShieldEl();
+      if (el.paused) {
+        el.play().catch(() => {});
+      }
+    } else if (mediaEl && mediaEl.paused) {
+      mediaEl.play().catch(() => {});
+    }
+    try {
+      updateMediaSession();
+    } catch (_) {}
+  }, 1500);
 }
 
 /** Full teardown when the tab/PWA is closed or killed — not on mere lock/minimize. */
 function teardownOnAppKill() {
   try {
-    playGen++; // cancel in-flight playCurrent
+    clearBgSessionKeepAlive();
+    playGen++;
     clearSoftEndTimers();
     if (typeof cancelTransition === "function") cancelTransition(false);
     transitioning = false;
+    state.playing = false;
 
-    // Stop Web Audio
     if (currentSource) {
       try {
         currentSource.onended = null;
@@ -307,7 +352,6 @@ function teardownOnAppKill() {
       mediaRaf = null;
     }
 
-    // Dual stream
     streamHandoffArmed = false;
     for (const el of [mediaA, mediaB]) {
       if (!el) continue;
@@ -321,8 +365,14 @@ function teardownOnAppKill() {
     }
     mediaA = mediaB = null;
 
-    // Silent shield + any HTMLAudio
-    stopSilentShield();
+    // Kill silence + persistent media hard
+    if (silentShieldEl) {
+      try {
+        silentShieldEl.pause();
+        silentShieldEl.removeAttribute("src");
+        silentShieldEl.load();
+      } catch (_) {}
+    }
     hardPausePersistentMedia();
     if (persistentMediaEl) {
       try {
@@ -332,14 +382,15 @@ function teardownOnAppKill() {
         persistentMediaEl.removeAttribute("src");
         persistentMediaEl.load();
         persistentMediaEl.dataset.keepAlive = "0";
-        // keep unlocked flag if you want; doesn't matter after kill
       } catch (_) {}
     }
     mediaEl = null;
     useMediaEl = false;
 
-    // Kill AudioContext so nothing keeps the process alive
     if (audioCtx) {
+      try {
+        audioCtx.suspend();
+      } catch (_) {}
       try {
         audioCtx.close();
       } catch (_) {}
@@ -347,10 +398,8 @@ function teardownOnAppKill() {
       audioWarmed = false;
     }
 
-    state.playing = false;
     document.body.classList.remove("is-playing", "is-transitioning");
 
-    // Clear lock-screen / Control Center session completely
     if ("mediaSession" in navigator) {
       try {
         navigator.mediaSession.playbackState = "none";
@@ -1400,6 +1449,7 @@ function playBuffer(audioBuffer, offsetSeconds = 0) {
   }
 
   state.playing = true;
+  if (document.visibilityState !== "visible") startBgSessionKeepAlive();
   document.body.classList.add("is-playing");
   updatePlayerUI();
   markPlayingTrack(getCurrentTrackId());
@@ -1760,7 +1810,6 @@ async function init() {
     console.error("[Noma] Failed to load games.json:", err);
     LIBRARY = [];
   }
-  teardownOnAppKill();
   renderGames();
   bindTabs();
   bindPlayerChrome();
@@ -1796,61 +1845,55 @@ async function init() {
     }
   });
   mountDurationDevTool();
-  document.addEventListener("visibilitychange", () => {
+   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState !== "visible") {
       syncSoftEndFromClock();
       try {
         kawarp?.stop();
       } catch (_) {}
-      // still push "playing" so lock screen doesn't flip to paused while audio continues
       if (state.playing) {
         try {
           navigator.mediaSession.playbackState = "playing";
         } catch (_) {}
+        // Keep silence + session alive while locked / backgrounded
+        if (!useMediaEl) startSilentShield();
+        startBgSessionKeepAlive();
       }
       return;
     }
 
-    // Back to foreground
+    // Foreground again
+    clearBgSessionKeepAlive();
     ensurePlaybackAudioSession();
     syncSoftEndFromClock();
 
     if (state.playing) {
-      // BFSTM: silence element may have been paused by iOS — re-arm
       if (!useMediaEl && decodedBuffer) {
         startSilentShield();
       }
-      // Stream: ensure element is still playing
       if (useMediaEl && mediaEl) {
         const cur = (typeof activeMedia === "function" && activeMedia()) || mediaEl;
-        if (cur && cur.paused) {
-          cur.play().catch(() => {});
-        }
+        if (cur && cur.paused) cur.play().catch(() => {});
       }
-      if (decodedBuffer && !scrubbing) {
-        updateProgressUI();
-      }
+      if (decodedBuffer && !scrubbing) updateProgressUI();
       if (useMediaEl) {
         if (mediaA && mediaB) bindStreamProgress();
         else updateMediaProgress();
       }
     }
 
-    // Re-bind actions (iOS sometimes restores ±10s) + force correct state/position
     bindMediaSession();
     updateMediaSession();
     syncKawarpPlayback();
   });
-  // App kill / tab close — stop audio + clear Media Session
-  // (visibilitychange alone is lock/minimize — do NOT use that for teardown)
-  window.addEventListener("pagehide", (e) => {
-    // Always tear down on leave; bfcache restore will re-init on next open
+
+  // Kill only on real leave (swipe away / close tab) — not on lock
+  window.addEventListener("pagehide", () => {
     teardownOnAppKill();
   });
   window.addEventListener("beforeunload", () => {
     teardownOnAppKill();
   });
-  // Page Lifecycle (Chromium / some WebViews)
   document.addEventListener("freeze", () => {
     teardownOnAppKill();
   });
@@ -2356,6 +2399,7 @@ async function togglePlay() {
       }
       state.playing = false;
       document.body.classList.remove("is-playing");
+      clearBgSessionKeepAlive();
       markPlayingTrack(getCurrentTrackId());
       updatePlayerUI();
       syncKawarpPlayback()
@@ -2373,6 +2417,7 @@ async function togglePlay() {
       stopSource();
       state.playing = false;
       document.body.classList.remove("is-playing");
+      clearBgSessionKeepAlive();
       markPlayingTrack(getCurrentTrackId());
       updatePlayerUI();
       syncKawarpPlayback()
@@ -2418,6 +2463,7 @@ async function togglePlay() {
     state.playing = false;
     document.body.classList.remove("is-playing");
     // so iOS doesn't keep treating silence.m4a as "still playing"
+    clearBgSessionKeepAlive();
     stopSilentShield();
     markPlayingTrack(getCurrentTrackId());
     updatePlayerUI();
