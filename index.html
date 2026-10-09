@@ -88,8 +88,16 @@
 
     <main class="content">
       <section id="tab-games" class="tab-panel active">
-        <h1 class="page-title">Deine Spiele</h1>
-        <div id="games-grid" class="games-grid"></div>
+        <div class="games-page-top">
+          <h1 class="page-title">Spiele</h1>
+          <div class="games-view-toggle" role="tablist" aria-label="Gruppierung">
+            <button type="button" class="games-view-btn active" data-games-view="console">Konsole</button>
+            <button type="button" class="games-view-btn" data-games-view="franchise">Franchise</button>
+          </div>
+        </div>
+        <div id="games-browse" class="games-browse"></div>
+        <!-- kept for compatibility; renderGames fills games-browse -->
+        <div id="games-grid" class="games-grid hidden" aria-hidden="true"></div>
       </section>
 
       <section id="tab-playlists" class="tab-panel">

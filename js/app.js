@@ -26,6 +26,54 @@ const DEFAULT_SETTINGS = {
   bgMode: "kawarp", // "kawarp" | "css" — switch later in settings
 };
 
+const CONSOLE_META = {
+  n64: {
+    id: "n64",
+    label: "Nintendo 64",
+    logo: "Assets/Filter/Console/Nintendo64_Logo.webp",
+  },
+  gamecube: {
+    id: "gamecube",
+    label: "GameCube",
+    logo: "Assets/Filter/Console/GameCube_Logo.png",
+  },
+  wii: {
+    id: "wii",
+    label: "Wii",
+    logo: "Assets/Filter/Console/Wii_Logo.png",
+  },
+  wiiu: {
+    id: "wiiu",
+    label: "Wii U",
+    logo: "Assets/Filter/Console/WiiU_Logo.webp",
+  },
+  switch: {
+    id: "switch",
+    label: "Nintendo Switch",
+    logo: "Assets/Filter/Console/Nintendo_Switch_Logo.png",
+  },
+  ps5: {
+    id: "ps5",
+    label: "PlayStation 5",
+    logo: "Assets/Filter/Console/PS5_Logo.png",
+  },
+};
+
+const FRANCHISE_META = {
+  zelda: {
+    id: "zelda",
+    label: "The Legend of Zelda",
+    logo: "Assets/Filter/Franchise/Zelda_Logo.webp",
+  },
+  mario: {
+    id: "mario",
+    label: "Super Mario",
+    logo: "Assets/Filter/Franchise/SuperMario_Logo.png",
+  },
+};
+
+let gamesViewMode = "console"; // "console" | "franchise"
+
 let settings = { ...DEFAULT_SETTINGS };
 
 function loadSettings() {
@@ -1649,6 +1697,11 @@ function bindHotkeys() {
         break;
       case "Escape":
         e.preventDefault();
+        if (document.body.classList.contains("games-cat-open")) {
+          closeCategoryFullscreen();
+          handled = true;
+          break;
+        }
         if (!$("#settings-view")?.classList.contains("hidden")) {
           closeSettings();
         } else if (!$("#fullscreen-player")?.classList.contains("hidden")) {
@@ -1850,6 +1903,7 @@ async function init() {
     LIBRARY = [];
   }
   renderGames();
+  bindGamesViewToggle();
   bindTabs();
   bindPlayerChrome();
   bindMediaSession();
@@ -1945,21 +1999,318 @@ async function init() {
   });
 }
 
-function renderGames() {
-  gamesGrid.innerHTML = LIBRARY.map(
-    (g) => `
-    <article class="game-card" data-id="${g.id}">
-      <img src="${g.cover}" alt="${escapeHtml(g.title)}" loading="lazy">
+function gameCardHtml(g) {
+  const n = g.tracks?.length || 0;
+  return `
+    <article class="game-card" data-id="${escapeHtml(g.id)}">
+      <div class="game-card-art">
+        <img src="${escapeHtml(g.cover)}" alt="${escapeHtml(g.title)}" loading="lazy" draggable="false">
+        <span class="game-card-eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
+      </div>
       <div class="card-body">
-        <h3>${escapeHtml(g.short)}</h3>
-        <p>${g.tracks.length} Titel</p>
+        <h3>${escapeHtml(g.short || g.title)}</h3>
+        <p class="game-card-meta">${n} Titel${g.composer ? ` · ${escapeHtml(g.composer)}` : ""}</p>
       </div>
     </article>
-  `
-  ).join("");
+  `;
+}
 
-  gamesGrid.querySelectorAll(".game-card").forEach((card) => {
+function groupGamesBy(mode) {
+  const metaMap = mode === "franchise" ? FRANCHISE_META : CONSOLE_META;
+  const field = mode === "franchise" ? "franchise" : "console";
+  const buckets = new Map();
+
+  for (const g of LIBRARY) {
+    const key = (g[field] || "").toLowerCase();
+    if (!key || !metaMap[key]) continue; // skip unknown / missing
+    if (!buckets.has(key)) buckets.set(key, []);
+    buckets.get(key).push(g);
+  }
+
+  // stable order = order of keys in meta maps
+  const rows = [];
+  for (const key of Object.keys(metaMap)) {
+    const games = buckets.get(key);
+    if (!games || !games.length) continue; // empty category → hide
+    rows.push({ key, meta: metaMap[key], games });
+  }
+  return rows;
+}
+
+function animateGamesRowsEnter(browse) {
+  if (!browse) return;
+  const rows = browse.querySelectorAll(".games-row");
+  rows.forEach((row, i) => {
+    row.classList.remove("is-entering", "is-leaving");
+    row.style.animationDelay = `${i * 40}ms`;
+    void row.offsetWidth;
+    row.classList.add("is-entering");
+    const clear = () => {
+      row.classList.remove("is-entering");
+      row.style.animationDelay = "";
+    };
+    row.addEventListener("animationend", clear, { once: true });
+    setTimeout(clear, 450 + i * 40);
+  });
+}
+
+function fadeOutGamesBrowse(browse, then) {
+  if (!browse) {
+    then?.();
+    return;
+  }
+  const rows = [...browse.querySelectorAll(".games-row, .games-cat-inline")];
+  if (!rows.length) {
+    then?.();
+    return;
+  }
+  let finished = false;
+  const done = () => {
+    if (finished) return;
+    finished = true;
+    then?.();
+  };
+  rows.forEach((el) => el.classList.add("is-leaving"));
+  rows[0].addEventListener("animationend", done, { once: true });
+  setTimeout(done, 240);
+}
+
+function renderGames(opts = {}) {
+  const browse = $("#games-browse");
+  if (!browse) return;
+
+  const rows = groupGamesBy(gamesViewMode);
+  if (!rows.length) {
+    browse.innerHTML = `<p class="muted">Keine Spiele für diese Ansicht.</p>`;
+    return;
+  }
+
+  browse.innerHTML = rows
+    .map((row) => {
+      const cards = row.games.map(gameCardHtml).join("");
+      return `
+      <section class="games-row" data-cat="${escapeHtml(row.key)}" data-mode="${gamesViewMode}">
+        <div class="games-row-head">
+          <div class="games-row-title">
+            <img class="games-row-logo" src="${escapeHtml(row.meta.logo)}" alt="" draggable="false">
+            <h2>${escapeHtml(row.meta.label)}</h2>
+            <button type="button" class="games-row-expand" data-cat="${escapeHtml(row.key)}" title="Alle anzeigen" aria-label="Kategorie erweitern">
+              <img src="Assets/Common/Back1.png" alt="" class="games-row-expand-icon">
+            </button>
+          </div>
+        </div>
+        <div class="games-row-scroll">
+          <div class="games-row-track">
+            ${cards}
+          </div>
+        </div>
+      </section>`;
+    })
+    .join("");
+
+  browse.querySelectorAll(".game-card").forEach((card) => {
     card.addEventListener("click", () => openGame(card.dataset.id));
+  });
+
+  browse.querySelectorAll(".games-row-expand").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      openCategoryFullscreen(btn.dataset.cat, gamesViewMode);
+    });
+  });
+
+  markPlayingGameCards();
+
+  if (opts.animate) {
+    animateGamesRowsEnter(browse);
+  }
+}
+
+function markPlayingGameCards() {
+  const item = state.queue[state.queueIndex];
+  const gameId = item?.gameId || null;
+
+  document.querySelectorAll(".game-card").forEach((card) => {
+    const on = !!(gameId && card.dataset.id === gameId);
+    card.classList.toggle("playing", on);
+
+    const eqBars = card.querySelectorAll(".game-card-eq i");
+    if (!on) {
+      card.classList.remove("audio-on");
+      eqBars.forEach((bar) => {
+        bar.style.transition = "";
+        bar.style.transform = "";
+        bar.style.animation = "";
+      });
+      return;
+    }
+
+    if (state.playing) {
+      eqBars.forEach((bar) => {
+        bar.style.transition = "";
+        bar.style.transform = "";
+        bar.style.animation = "";
+      });
+      card.classList.add("audio-on");
+    } else {
+      // smooth → resting size (same as track list)
+      eqBars.forEach((bar) => {
+        const current = getComputedStyle(bar).transform;
+        bar.style.animation = "none";
+        bar.style.transform =
+          current === "none" ? "scaleY(0.35)" : current;
+        requestAnimationFrame(() => {
+          bar.style.transition =
+            "transform 0.35s cubic-bezier(0.22, 1, 0.36, 1)";
+          bar.style.transform = "scaleY(0.35)";
+        });
+      });
+      card.classList.remove("audio-on");
+    }
+  });
+}
+
+function openCategoryFullscreen(catKey, mode) {
+  const metaMap = mode === "franchise" ? FRANCHISE_META : CONSOLE_META;
+  const meta = metaMap[catKey];
+  if (!meta) return;
+  const field = mode === "franchise" ? "franchise" : "console";
+  const games = LIBRARY.filter((g) => (g[field] || "").toLowerCase() === catKey);
+  if (!games.length) return;
+
+  const browse = $("#games-browse");
+  if (!browse) return;
+
+  const inject = () => {
+    browse.dataset.catOpen = catKey;
+    browse.dataset.catMode = mode;
+    document.body.classList.add("games-cat-open");
+
+    browse.innerHTML = `
+      <div class="games-cat-inline">
+        <button type="button" class="back-btn" id="games-cat-back">
+          <img src="Assets/Common/Back1.png" alt="" class="back-icon">
+          Zurück
+        </button>
+        <div class="games-cat-fs-title">
+          <img src="${escapeHtml(meta.logo)}" alt="" class="games-row-logo" draggable="false">
+          <h2>${escapeHtml(meta.label)}</h2>
+        </div>
+        <div class="games-cat-fs-grid">
+          ${games.map(gameCardHtml).join("")}
+        </div>
+      </div>
+    `;
+
+    $("#games-cat-back")?.addEventListener("click", closeCategoryFullscreen);
+    browse.querySelectorAll(".game-card").forEach((card) => {
+      card.addEventListener("click", () => openGame(card.dataset.id));
+    });
+    markPlayingGameCards();
+  };
+
+  const top = document.querySelector(".games-page-top");
+  let finished = false;
+  const go = () => {
+    if (finished) return;
+    finished = true;
+    inject();
+  };
+
+  // Fade header + filter buttons out, then hide
+  if (top && !top.classList.contains("is-leaving")) {
+    top.classList.remove("is-entering");
+    top.classList.add("is-leaving");
+    top.addEventListener(
+      "animationend",
+      (e) => {
+        if (e.target !== top) return;
+        top.classList.remove("is-leaving");
+      },
+      { once: true }
+    );
+  }
+
+  fadeOutGamesBrowse(browse, go);
+  // safety if browse was empty
+  setTimeout(go, 260);
+}
+
+function closeCategoryFullscreen() {
+  if (!document.body.classList.contains("games-cat-open")) return;
+
+  const browse = $("#games-browse");
+  const panel = browse?.querySelector(".games-cat-inline");
+  let done = false;
+
+  const finish = () => {
+    if (done) return;
+    done = true;
+
+    document.body.classList.remove("games-cat-open");
+    if (browse) {
+      delete browse.dataset.catOpen;
+      delete browse.dataset.catMode;
+    }
+
+    renderGames({ animate: true });
+
+    // Heading + Konsole/Franchise fade in
+    const top = document.querySelector(".games-page-top");
+    if (top) {
+      top.classList.remove("is-entering", "is-leaving");
+      void top.offsetWidth;
+      top.classList.add("is-entering");
+      const clearTop = () => top.classList.remove("is-entering");
+      top.addEventListener("animationend", clearTop, { once: true });
+      setTimeout(clearTop, 400);
+    }
+  };
+
+  if (!panel) {
+    finish();
+    return;
+  }
+
+  panel.classList.add("is-leaving");
+  panel.addEventListener(
+    "animationend",
+    (e) => {
+      if (e.target !== panel) return;
+      finish();
+    },
+    { once: true }
+  );
+  setTimeout(finish, 300);
+}
+
+function bindGamesViewToggle() {
+  document.querySelectorAll(".games-view-btn").forEach((btn) => {
+    if (btn.dataset.bound) return;
+    btn.dataset.bound = "1";
+    btn.addEventListener("click", () => {
+      const next = btn.dataset.gamesView === "franchise" ? "franchise" : "console";
+      if (next === gamesViewMode) return;
+
+      document.querySelectorAll(".games-view-btn").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      gamesViewMode = next;
+
+      // leave category view if open
+      if (document.body.classList.contains("games-cat-open")) {
+        document.body.classList.remove("games-cat-open");
+        const browse = $("#games-browse");
+        if (browse) {
+          delete browse.dataset.catOpen;
+          delete browse.dataset.catMode;
+        }
+      }
+
+      const browse = $("#games-browse");
+      fadeOutGamesBrowse(browse, () => {
+        renderGames({ animate: true });
+      });
+    });
   });
 }
 
@@ -2427,6 +2778,8 @@ function markPlayingTrack(trackId) {
       row.classList.remove("audio-on");
     }
   });
+
+  markPlayingGameCards();
 }
 
 function clearEqInline(row) {
