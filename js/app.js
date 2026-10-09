@@ -4477,8 +4477,8 @@ function bindContextMenu() {
   window.addEventListener("scroll", closeOnScroll, { passive: true, capture: true });
 }
 
-const PRESS_MIN_MS_MOUSE = 120;
-const PRESS_MIN_MS_TOUCH = 300; // higher on touchscreen
+const PRESS_MIN_MS_MOUSE = 100;
+const PRESS_MIN_MS_TOUCH = 180; // higher on touchscreen
 
 function pressMinMs(e) {
   // pointerType: "touch" | "pen" | "mouse"
