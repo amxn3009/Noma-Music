@@ -274,5 +274,23 @@
         "duration": 433.2
       }
     ]
-  }
+  },
+
+  {
+    "id": "mariogalaxy",
+    "title": "Super Mario Galaxy",
+    "short": "Super Mario Galaxy",
+    "composer": "Mahito Yokota, Koji Kondo",
+    "console": "wii",
+    "franchise": "mario",
+    "cover": "Assets/Games/SuperMarioGalaxy/AlbumCover/AlbumCover_MarioGalaxy.png",
+    "tracks": [
+      {
+        "id": "smg-overture",
+        "title": "Overture",
+        "file": "Assets/Games/SuperMarioGalaxy/Tracks/Overture.bfstm",
+        "duration": 0
+      }
+    ]
+}
 ]
