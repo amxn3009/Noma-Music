@@ -1759,10 +1759,7 @@ function showVolumeSlider() {
 }
 
 function toggleFullscreen() {
-  const sleepPanel = $("#sleep-panel");
-  const sleepBtn = $("#btn-sleep");
-  sleepPanel?.classList.add("hidden");
-  sleepBtn?.setAttribute("aria-expanded", "false");
+  closeSleepPanel();
 
   const fs = $("#fullscreen-player");
   const btnFs = $("#btn-fullscreen");
@@ -1793,10 +1790,17 @@ function toggleFullscreen() {
     btnFs?.classList.add("hidden");
     btnMin?.classList.remove("hidden");
   } else {
-    fs.classList.add("hidden");
+    if (fs.classList.contains("is-closing")) return;
+    fs.classList.add("is-closing");
     document.body.classList.remove("fs-open");
+    document.body.classList.add("fs-leaving");
     btnMin?.classList.add("hidden");
     btnFs?.classList.remove("hidden");
+    setTimeout(() => {
+      fs.classList.add("hidden");
+      fs.classList.remove("is-closing");
+      document.body.classList.remove("fs-leaving");
+    }, 340);
   }
 }
 
@@ -4370,10 +4374,24 @@ function bindTrackListFade() {
 let contextMenuAnchor = null;
 let suppressDocClickUntil = 0;
 
+let contextMenuCloseTimer = null;
+
 function hideContextMenu() {
-  contextMenu?.classList.add("hidden");
   contextMenuAnchor = null;
   contextTrack = null;
+  if (
+    !contextMenu ||
+    contextMenu.classList.contains("hidden") ||
+    contextMenu.classList.contains("is-closing")
+  ) {
+    return;
+  }
+  contextMenu.classList.add("is-closing");
+  clearTimeout(contextMenuCloseTimer);
+  contextMenuCloseTimer = setTimeout(() => {
+    contextMenu.classList.add("hidden");
+    contextMenu.classList.remove("is-closing");
+  }, 190);
 }
 
 function showContextMenu(x, y, payload, anchorEl = null) {
@@ -4428,7 +4446,13 @@ function showContextMenu(x, y, payload, anchorEl = null) {
       : " Ans Ende der Queue";
   }
 
+  clearTimeout(contextMenuCloseTimer);
+  contextMenu.classList.remove("is-closing");
   contextMenu.classList.remove("hidden");
+  // restart the open animation (also when it is re-opened somewhere else)
+  contextMenu.style.animation = "none";
+  void contextMenu.offsetWidth;
+  contextMenu.style.animation = "";
   const menuW = contextMenu.offsetWidth || 260;
   const menuH = contextMenu.offsetHeight || 160;
   contextMenu.style.left = `${Math.min(x, window.innerWidth - menuW - 8)}px`;
@@ -4693,15 +4717,28 @@ function openSettings() {
   document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
   gameDetail.classList.add("hidden");
   gameDetail.classList.remove("active");
+  clearTimeout(settingsCloseTimer);
+  $("#settings-view")?.classList.remove("is-closing");
   $("#settings-view")?.classList.remove("hidden");
   document.body.classList.add("settings-open");
 
   syncSettingsForm();
 }
 
+let settingsCloseTimer = null;
+
 function closeSettings() {
-  $("#settings-view")?.classList.add("hidden");
-  document.body.classList.remove("settings-open");
+  const view = $("#settings-view");
+  if (!view || view.classList.contains("hidden") || view.classList.contains("is-closing")) return;
+
+  // settings fade out on top while the page underneath already comes back
+  view.classList.add("is-closing");
+  clearTimeout(settingsCloseTimer);
+  settingsCloseTimer = setTimeout(() => {
+    view.classList.add("hidden");
+    view.classList.remove("is-closing");
+    document.body.classList.remove("settings-open");
+  }, 290);
 
   if (settingsReturn?.type === "game" && settingsReturn.gameId) {
     openGame(settingsReturn.gameId);
@@ -4991,6 +5028,20 @@ function updateSleepEndLabel() {
   el.textContent = `(${formatTime(ms / 1000)})`;
 }
 
+let sleepPanelCloseTimer = null;
+
+function closeSleepPanel() {
+  const panel = $("#sleep-panel");
+  $("#btn-sleep")?.setAttribute("aria-expanded", "false");
+  if (!panel || panel.classList.contains("hidden") || panel.classList.contains("is-closing")) return;
+  panel.classList.add("is-closing");
+  clearTimeout(sleepPanelCloseTimer);
+  sleepPanelCloseTimer = setTimeout(() => {
+    panel.classList.add("hidden");
+    panel.classList.remove("is-closing");
+  }, 200);
+}
+
 function positionSleepPanel() {
   const panel = $("#sleep-panel");
   const btn = $("#btn-sleep");
@@ -5106,8 +5157,7 @@ function startSleepDuration(minutes) {
   const ms = Math.max(0.1, Number(minutes)) * 60 * 1000;
   sleepMode = "duration";
   sleepEndsAt = Date.now() + ms;
-  $("#sleep-panel")?.classList.add("hidden");
-  $("#btn-sleep")?.setAttribute("aria-expanded", "false");
+  closeSleepPanel();
   startSleepTick();
 }
 
@@ -5119,8 +5169,7 @@ function startSleepEndOfSong() {
   // Stay in "end" mode — fire only when this song actually ends (no early next track)
   sleepMode = "end";
   sleepEndsAt = 0;
-  $("#sleep-panel")?.classList.add("hidden");
-  $("#btn-sleep")?.setAttribute("aria-expanded", "false");
+  closeSleepPanel();
   startSleepTick();
 }
 
@@ -5150,8 +5199,11 @@ function bindSleepTimer() {
   btn?.addEventListener("click", (e) => {
     e.stopPropagation();
     if (sleepMode) return;
-    const opening = panel?.classList.contains("hidden");
+    const opening =
+      panel?.classList.contains("hidden") || panel?.classList.contains("is-closing");
     if (opening) {
+      clearTimeout(sleepPanelCloseTimer);
+      panel.classList.remove("is-closing");
       updateSleepEndLabel();
       panel.classList.remove("hidden");
       btn.setAttribute("aria-expanded", "true");
@@ -5168,8 +5220,7 @@ function bindSleepTimer() {
         }, 250);
       }
     } else {
-      panel.classList.add("hidden");
-      btn.setAttribute("aria-expanded", "false");
+      closeSleepPanel();
     }
   });
 
@@ -5226,8 +5277,7 @@ function bindSleepTimer() {
 
   document.addEventListener("click", (e) => {
     if (e.target.closest(".sleep-wrap") || e.target.closest("#sleep-panel")) return;
-    panel?.classList.add("hidden");
-    btn?.setAttribute("aria-expanded", "false");
+    closeSleepPanel();
   });
 
   window.addEventListener("resize", () => positionSleepPanel(), { passive: true });

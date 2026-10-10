@@ -3283,3 +3283,201 @@ body.games-cat-open .games-page-top.is-leaving {
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
   z-index: 3;
 }
+
+
+/* =====================================================================
+   MOBILE / TOUCH FIXES
+   ===================================================================== */
+@media (hover: none), (pointer: coarse) {
+
+  /* smooth, slow release */
+  .ctrl-btn, .play-btn, .primary-btn, .tab, .back-btn, .settings-btn,
+  .circle-btn, .header-toggle-btn, .fs-back-btn, .confirm-btn,
+  .games-view-btn, .sleep-panel > button, .sleep-chip, .sleep-custom-go,
+  .settings-reset-btn, .custom-select-btn, .custom-select-menu li {
+    transition:
+      transform 0.35s var(--ease),
+      background-color 0.3s ease,
+      color 0.25s ease,
+      opacity 0.3s ease,
+      border-color 0.3s ease,
+      box-shadow 0.3s ease;
+  }
+
+  /* quick, soft press (works for finger down, JS .is-pressed and :active) */
+  .ctrl-btn.is-pressed, .ctrl-btn:active,
+  .tab.is-pressed, .tab:active,
+  .back-btn.is-pressed, .back-btn:active,
+  .settings-btn.is-pressed, .settings-btn:active,
+  .header-toggle-btn.is-pressed, .header-toggle-btn:active,
+  .games-view-btn.is-pressed, .games-view-btn:active {
+    transform: scale(0.92) !important;
+  }
+  .ctrl-btn.is-pressed, .ctrl-btn:active,
+  .play-btn.is-pressed, .primary-btn.is-pressed, .circle-btn.is-pressed,
+  .tab.is-pressed, .tab:active, .back-btn.is-pressed, .back-btn:active,
+  .settings-btn.is-pressed, .settings-btn:active,
+  .header-toggle-btn.is-pressed, .games-view-btn.is-pressed {
+    transition-duration: 0.12s;
+  }
+
+  /* player controls (shuffle, prev, next, loop, queue, fullscreen, minimize) */
+  .ctrl-btn:not(.play-btn).is-pressed,
+  .ctrl-btn:not(.play-btn):active {
+    background: rgba(255, 255, 255, 0.14);
+    color: var(--text);
+  }
+
+  /* shuffle / loop stay blue, also after a tap */
+  .ctrl-btn.active,
+  .ctrl-btn.active:hover { color: var(--accent); }
+  .ctrl-btn.active.is-pressed,
+  .ctrl-btn.active:active {
+    color: var(--accent);
+    background: var(--accent-soft);
+  }
+
+  /* tabs: the active one keeps its highlight after a tap */
+  .tab.active, .tab.active:hover, .tab.active.is-pressed {
+    color: var(--text);
+    background: var(--surface-2);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35) !important;
+  }
+  .tab:not(.active).is-pressed,
+  .tab:not(.active):active {
+    color: var(--text);
+    background: rgba(255, 255, 255, 0.08);
+  }
+  .games-view-btn.active, .games-view-btn.active:hover {
+    color: var(--text);
+    background: var(--surface-2);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35) !important;
+  }
+
+  /* settings + sleep button, header toggle */
+  .settings-btn.is-pressed, .settings-btn:active {
+    color: var(--text);
+    background: rgba(255, 255, 255, 0.14);
+    border-color: rgba(255, 255, 255, 0.18);
+  }
+  .header-toggle-btn.is-pressed, .header-toggle-btn:active {
+    background: rgba(255, 255, 255, 0.14);
+  }
+
+  /* back buttons: white from the start, tap = scale + dim */
+  .back-btn, .back-btn:hover,
+  .settings-top .back-btn, .settings-top .back-btn:hover {
+    color: var(--text);
+  }
+  .back-btn .back-icon,
+  .back-btn:hover .back-icon,
+  .settings-top .back-btn .back-icon {
+    opacity: 1;
+  }
+  .back-btn.is-pressed, .back-btn:active { opacity: 0.6; }
+
+  /* sleep timer menu + settings controls get a tap effect too */
+  .sleep-panel > button:active, .sleep-chip:active, .sleep-custom-go:active,
+  .settings-reset-btn:active, .custom-select-btn:active,
+  .custom-select-menu li:active, .confirm-btn:active {
+    transform: scale(0.96);
+    background: rgba(255, 255, 255, 0.14);
+    transition-duration: 0.12s;
+  }
+}
+
+/* =====================================================================
+   OPEN ANIMATIONS: settings + sleep timer (all devices)
+   ===================================================================== */
+.settings-view:not(.hidden) { animation: settingsIn 0.38s var(--ease) both; }
+@keyframes settingsIn {
+  from { opacity: 0; transform: translateY(14px) scale(0.985); }
+  to   { opacity: 1; transform: none; }
+}
+
+.sleep-panel:not(.hidden) {
+  animation: sleepIn 0.26s var(--ease) both;
+  transform-origin: top right;
+}
+@keyframes sleepIn {
+  from { opacity: 0; transform: translateY(-8px) scale(0.96); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* =====================================================================
+   SMOOTH EXIT FROM FULLSCREEN
+   ===================================================================== */
+.fullscreen-player.is-closing { animation: fsOut 0.34s var(--ease) both; }
+@keyframes fsOut {
+  from { opacity: 1; transform: none; }
+  to   { opacity: 0; transform: translateY(10px) scale(0.97); }
+}
+
+/* the dark veil cross-fades instead of snapping (gradients can't transition) */
+.bg-overlay { background: none !important; }
+.bg-overlay::before,
+.bg-overlay::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transition: opacity 0.5s ease;
+}
+.bg-overlay::before {
+  background: linear-gradient(180deg,
+    rgba(10, 10, 10, 0.35) 0%, rgba(10, 10, 10, 0.7) 45%, rgba(10, 10, 10, 0.92) 100%);
+  opacity: 1;
+}
+.bg-overlay::after {
+  background: linear-gradient(180deg,
+    rgba(10, 10, 10, 0.12) 0%, rgba(10, 10, 10, 0.28) 40%, rgba(10, 10, 10, 0.55) 100%);
+  opacity: 0;
+}
+body.fs-open .bg-overlay::before { opacity: 0; }
+body.fs-open .bg-overlay::after  { opacity: 1; }
+
+/* player bar fades back to its normal look */
+.player-bar {
+  transition: background 0.4s ease, border-color 0.4s ease,
+              backdrop-filter 0.4s ease, -webkit-backdrop-filter 0.4s ease;
+}
+
+/* page content fades back in while the stage fades out */
+body.fs-leaving .topbar,
+body.fs-leaving .content,
+body.fs-leaving .player-left {
+  animation: fsPageIn 0.4s var(--ease) both;
+}
+@keyframes fsPageIn { from { opacity: 0; } to { opacity: 1; } }
+
+
+
+/* =====================================================================
+   CLOSING ANIMATIONS + context menu animation
+   ===================================================================== */
+.settings-view.is-closing {
+  animation: settingsOut 0.28s var(--ease) both;
+  pointer-events: none;
+}
+@keyframes settingsOut {
+  from { opacity: 1; transform: none; }
+  to   { opacity: 0; transform: translateY(14px) scale(0.985); }
+}
+
+.sleep-panel.is-closing {
+  animation: sleepOut 0.2s var(--ease) both;
+  pointer-events: none;
+}
+@keyframes sleepOut {
+  from { opacity: 1; transform: none; }
+  to   { opacity: 0; transform: translateY(-8px) scale(0.96); }
+}
+
+/* context menu = same open animation as the sleep timer, plus a close */
+.context-menu:not(.hidden) {
+  animation: sleepIn 0.26s var(--ease) both;
+  transform-origin: top left;
+}
+.context-menu.is-closing {
+  animation: sleepOut 0.19s var(--ease) both;
+  pointer-events: none;
+}
