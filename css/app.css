@@ -2894,6 +2894,7 @@ body.fs-open .progress-row {
 .games-row-title:active,
 .games-row-title.is-pressed {
   transform: scale(0.98);
+  opacity: 0.6;
   background: transparent !important;
 }
 
@@ -3480,4 +3481,11 @@ body.fs-leaving .player-left {
 .context-menu.is-closing {
   animation: sleepOut 0.19s var(--ease) both;
   pointer-events: none;
+}
+
+.games-row-title:active h2,
+.games-row-title.is-pressed h2,
+.games-row-title:active .games-row-expand,
+.games-row-title.is-pressed .games-row-expand {
+  opacity: 0.6;
 }

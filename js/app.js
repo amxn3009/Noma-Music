@@ -1966,7 +1966,12 @@ async function init() {
 
     // App was killed / reloaded while audio was "ghosting": force idle UI + session
     if (!state.playing) {
-      clearMediaSessionHard();
+      if (state.queueIndex < 0) {
+        clearMediaSessionHard(); // nothing loaded: wipe the lock screen entry
+      } else {
+        bindMediaSession(); // paused with a song loaded: keys must still resume it
+        updateMediaSession();
+      }
       // If silence or a stream element is still running, hard-stop it
       stopSilentShield();
       try {
@@ -4503,8 +4508,8 @@ function bindContextMenu() {
   window.addEventListener("scroll", closeOnScroll, { passive: true, capture: true });
 }
 
-const PRESS_MIN_MS_MOUSE = 145;
-const PRESS_MIN_MS_TOUCH = 175; // higher on touchscreen
+const PRESS_MIN_MS_MOUSE = 120; // lower on mouse
+const PRESS_MIN_MS_TOUCH = 160; // higher on touchscreen
 
 function pressMinMs(e) {
   // pointerType: "touch" | "pen" | "mouse"
