@@ -276,21 +276,388 @@
     ]
   },
 
-  {
-    "id": "mariogalaxy",
-    "title": "Super Mario Galaxy",
-    "short": "Super Mario Galaxy",
-    "composer": "Mahito Yokota, Koji Kondo",
-    "console": "wii",
-    "franchise": "mario",
-    "cover": "Assets/Games/SuperMarioGalaxy/AlbumCover/AlbumCover_MarioGalaxy.png",
-    "tracks": [
-      {
-        "id": "smg-overture",
-        "title": "Overture",
-        "file": "Assets/Games/SuperMarioGalaxy/Tracks/Overture.bfstm",
-        "duration": 0
-      }
-    ]
+
+{
+  "id": "mariogalaxy",
+  "title": "Super Mario Galaxy",
+  "short": "Mario Galaxy",
+  "composer": "Mahito Yokota, Koji Kondo",
+  "console": "wii",
+  "franchise": "mario",
+  "cover": "Assets/Games/SuperMarioGalaxy/AlbumCover/AlbumCover_MarioGalaxy.png",
+  "tracks": [
+    {
+      "id": "smg-overture",
+      "title": "Overture",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/Overture.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-the-star-festival",
+      "title": "The Star Festival",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/The Star Festival.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-attack-of-the-airships",
+      "title": "Attack of the Airships",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/Attack of the Airships.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-catastrophe",
+      "title": "Catastrophe",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/Catastrophe.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-enter-the-galaxy",
+      "title": "Enter the Galaxy",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/Enter the Galaxy.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-egg-planet",
+      "title": "Egg Planet",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/Egg Planet.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-rosalina-observatory-1",
+      "title": "Rosalina in the Observatory 1",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/Rosalina in the Observatory 1.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-the-honeyhive",
+      "title": "The Honeyhive",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/The Honeyhive.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-space-junk-road",
+      "title": "Space Junk Road",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/Space Junk Road.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-battlerock-galaxy",
+      "title": "Battlerock Galaxy",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/Battlerock Galaxy.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-beach-bowl-galaxy",
+      "title": "Beach Bowl Galaxy",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/Beach Bowl Galaxy.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-rosalina-observatory-2",
+      "title": "Rosalina in the Observatory 2",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/Rosalina in the Observatory 2.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-enter-bowser-jr",
+      "title": "Enter Bowser Jr.!",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/Enter Bowser Jr.!.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-waltz-of-the-boos",
+      "title": "Waltz of the Boos",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/Waltz of the Boos.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-buoy-base-galaxy",
+      "title": "Buoy Base Galaxy",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/Buoy Base Galaxy.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-gusty-garden-galaxy",
+      "title": "Gusty Garden Galaxy",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/Gusty Garden Galaxy.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-rosalina-observatory-3",
+      "title": "Rosalina in the Observatory 3",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/Rosalina in the Observatory 3.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-king-bowser",
+      "title": "King Bowser",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/King Bowser.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-melty-molten-galaxy",
+      "title": "Melty Molten Galaxy",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/Melty Molten Galaxy.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-the-galaxy-reactor",
+      "title": "The Galaxy Reactor",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/The Galaxy Reactor.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-final-battle-with-bowser",
+      "title": "Final Battle with Bowser",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/Final Battle with Bowser.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-day-break-a-new-dawn",
+      "title": "Day Break - A New Dawn",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/Day Break- A New Dawn.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-birth",
+      "title": "Birth",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/Birth.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-super-mario-galaxy",
+      "title": "Super Mario Galaxy",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/Super Mario Galaxy.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-purple-comet",
+      "title": "Purple Comet",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/Purple Comet.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-blue-sky-athletic",
+      "title": "Blue Sky Athletic",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/Blue Sky Athletic.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-super-mario-2007",
+      "title": "Super Mario 2007",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/Super Mario 2007.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-file-select",
+      "title": "File Select",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/File Select.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-luma",
+      "title": "Luma",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/Luma.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-gateway-galaxy-main",
+      "title": "Gateway Galaxy - Main",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/Gateway Galaxy - Main.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-to-the-observatory-grounds-1",
+      "title": "To The Observatory Grounds 1",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/To The Observatory Grounds 1.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-observatory-dome",
+      "title": "Observatory Dome",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/Observatory Dome.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-course-select",
+      "title": "Course Select",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/Course Select.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-dino-piranha",
+      "title": "Dino Piranha",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/Dino Piranha.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-a-tense-moment",
+      "title": "A Tense Moment",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/A Tense Moment.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-the-toad-brigade",
+      "title": "The Toad Brigade",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/The Toad Brigade.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-airship-armada",
+      "title": "Airship Armada",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/Airship Armada.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-aquatic-race",
+      "title": "Aquatic Race",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/Aquatic Race.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-space-fantasy",
+      "title": "Space Fantasy",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/Space Fantasy.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-megaleg",
+      "title": "Megaleg",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/Megaleg.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-to-the-observatory-grounds-2",
+      "title": "To The Observatory Grounds 2",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/To The Observatory Grounds 2.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-space-athletic",
+      "title": "Space Athletic",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/Space Athletic.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-speedy-comet-in-orbit",
+      "title": "Speedy Comet in Orbit",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/Speedy Comet in Orbit.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-beach-bowl-underwater",
+      "title": "Beach Bowl Galaxy - Underwater",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/Beach Bowl Galaxy - Underwater.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-interlude",
+      "title": "Interlude",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/Interlude.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-the-fiery-stronghold",
+      "title": "The Fiery Stronghold",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/The Fiery Stronghold.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-the-big-staircase",
+      "title": "The Big Staircase",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/The Big Staircase.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-the-library",
+      "title": "The Library",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/The Library.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-buoy-base-underwater",
+      "title": "Buoy Base Galaxy - Underwater",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/Buoy Base Galaxy - Underwater.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-rainbow-mario",
+      "title": "Rainbow Mario",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/Rainbow Mario.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-pipe-interior",
+      "title": "Pipe Interior",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/Pipe Interior.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-cosmic-comet",
+      "title": "Cosmic Comet",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/Cosmic Comet.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-drip-drop-galaxy",
+      "title": "Drip Drop Galaxy",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/Drip Drop Galaxy.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-kingfin",
+      "title": "Kingfin",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/Kingfin.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-boo-race",
+      "title": "Boo Race",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/Boo Race.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-ice-mountain",
+      "title": "Ice Mountain",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/Ice Mountain.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-dusty-dune-galaxy",
+      "title": "Dusty Dune Galaxy",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/Dusty Dune Galaxy.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-deep-dark-galaxy",
+      "title": "Deep Dark Galaxy",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/Deep Dark Galaxy.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-sad-girl",
+      "title": "Sad Girl",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/Sad Girl.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-a-wish",
+      "title": "A Wish",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/A Wish.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-family",
+      "title": "Family",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/Family.bfstm",
+      "duration": 0
+    },
+    {
+      "id": "smg-day-break-a-new-dawn",
+      "title": "Day Break - A New Dawn",
+      "file": "Assets/Games/SuperMarioGalaxy/Tracks/Day Break- A New Dawn.bfstm",
+      "duration": 0
+    }
+  ]
 }
 ]
