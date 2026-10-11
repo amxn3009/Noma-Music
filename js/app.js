@@ -73,6 +73,10 @@ const FRANCHISE_META = {
 };
 
 let gamesViewMode = "console"; // "console" | "franchise"
+const albumViewMemory = new Map(); // gameId -> { scrollTop, query }
+let searchReturn = null; // { type: "games"|"game"|"playlists"|"category", ... }
+let globalSearchOpen = false;
+let gamesLocalQuery = "";
 
 let settings = { ...DEFAULT_SETTINGS };
 
@@ -684,11 +688,13 @@ function decodeCacheSet(url, entry) {
 }
 
 async function getTrackDuration(url, track) {
-  if (track && Number.isFinite(track.duration) && track.duration > 0) {
-    durationCache.set(url, track.duration);
-    return track.duration;
+  // JSON / local duration always wins and overwrites cache
+  const fromJson = track != null ? Number(track.duration) : NaN;
+  if (Number.isFinite(fromJson) && fromJson > 0) {
+    if (url) durationCache.set(url, fromJson);
+    return fromJson;
   }
-  if (durationCache.has(url)) return durationCache.get(url);
+  if (url && durationCache.has(url)) return durationCache.get(url);
 
   if (isWebAudioFile(url)) {
     try {
@@ -1686,7 +1692,17 @@ function bindHotkeys() {
     let handled = false;
     switch (e.code) {
       case "Space":
-        e.preventDefault();
+       e.preventDefault();
+        if (globalSearchOpen) {
+          closeGlobalSearch();
+          handled = true;
+          break;
+        }
+        if (document.body.classList.contains("games-cat-open")) {
+          closeCategoryFullscreen();
+          handled = true;
+          break;
+        }
         togglePlay();
         handled = true;
         break;
@@ -1899,7 +1915,9 @@ async function decodeBfstm(url) {
 
 async function init() {
   try {
-   const res = await fetch("/Assets/games.json");
+      const res = await fetch(`/Assets/games.json?t=${Date.now()}`, {
+      cache: "no-store",
+    });
     if (!res.ok) throw new Error(res.status);
     LIBRARY = await res.json();
   } catch (err) {
@@ -1908,6 +1926,8 @@ async function init() {
   }
   renderGames();
   bindGamesViewToggle();
+  bindGlobalSearchUI();
+  bindGamesLocalSearch();
   bindTabs();
   bindPlayerChrome();
   bindMediaSession();
@@ -2143,6 +2163,7 @@ function renderGames(opts = {}) {
 
    // was: bindPressMinHold(gamesGrid);
   bindPressMinHold(browse);
+  applyGamesLocalFilter();
 }
 
 function markPlayingGameCards() {
@@ -2227,6 +2248,7 @@ function openCategoryFullscreen(catKey, mode) {
     });
     markPlayingGameCards();
     bindPressMinHold(browse); // ← add this
+    applyGamesLocalFilter();
   };
 
 
@@ -2336,9 +2358,405 @@ function bindGamesViewToggle() {
   });
 }
 
+function norm(s) {
+  return String(s || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+function albumTotalSec(game) {
+  return (game.tracks || []).reduce((a, t) => {
+    const d = Number(t.duration);
+    return a + (Number.isFinite(d) && d > 0 ? d : 0);
+  }, 0);
+}
+
+function openGlobalSearch(clearInput = true) {
+  if (globalSearchOpen) {
+    if (clearInput) {
+      const input = $("#global-search-input");
+      if (input) input.value = "";
+      runGlobalSearch("");
+    }
+    return;
+  }
+
+  searchReturn = {
+    type: document.body.classList.contains("games-cat-open")
+      ? "category"
+      : gameDetail?.classList.contains("active")
+        ? "game"
+        : document.querySelector('.tab[data-tab="playlists"]')?.classList.contains("active")
+          ? "playlists"
+          : "games",
+    gameId: state.currentGame?.id || null,
+    catKey: $("#games-browse")?.dataset.catOpen || null,
+    catMode: $("#games-browse")?.dataset.catMode || null,
+  };
+
+  globalSearchOpen = true;
+  document.body.classList.add("search-open", "search-mode");
+
+  gameDetail?.classList.add("hidden");
+  gameDetail?.classList.remove("active");
+  if (document.body.classList.contains("games-cat-open")) {
+    document.body.classList.remove("games-cat-open");
+  }
+
+  document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
+  document.querySelector('.tab[data-tab="games"]')?.classList.add("active");
+  document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
+  $("#tab-games")?.classList.add("active");
+
+  const title = $("#games-page-title");
+  if (title) title.textContent = "Suche";
+
+  const input = $("#global-search-input");
+  if (clearInput && input) {
+    input.value = "";
+    $("#global-search-clear")?.classList.add("hidden");
+  }
+  if (input && document.activeElement !== input) {
+    requestAnimationFrame(() => input.focus());
+  }
+
+  runGlobalSearch(input?.value || "");
+}
+
+function closeGlobalSearch() {
+  globalSearchOpen = false;
+  document.body.classList.remove("search-open", "search-mode");
+  $("#global-search-results")?.classList.add("hidden");
+  if ($("#global-search-results")) $("#global-search-results").innerHTML = "";
+
+  // keep the topbar search bar visible always
+  const input = $("#global-search-input");
+  if (input) {
+    input.value = "";
+    input.blur();
+  }
+  $("#global-search-clear")?.classList.add("hidden");
+
+  const title = $("#games-page-title");
+  if (title) title.textContent = "Spiele";
+
+  const ret = searchReturn;
+  searchReturn = null;
+
+  if (ret?.type === "game" && ret.gameId) {
+    openGame(ret.gameId);
+  } else if (ret?.type === "category" && ret.catKey) {
+    document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
+    document.querySelector('.tab[data-tab="games"]')?.classList.add("active");
+    $("#tab-games")?.classList.add("active");
+    gameDetail?.classList.add("hidden");
+    gameDetail?.classList.remove("active");
+    openCategoryFullscreen(ret.catKey, ret.catMode || gamesViewMode);
+  } else if (ret?.type === "playlists") {
+    document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
+    document.querySelector('.tab[data-tab="playlists"]')?.classList.add("active");
+    document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
+    $("#tab-playlists")?.classList.add("active");
+  } else {
+    document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
+    document.querySelector('.tab[data-tab="games"]')?.classList.add("active");
+    document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
+    $("#tab-games")?.classList.add("active");
+    gameDetail?.classList.add("hidden");
+    gameDetail?.classList.remove("active");
+    renderGames({ animate: true });
+  }
+}
+
+function runGlobalSearch(raw) {
+  const box = $("#global-search-results");
+  if (!box) return;
+  const q = norm(raw);
+  $("#global-search-clear")?.classList.toggle("hidden", !String(raw || "").trim());
+
+  if (!q) {
+    box.innerHTML = `<p class="muted gs-empty">Tippe, um Spiele und Songs zu finden.</p>`;
+    box.classList.remove("hidden");
+    return;
+  }
+
+  const gamesHit = LIBRARY.filter((g) => {
+    const consoleLabel = CONSOLE_META[g.console]?.label || "";
+    const franchiseLabel = FRANCHISE_META[g.franchise]?.label || "";
+    return (
+      norm(g.title).includes(q) ||
+      norm(g.short).includes(q) ||
+      norm(g.composer).includes(q) ||
+      norm(consoleLabel).includes(q) ||
+      norm(franchiseLabel).includes(q)
+    );
+  });
+
+  const tracksHit = [];
+  for (const g of LIBRARY) {
+    for (const t of g.tracks || []) {
+      if (norm(t.title).includes(q)) tracksHit.push({ game: g, track: t });
+    }
+  }
+
+  const gameRows = gamesHit
+    .map((g) => {
+      const total = albumTotalSec(g);
+      const isPlaying =
+        state.queue[state.queueIndex]?.gameId === g.id && state.queueIndex >= 0;
+      return `
+      <div class="gs-row gs-row-game ${isPlaying ? "playing" : ""} ${
+        state.playing && isPlaying ? "audio-on" : ""
+      }" data-kind="game" data-game-id="${g.id}">
+        <img class="gs-cover" src="${escapeHtml(g.cover || PLACEHOLDER)}" alt="" draggable="false">
+        <span class="gs-indicator" aria-hidden="true">
+          <span class="eq"><i></i><i></i><i></i><i></i><i></i></span>
+          <span class="hover-play"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>
+        </span>
+        <div class="gs-meta">
+          <div class="gs-title">${escapeHtml(g.title)}</div>
+          <div class="gs-sub">${escapeHtml(g.composer || "")}</div>
+        </div>
+        <span class="gs-duration">${total ? formatAlbumDuration(total) : ""}</span>
+        <button type="button" class="ctrl-btn gs-menu" data-action="menu" title="Mehr">⋮</button>
+      </div>`;
+    })
+    .join("");
+
+  const trackRows = tracksHit
+    .map(({ game, track }) => {
+      const isCurrent = state.queue[state.queueIndex]?.track?.id === track.id;
+      const dur =
+        Number.isFinite(track.duration) && track.duration > 0
+          ? formatTime(track.duration)
+          : "–:––";
+      return `
+      <div class="gs-row gs-row-track ${isCurrent ? "playing" : ""} ${
+        state.playing && isCurrent ? "audio-on" : ""
+      }" data-kind="track" data-game-id="${game.id}" data-track-id="${track.id}">
+        <img class="gs-cover" src="${escapeHtml(game.cover || PLACEHOLDER)}" alt="" draggable="false">
+        <span class="gs-indicator" aria-hidden="true">
+          <span class="eq"><i></i><i></i><i></i><i></i><i></i></span>
+          <span class="hover-play"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>
+        </span>
+        <div class="gs-meta">
+          <div class="gs-title">${escapeHtml(track.title)}</div>
+          <div class="gs-sub">${escapeHtml(game.title)}</div>
+        </div>
+        <span class="gs-duration">${dur}</span>
+        <button type="button" class="ctrl-btn gs-menu" data-action="menu" title="Mehr">⋮</button>
+      </div>`;
+    })
+    .join("");
+
+  box.innerHTML = `
+    ${
+      gamesHit.length
+        ? `<div class="gs-section"><h3 class="gs-section-title">Spiele</h3><div class="gs-game-list">${gameRows}</div></div>`
+        : ""
+    }
+    ${
+      tracksHit.length
+        ? `<div class="gs-section"><h3 class="gs-section-title">Songs</h3><div class="gs-track-list">${trackRows}</div></div>`
+        : ""
+    }
+    ${
+      !gamesHit.length && !tracksHit.length
+        ? `<p class="muted gs-empty">Keine Treffer.</p>`
+        : ""
+    }
+  `;
+  box.classList.remove("hidden");
+  bindGlobalSearchResults(box);
+}
+
+function bindGlobalSearchResults(box) {
+  box.querySelectorAll(".gs-row").forEach((row) => {
+    row.addEventListener("click", (e) => {
+      if (e.target.closest(".gs-menu")) return;
+      const kind = row.dataset.kind;
+      const gameId = row.dataset.gameId;
+      if (kind === "game") {
+        closeGlobalSearch();
+        openGame(gameId);
+      } else if (kind === "track") {
+        const game = LIBRARY.find((g) => g.id === gameId);
+        const track = game?.tracks?.find((t) => t.id === row.dataset.trackId);
+        if (game && track) {
+          // same as selecting in album: reset queue to full album, play this track
+          playFromGame?.(game, track);
+        }
+      }
+    });
+    row.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+      openSearchContextMenu(row, e.clientX, e.clientY);
+    });
+  });
+
+  box.querySelectorAll(".gs-menu").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const row = btn.closest(".gs-row");
+      const r = btn.getBoundingClientRect();
+      openSearchContextMenu(row, r.left, r.bottom);
+    });
+  });
+
+  // long-press mobile
+  let lpTimer = null;
+  box.querySelectorAll(".gs-row").forEach((row) => {
+    row.addEventListener("pointerdown", (e) => {
+      if (e.pointerType === "mouse") return;
+      lpTimer = setTimeout(() => {
+        openSearchContextMenu(row, e.clientX, e.clientY);
+      }, 480);
+    });
+    row.addEventListener("pointerup", () => clearTimeout(lpTimer));
+    row.addEventListener("pointercancel", () => clearTimeout(lpTimer));
+    row.addEventListener("pointermove", () => clearTimeout(lpTimer));
+  });
+}
+
+function openSearchContextMenu(row, x, y) {
+  if (!row) return;
+  const gameId = row.dataset.gameId;
+  const trackId = row.dataset.trackId || null;
+  const game = LIBRARY.find((g) => g.id === gameId);
+  if (!game) return;
+
+  const track = trackId
+    ? (game.tracks || []).find((t) => t.id === trackId)
+    : null;
+
+  // Use existing showContextMenu so header + actions stay consistent
+  showContextMenu(
+    x,
+    y,
+    track
+      ? { game, track, fromQueue: false }
+      : { game, album: true }
+  );
+}
+
+function bindGlobalSearchUI() {
+  const input = $("#global-search-input");
+
+  // typing / focus opens search mode
+  input?.addEventListener("focus", () => {
+    if (!globalSearchOpen) openGlobalSearch(false); // false = don't clear value
+  });
+  input?.addEventListener("input", (e) => {
+    if (!globalSearchOpen) openGlobalSearch(false);
+    runGlobalSearch(e.target.value);
+  });
+
+  $("#global-search-clear")?.addEventListener("click", () => {
+    if (input) {
+      input.value = "";
+      input.focus();
+      runGlobalSearch("");
+    }
+  });
+  $("#global-search-back")?.addEventListener("click", closeGlobalSearch);
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && globalSearchOpen) {
+      e.preventDefault();
+      closeGlobalSearch();
+    }
+  });
+}
+
+function bindGamesLocalSearch() {
+  const input = $("#games-local-search");
+  const clearBtn = $("#games-local-search-clear");
+  if (!input) return;
+  if (input.dataset.bound === "1") return;
+  input.dataset.bound = "1";
+
+  input.addEventListener("input", () => {
+    gamesLocalQuery = input.value.trim();
+    clearBtn?.classList.toggle("hidden", !gamesLocalQuery);
+    applyGamesLocalFilter();
+  });
+  clearBtn?.addEventListener("click", () => {
+    input.value = "";
+    gamesLocalQuery = "";
+    clearBtn.classList.add("hidden");
+    applyGamesLocalFilter();
+    input.focus();
+  });
+}
+
+function applyGamesLocalFilter() {
+  const browse = $("#games-browse");
+  if (!browse) return;
+  const q = norm(gamesLocalQuery);
+
+  // Category expanded view
+  if (browse.dataset.catOpen) {
+    browse.querySelectorAll(".game-card").forEach((card) => {
+      const game = LIBRARY.find((g) => g.id === card.dataset.id);
+      if (!game) return;
+      const hit =
+        !q ||
+        norm(game.title).includes(q) ||
+        norm(game.short).includes(q) ||
+        norm(game.composer).includes(q);
+      card.classList.toggle("hidden", !hit);
+    });
+    return;
+  }
+
+  // Main grouped rows
+  browse.querySelectorAll(".games-row").forEach((row) => {
+    const catKey = row.dataset.cat;
+    const mode = row.dataset.mode || gamesViewMode;
+    const meta =
+      mode === "franchise" ? FRANCHISE_META[catKey] : CONSOLE_META[catKey];
+    const catHit =
+      !!q &&
+      (norm(meta?.label).includes(q) || norm(catKey).includes(q));
+
+    let anyGame = false;
+    row.querySelectorAll(".game-card").forEach((card) => {
+      const game = LIBRARY.find((g) => g.id === card.dataset.id);
+      if (!game) return;
+      const gameHit =
+        !q ||
+        catHit ||
+        norm(game.title).includes(q) ||
+        norm(game.short).includes(q) ||
+        norm(game.composer).includes(q);
+      card.classList.toggle("hidden", !gameHit);
+      if (gameHit) anyGame = true;
+    });
+
+    const showRow = !q || catHit || anyGame;
+    row.classList.toggle("hidden", !showRow);
+
+    // Specific game search (not category name): only matching games under the row
+    if (q && !catHit) {
+      row.querySelectorAll(".game-card").forEach((card) => {
+        const game = LIBRARY.find((g) => g.id === card.dataset.id);
+        if (!game) return;
+        const exactish =
+          norm(game.title).includes(q) || norm(game.short).includes(q);
+        if (!exactish) card.classList.add("hidden");
+      });
+    }
+  });
+}
+
 function openGame(id) {
   const game = LIBRARY.find((g) => g.id === id);
   if (!game) return;
+    // Remember previous album (scroll + its own search), not a global one
+  if (state.currentGame && state.currentGame.id !== id) {
+    saveAlbumViewState();
+  }
   state.currentGame = game;
 
   tabGames.classList.remove("active");
@@ -2386,20 +2804,25 @@ function openGame(id) {
         </span>
       </span>
       <span class="track-name">${escapeHtml(t.title)}</span>
-      <span class="track-duration" data-file="${escapeHtml(t.file)}">–:––</span>
+      <span class="track-duration" data-track-id="${escapeHtml(t.id)}">${
+        Number.isFinite(Number(t.duration)) && Number(t.duration) > 0
+          ? formatTime(Number(t.duration))
+          : "–:––"
+      }</span>
       <span class="track-actions" data-action="menu">⋮</span>
     </div>
   `
     )
     .join("");
 
-  // Durations (JSON first, else file)
+  // Fill missing durations from file (JSON already shown above)
   game.tracks.forEach(async (t) => {
+    if (Number.isFinite(Number(t.duration)) && Number(t.duration) > 0) return;
     const url = typeof getTrackUrl === "function" ? getTrackUrl(t) : t.file;
     const sec = await getTrackDuration(url, t);
     if (sec == null) return;
     const el = trackListEl.querySelector(
-      `.track-duration[data-file="${CSS.escape(t.file)}"]`
+      `.track-duration[data-track-id="${CSS.escape(t.id)}"]`
     );
     if (el) el.textContent = formatTime(sec);
   });
@@ -2554,8 +2977,9 @@ function openGame(id) {
 
   // ── these must run every time you open a game (NOT inside shuffle) ──
   setupGameTrackSearch();
-  bindTrackSearch();
+  restoreAlbumViewState();
 }
+
 
 function bindTabs() {
   document.querySelectorAll(".tab").forEach((tab) => {
@@ -2582,6 +3006,7 @@ function bindTabs() {
   });
 
   $("#back-to-games").addEventListener("click", () => {
+    if (state.currentGame) saveAlbumViewState(state.currentGame.id);
     state.currentGame = null;
     gameDetail.classList.add("hidden");
     gameDetail.classList.remove("active");
@@ -2634,10 +3059,10 @@ async function playCurrent() {
 
   $("#now-cover").src = game?.cover || PLACEHOLDER;
   $("#now-title").textContent = track.title;
-  $("#now-game").textContent = game?.short || "";
+  $("#now-game").textContent = game?.title || game?.short || "";
   $("#fs-cover").src = game?.cover || PLACEHOLDER;
   $("#fs-title").textContent = track.title;
-  $("#fs-game").textContent = game?.short || "";
+  $("#fs-game").textContent = game?.title || game?.short || "";
   // set cover only once we know the track — avoids idle→placeholder→cover flash
   if (game?.cover) {
     setAmbientBackground(game.cover);
@@ -2804,6 +3229,11 @@ function markPlayingTrack(trackId) {
   });
 
   markPlayingGameCards();
+
+  const gs = $("#global-search-results");
+  if (gs && !gs.classList.contains("hidden")) {
+    runGlobalSearch($("#global-search-input")?.value || "");
+  }
 }
 
 function clearEqInline(row) {
@@ -3613,7 +4043,11 @@ function renderQueue() {
           <div class="q-title">${escapeHtml(item.track.title)}</div>
           <div class="q-game muted">${escapeHtml(game?.short || game?.title || "")}</div>
         </div>
-        <span class="q-duration" data-file="${escapeHtml(file)}">–:––</span>
+          <span class="q-duration" data-track-id="${escapeHtml(item.track.id)}">${
+          Number.isFinite(Number(item.track.duration)) && Number(item.track.duration) > 0
+            ? formatTime(Number(item.track.duration))
+            : "–:––"
+        }</span>
         <span class="track-actions q-actions" data-action="menu">⋮</span>
         <button class="q-remove" type="button" data-remove="${i}" title="Entfernen" aria-label="Entfernen">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
@@ -3623,11 +4057,12 @@ function renderQueue() {
     .join("");
 
   state.queue.forEach(async (item) => {
+    if (Number.isFinite(Number(item.track.duration)) && Number(item.track.duration) > 0) return;
     const url = typeof getTrackUrl === "function" ? getTrackUrl(item.track) : item.track.file;
     const sec = await getTrackDuration(url, item.track);
     if (sec == null) return;
     list
-      .querySelectorAll(`.q-duration[data-file="${CSS.escape(item.track.file)}"]`)
+      .querySelectorAll(`.q-duration[data-track-id="${CSS.escape(item.track.id)}"]`)
       .forEach((el) => {
         el.textContent = formatTime(sec);
       });
@@ -3876,6 +4311,13 @@ function bindQueuePointerDrag(list) {
   function placeSlot(insertBeforeIndex) {
     // Only touch DOM when the index actually changes → no jitter
     if (insertBeforeIndex === lastDropIndex) return;
+      // Same position as current item → no visual gap (still allow drop back)
+      if (insertBeforeIndex === dragFrom || insertBeforeIndex === dragFrom + 1) {
+        clearGapVisual();
+        dropIndex = insertBeforeIndex;
+        lastDropIndex = insertBeforeIndex;
+        return;
+      }
     lastDropIndex = insertBeforeIndex;
     dropIndex = insertBeforeIndex;
 
@@ -4188,47 +4630,68 @@ function bindFullscreen() {
   });
 }
 
+function saveAlbumViewState() {
+  const game = state.currentGame;
+  if (!game) return;
+  const scroll = $("#track-list-scroll");
+  const input = $("#game-track-search");
+  albumViewMemory.set(game.id, {
+    scrollTop: scroll?.scrollTop ?? 0,
+    query: input?.value ?? "",
+  });
+}
+
+function restoreAlbumViewState() {
+  const game = state.currentGame;
+  if (!game) return;
+  const mem = albumViewMemory.get(game.id);
+  const input = $("#game-track-search");
+  const scroll = $("#track-list-scroll");
+  if (input) {
+    input.value = mem?.query ?? "";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+  const clearBtn = $("#game-track-search-clear");
+  if (clearBtn) clearBtn.classList.toggle("hidden", !(mem?.query || "").trim());
+  requestAnimationFrame(() => {
+    if (scroll && mem) scroll.scrollTop = mem.scrollTop || 0;
+  });
+}
+
 function setupGameTrackSearch() {
   const input = document.getElementById("game-track-search");
-  if (!input) {
-    console.warn("[Noma] #game-track-search missing");
-    return;
-  }
+  if (!input) return;
 
-  // fresh node → no stacked handlers
   const clean = input.cloneNode(true);
-  clean.value = "";
+  // restore per-album query — do NOT force empty
+  const mem = state.currentGame ? albumViewMemory.get(state.currentGame.id) : null;
+  clean.value = mem?.query ?? "";
   input.replaceWith(clean);
 
   const emptyEl = document.getElementById("track-search-empty");
-  if (emptyEl) emptyEl.classList.add("hidden");
+  const clearBtn = document.getElementById("game-track-search-clear");
 
-  clean.addEventListener("input", () => {
+  function applyFilter() {
     const q = clean.value.trim().toLowerCase();
-
+    if (clearBtn) clearBtn.classList.toggle("hidden", !q);
+    let visible = 0;
     document.querySelectorAll("#track-list .track-row").forEach((row) => {
-      const name =
-        row.querySelector(".track-name")?.textContent?.toLowerCase() || "";
-      const match = !q || name.includes(q);
-      row.hidden = !match;
-      row.classList.toggle("track-row-hidden", !match);
-      if (!match) row.style.opacity = "1";
+      const name = (row.querySelector(".track-name")?.textContent || "").toLowerCase();
+      const show = !q || name.includes(q);
+      row.classList.toggle("hidden", !show);
+      if (show) visible++;
     });
+    if (emptyEl) emptyEl.classList.toggle("hidden", visible > 0 || !q);
+  }
 
-    // empty state
-    if (emptyEl) {
-      if (!q) {
-        emptyEl.classList.add("hidden");
-      } else {
-        const visible = document.querySelectorAll(
-          "#track-list .track-row:not([hidden]):not(.track-row-hidden)"
-        );
-        emptyEl.classList.toggle("hidden", visible.length > 0);
-      }
-    }
-
-    requestAnimationFrame(updateTrackFade);
+  clean.addEventListener("input", applyFilter);
+  clearBtn?.addEventListener("click", (e) => {
+    e.preventDefault();
+    clean.value = "";
+    applyFilter();
+    clean.focus();
   });
+  applyFilter();
 }
 
 function bindGameHeaderToggle() {
@@ -4317,32 +4780,6 @@ function updateTrackFade() {
       row.style.pointerEvents = "auto";
     }
   }
-}
-
-function bindTrackSearch() {
-  // change the selector if your input id/class is different
-  const input =
-    $("#track-search") ||
-    $(".game-search") ||
-    document.querySelector('input[type="search"]');
-
-  if (!input) {
-    console.warn("[Noma] search input not found");
-    return;
-  }
-
-  input.value = "";
-  input.oninput = () => {
-    const q = input.value.trim().toLowerCase();
-    trackListEl.querySelectorAll(".track-row").forEach((row) => {
-      const name =
-        row.querySelector(".track-name")?.textContent?.toLowerCase() || "";
-      const match = !q || name.includes(q);
-      row.classList.toggle("track-row-hidden", !match);
-      if (!match) row.style.opacity = "1";
-    });
-    requestAnimationFrame(updateTrackFade);
-  };
 }
 
 function bindTrackListFade() {
@@ -4873,54 +5310,64 @@ function applyIpadStandaloneClass() {
 applyIpadStandaloneClass();
 
 async function runDurationScan() {
-  if (!LIBRARY.length) {
-    console.warn("[Noma DEV] LIBRARY is empty");
+  // Only the game you currently have open
+  const game = state.currentGame;
+  if (!game) {
+    console.warn(
+      "%c[Noma DEV] Open a game first, then scan.",
+      "color:#ff8a8a;font-weight:bold"
+    );
+    alert("DEV: Öffne zuerst ein Spiel (Album), dann scannen.");
     return;
   }
 
-  console.log("%c[Noma DEV] Scanning durations…", "color:#7c9cff;font-weight:bold");
+  const tracks = game.tracks || [];
+  if (!tracks.length) {
+    console.warn("[Noma DEV] No tracks in", game.id);
+    return;
+  }
+
+  console.log(
+    `%c[Noma DEV] Scanning durations for: ${game.short || game.title} (${game.id})`,
+    "color:#7c9cff;font-weight:bold"
+  );
+
   const lines = [];
   const byId = {};
 
-  for (const game of LIBRARY) {
-    for (const track of game.tracks || []) {
-      const url = getTrackUrl(track);
-      try {
-        const sec = await getTrackDuration(url, {
-          // force re-read from file, ignore existing duration
-          ...track,
-          duration: undefined,
-        });
-        if (sec == null || !Number.isFinite(sec)) {
-          console.warn("[Noma DEV] failed:", track.id, url);
-          continue;
-        }
-        const d = formatDurationForJson(sec);
-        byId[track.id] = d;
-        lines.push(`    "duration": ${d},  // ${track.id} — ${track.title}`);
-        console.log(`${track.id}: ${d}s`);
-      } catch (err) {
-        console.warn("[Noma DEV] error:", track.id, err);
+  for (const track of tracks) {
+    const url = getTrackUrl(track);
+    try {
+      const sec = await getTrackDuration(url, {
+        ...track,
+        duration: undefined, // force re-read from file
+      });
+      if (sec == null || !Number.isFinite(sec)) {
+        console.warn("[Noma DEV] failed:", track.id, url);
+        continue;
       }
+      const d = formatDurationForJson(sec);
+      byId[track.id] = d;
+      lines.push(`    "duration": ${d},  // ${track.id} — ${track.title}`);
+      console.log(`${track.id}: ${d}s`);
+    } catch (err) {
+      console.warn("[Noma DEV] error:", track.id, err);
     }
   }
 
   console.log("%c[Noma DEV] Paste helpers", "color:#7c9cff;font-weight:bold");
-  console.log("— One line per track (search id in games.json and add duration):");
+  console.log("— One line per track (paste into this game’s tracks in games.json):");
   console.log(lines.join("\n"));
 
   console.log("— Map by id:");
   console.log(JSON.stringify(byId, null, 2));
 
-  console.log("— Full tracks with duration merged (copy into games.json tracks arrays carefully):");
-  const merged = LIBRARY.map((g) => ({
-    ...g,
-    tracks: (g.tracks || []).map((t) => ({
-      ...t,
-      duration: byId[t.id] ?? t.duration,
-    })),
+  console.log("— This game’s tracks with duration merged:");
+  const mergedTracks = tracks.map((t) => ({
+    ...t,
+    duration: byId[t.id] ?? t.duration,
   }));
-  console.log(JSON.stringify(merged, null, 2));
+  console.log(JSON.stringify(mergedTracks, null, 2));
 
   console.log("%c[Noma DEV] Done.", "color:#7c9cff;font-weight:bold");
 }
@@ -4931,8 +5378,8 @@ function mountDurationDevTool() {
   const btn = document.createElement("button");
   btn.type = "button";
   btn.id = "dev-duration-scan";
-  btn.textContent = "DEV: Scan durations";
-  btn.title = "Logs JSON-ready durations to the console";
+  btn.textContent = "DEV: Scan open game";
+  btn.title = "Scan durations for the currently open album only";
   Object.assign(btn.style, {
     position: "fixed",
     right: "12px",
@@ -4959,7 +5406,7 @@ function mountDurationDevTool() {
     }
     setTimeout(() => {
       btn.disabled = false;
-      btn.textContent = "DEV: Scan durations";
+      btn.textContent = "DEV: Scan open game";
     }, 2000);
   });
   document.body.appendChild(btn);
