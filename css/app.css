@@ -2869,8 +2869,6 @@ body.search-mode .games-page-top {
   z-index: 6;
   padding: 0 0 8px;
   background: transparent;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
 }
 
 body.search-mode #games-page-title {
@@ -3341,9 +3339,7 @@ body.games-cat-open .games-cat-inline .games-cat-fs-title {
   position: sticky;
   z-index: 5;
   /* glass, not solid var(--bg) */
-  background: rgba(10, 10, 10, 0.55);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: transparent;
 }
 
 body.games-cat-open .games-page-top.is-leaving {
@@ -3946,8 +3942,6 @@ body.search-mode .search-back-row { display: flex !important; padding: 4px 0 2px
   flex-wrap: wrap;
   padding: 8px 0 10px;
   background: transparent;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
 }
 body.search-mode .games-page-sticky { display: none !important; }
 
@@ -3956,8 +3950,6 @@ body.search-mode .games-page-top {
   top: 0;
   z-index: 6;
   background: transparent;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
   padding-bottom: 8px;
 }
 
