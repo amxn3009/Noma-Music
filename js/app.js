@@ -1692,12 +1692,8 @@ function bindHotkeys() {
     let handled = false;
     switch (e.code) {
       case "Space":
-       e.preventDefault();
-        if (globalSearchOpen) {
-          closeGlobalSearch();
-          handled = true;
-          break;
-        }
+        e.preventDefault();
+        // Do NOT close/clear global search on Space — only play/pause
         if (document.body.classList.contains("games-cat-open")) {
           closeCategoryFullscreen();
           handled = true;
@@ -1713,6 +1709,12 @@ function bindHotkeys() {
         break;
       case "Escape":
         e.preventDefault();
+        // Global search first — must not fall through to “back from game”
+        if (globalSearchOpen) {
+          closeGlobalSearch();
+          handled = true;
+          break;
+        }
         if (document.body.classList.contains("games-cat-open")) {
           closeCategoryFullscreen();
           handled = true;
@@ -2210,7 +2212,7 @@ function markPlayingGameCards() {
   });
 }
 
-function openCategoryFullscreen(catKey, mode) {
+function openCategoryFullscreen(catKey, mode, opts = {}) {
   const metaMap = mode === "franchise" ? FRANCHISE_META : CONSOLE_META;
   const meta = metaMap[catKey];
   if (!meta) return;
@@ -2228,16 +2230,38 @@ function openCategoryFullscreen(catKey, mode) {
 
     browse.innerHTML = `
       <div class="games-cat-inline">
-        <button type="button" class="back-btn" id="games-cat-back">
-          <img src="Assets/Common/Back1.png" alt="" class="back-icon">
-          Zurück
-        </button>
-        <div class="games-cat-fs-title">
-          <img src="${escapeHtml(meta.logo)}" alt="" class="games-row-logo" draggable="false">
-          <h2>${escapeHtml(meta.label)}</h2>
+        <div class="games-cat-chrome">
+          <button type="button" class="back-btn" id="games-cat-back">
+            <img src="Assets/Common/Back1.png" alt="" class="back-icon">
+            Zurück
+          </button>
+          <div class="games-cat-chrome-row">
+            <div class="games-cat-fs-title">
+              <img src="${escapeHtml(meta.logo)}" alt="" class="games-row-logo" draggable="false">
+              <h2>${escapeHtml(meta.label)}</h2>
+            </div>
+            <div class="games-cat-search-wrap games-local-search-wrap">
+              <svg class="search-icon" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true">
+                <path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+              </svg>
+              <input
+                id="games-cat-search"
+                class="games-local-search-input"
+                type="search"
+                placeholder="Hier Suchen..."
+                autocomplete="off"
+                spellcheck="false"
+                value="${escapeHtml(gamesLocalQuery)}"
+              >
+              <button type="button" id="games-cat-search-clear" class="search-clear-btn ${gamesLocalQuery ? "" : "hidden"}" title="Löschen">✕</button>
+            </div>
+          </div>
         </div>
-        <div class="games-cat-fs-grid">
-          ${games.map(gameCardHtml).join("")}
+        <div class="games-cat-scroll">
+          <div class="games-cat-fs-grid">
+            ${games.map(gameCardHtml).join("")}
+          </div>
+          <p id="games-filter-empty" class="games-filter-empty hidden">Keine Treffer.</p>
         </div>
       </div>
     `;
@@ -2246,12 +2270,42 @@ function openCategoryFullscreen(catKey, mode) {
     browse.querySelectorAll(".game-card").forEach((card) => {
       card.addEventListener("click", () => openGame(card.dataset.id));
     });
+
+    // Category-local search (same filter as main page)
+    const catInput = $("#games-cat-search");
+    const catClear = $("#games-cat-search-clear");
+    const mainInput = $("#games-local-search");
+    const mainClear = $("#games-local-search-clear");
+
+   catInput?.addEventListener("input", () => {
+      gamesLocalQuery = catInput.value.trim();
+      catClear?.classList.toggle("hidden", !gamesLocalQuery);
+      if (mainInput && mainInput.value !== catInput.value) {
+        mainInput.value = catInput.value;
+      }
+      mainClear?.classList.toggle("hidden", !gamesLocalQuery);
+      applyGamesLocalFilter();
+    });
+
+    catClear?.addEventListener("click", () => {
+      if (catInput) catInput.value = "";
+      gamesLocalQuery = "";
+      catClear.classList.add("hidden");
+      if (mainInput) mainInput.value = "";
+      mainClear?.classList.add("hidden");
+      applyGamesLocalFilter();
+      catInput?.focus();
+    });
+
     markPlayingGameCards();
-    bindPressMinHold(browse); // ← add this
+    bindPressMinHold(browse);
     applyGamesLocalFilter();
   };
 
-
+  if (opts.instant) {
+    inject();
+    return;
+  }
 
   const top = document.querySelector(".games-page-top");
   let finished = false;
@@ -2261,7 +2315,6 @@ function openCategoryFullscreen(catKey, mode) {
     inject();
   };
 
-  // Fade header + filter buttons out, then hide
   if (top && !top.classList.contains("is-leaving")) {
     top.classList.remove("is-entering");
     top.classList.add("is-leaving");
@@ -2276,7 +2329,6 @@ function openCategoryFullscreen(catKey, mode) {
   }
 
   fadeOutGamesBrowse(browse, go);
-  // safety if browse was empty
   setTimeout(go, 260);
 }
 
@@ -2296,6 +2348,12 @@ function closeCategoryFullscreen() {
       delete browse.dataset.catOpen;
       delete browse.dataset.catMode;
     }
+
+    // Sync main “Hier Suchen…” + ✕ with whatever was typed in the category
+    const mainInput = $("#games-local-search");
+    const mainClear = $("#games-local-search-clear");
+    if (mainInput) mainInput.value = gamesLocalQuery || "";
+    mainClear?.classList.toggle("hidden", !(gamesLocalQuery || "").trim());
 
     renderGames({ animate: true });
 
@@ -2404,10 +2462,12 @@ function openGlobalSearch(clearInput = true) {
     document.body.classList.remove("games-cat-open");
   }
 
-  document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
-  document.querySelector('.tab[data-tab="games"]')?.classList.add("active");
-  document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
+  // Show search UI on games panel without forcing the tab highlight
+  gameDetail?.classList.add("hidden");
+  gameDetail?.classList.remove("active");
+  $("#tab-playlists")?.classList.remove("active");
   $("#tab-games")?.classList.add("active");
+  // do NOT touch .tab active classes
 
   const title = $("#games-page-title");
   if (title) title.textContent = "Suche";
@@ -2417,7 +2477,8 @@ function openGlobalSearch(clearInput = true) {
     input.value = "";
     $("#global-search-clear")?.classList.add("hidden");
   }
-  if (input && document.activeElement !== input) {
+  // Only focus when the user intentionally opens/types search — not when restoring after leaving a game
+  if (clearInput && input && document.activeElement !== input) {
     requestAnimationFrame(() => input.focus());
   }
 
@@ -2446,13 +2507,16 @@ function closeGlobalSearch() {
 
   if (ret?.type === "game" && ret.gameId) {
     openGame(ret.gameId);
-  } else if (ret?.type === "category" && ret.catKey) {
+    } else if (ret?.type === "category" && ret.catKey) {
     document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
     document.querySelector('.tab[data-tab="games"]')?.classList.add("active");
     $("#tab-games")?.classList.add("active");
     gameDetail?.classList.add("hidden");
     gameDetail?.classList.remove("active");
-    openCategoryFullscreen(ret.catKey, ret.catMode || gamesViewMode);
+    // Open category immediately — no fade through main browse (avoids flash)
+    openCategoryFullscreen(ret.catKey, ret.catMode || gamesViewMode, {
+      instant: true,
+    });
   } else if (ret?.type === "playlists") {
     document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
     document.querySelector('.tab[data-tab="playlists"]')?.classList.add("active");
@@ -2476,7 +2540,7 @@ function runGlobalSearch(raw) {
   $("#global-search-clear")?.classList.toggle("hidden", !String(raw || "").trim());
 
   if (!q) {
-    box.innerHTML = `<p class="muted gs-empty">Tippe, um Spiele und Songs zu finden.</p>`;
+    box.innerHTML = `<p class="muted gs-empty">Suche etwas, um Spiele und Songs zu finden.</p>`;
     box.classList.remove("hidden");
     return;
   }
@@ -2510,9 +2574,8 @@ function runGlobalSearch(raw) {
         state.playing && isPlaying ? "audio-on" : ""
       }" data-kind="game" data-game-id="${g.id}">
         <img class="gs-cover" src="${escapeHtml(g.cover || PLACEHOLDER)}" alt="" draggable="false">
-        <span class="gs-indicator" aria-hidden="true">
+       <span class="gs-indicator" aria-hidden="true">
           <span class="eq"><i></i><i></i><i></i><i></i><i></i></span>
-          <span class="hover-play"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>
         </span>
         <div class="gs-meta">
           <div class="gs-title">${escapeHtml(g.title)}</div>
@@ -2578,7 +2641,11 @@ function bindGlobalSearchResults(box) {
       const kind = row.dataset.kind;
       const gameId = row.dataset.gameId;
       if (kind === "game") {
-        closeGlobalSearch();
+        const q = $("#global-search-input")?.value?.trim() || "";
+        searchReturn = q ? { type: "search", query: q } : null;
+        globalSearchOpen = false;
+        document.body.classList.remove("search-open", "search-mode");
+        $("#global-search-results")?.classList.add("hidden");
         openGame(gameId);
       } else if (kind === "track") {
         const game = LIBRARY.find((g) => g.id === gameId);
@@ -2660,13 +2727,6 @@ function bindGlobalSearchUI() {
     }
   });
   $("#global-search-back")?.addEventListener("click", closeGlobalSearch);
-
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && globalSearchOpen) {
-      e.preventDefault();
-      closeGlobalSearch();
-    }
-  });
 }
 
 function bindGamesLocalSearch() {
@@ -2679,12 +2739,22 @@ function bindGamesLocalSearch() {
   input.addEventListener("input", () => {
     gamesLocalQuery = input.value.trim();
     clearBtn?.classList.toggle("hidden", !gamesLocalQuery);
+    // keep category field in sync if open
+    const catInput = $("#games-cat-search");
+    const catClear = $("#games-cat-search-clear");
+    if (catInput && catInput.value !== input.value) catInput.value = input.value;
+    catClear?.classList.toggle("hidden", !gamesLocalQuery);
     applyGamesLocalFilter();
   });
+
   clearBtn?.addEventListener("click", () => {
     input.value = "";
     gamesLocalQuery = "";
     clearBtn.classList.add("hidden");
+    const catInput = $("#games-cat-search");
+    const catClear = $("#games-cat-search-clear");
+    if (catInput) catInput.value = "";
+    catClear?.classList.add("hidden");
     applyGamesLocalFilter();
     input.focus();
   });
@@ -2697,6 +2767,7 @@ function applyGamesLocalFilter() {
 
   // Category expanded view
   if (browse.dataset.catOpen) {
+    let visible = 0;
     browse.querySelectorAll(".game-card").forEach((card) => {
       const game = LIBRARY.find((g) => g.id === card.dataset.id);
       if (!game) return;
@@ -2706,11 +2777,22 @@ function applyGamesLocalFilter() {
         norm(game.short).includes(q) ||
         norm(game.composer).includes(q);
       card.classList.toggle("hidden", !hit);
+      if (hit) visible++;
     });
+    let empty = browse.querySelector("#games-filter-empty");
+    if (!empty) {
+      empty = document.createElement("p");
+      empty.id = "games-filter-empty";
+      empty.className = "games-filter-empty";
+      browse.querySelector(".games-cat-scroll")?.appendChild(empty);
+    }
+    empty.textContent = "Keine Treffer.";
+    empty.classList.toggle("hidden", !q || visible > 0);
     return;
   }
 
   // Main grouped rows
+  let anyVisible = false;
   browse.querySelectorAll(".games-row").forEach((row) => {
     const catKey = row.dataset.cat;
     const mode = row.dataset.mode || gamesViewMode;
@@ -2734,10 +2816,6 @@ function applyGamesLocalFilter() {
       if (gameHit) anyGame = true;
     });
 
-    const showRow = !q || catHit || anyGame;
-    row.classList.toggle("hidden", !showRow);
-
-    // Specific game search (not category name): only matching games under the row
     if (q && !catHit) {
       row.querySelectorAll(".game-card").forEach((card) => {
         const game = LIBRARY.find((g) => g.id === card.dataset.id);
@@ -2746,13 +2824,39 @@ function applyGamesLocalFilter() {
           norm(game.title).includes(q) || norm(game.short).includes(q);
         if (!exactish) card.classList.add("hidden");
       });
+      anyGame = [...row.querySelectorAll(".game-card")].some(
+        (c) => !c.classList.contains("hidden")
+      );
     }
+
+    const showRow = !q || catHit || anyGame;
+    row.classList.toggle("hidden", !showRow);
+    if (showRow) anyVisible = true;
   });
+
+  let empty = browse.querySelector("#games-browse-empty");
+  if (!empty) {
+    empty = document.createElement("p");
+    empty.id = "games-browse-empty";
+    empty.className = "games-filter-empty";
+    browse.appendChild(empty);
+  }
+  empty.textContent = "Keine Treffer.";
+  empty.classList.toggle("hidden", !q || anyVisible);
 }
 
 function openGame(id) {
   const game = LIBRARY.find((g) => g.id === id);
   if (!game) return;
+  // Keep global search query so “back” can restore results
+  const gsInput = $("#global-search-input");
+  const savedSearch = gsInput?.value?.trim() || "";
+  if (globalSearchOpen && savedSearch) {
+    searchReturn = {
+      type: "search",
+      query: savedSearch,
+    };
+  }
     // Remember previous album (scroll + its own search), not a global one
   if (state.currentGame && state.currentGame.id !== id) {
     saveAlbumViewState();
@@ -3013,6 +3117,22 @@ function bindTabs() {
     tabGames.classList.add("active");
     document.querySelector('.tab[data-tab="games"]')?.classList.add("active");
     $("#tab-games")?.classList.add("active");
+
+    // Restore previous global search instead of wiping it
+    if (searchReturn?.type === "search" && searchReturn.query) {
+      const q = searchReturn.query;
+      searchReturn = null;
+      openGlobalSearch(false); // false = don't clear, don't focus
+      const input = $("#global-search-input");
+      if (input) {
+        input.value = q;
+        input.blur(); // stay out of the field
+        $("#global-search-clear")?.classList.toggle("hidden", !q.trim());
+        runGlobalSearch(q);
+      }
+      return;
+    }
+    renderGames({ animate: true });
   });
 }
 
@@ -3230,10 +3350,31 @@ function markPlayingTrack(trackId) {
 
   markPlayingGameCards();
 
-  const gs = $("#global-search-results");
-  if (gs && !gs.classList.contains("hidden")) {
-    runGlobalSearch($("#global-search-input")?.value || "");
-  }
+  // Global search rows: update in place (keeps smooth EQ pause)
+  document.querySelectorAll("#global-search-results .gs-row").forEach((row) => {
+    const kind = row.dataset.kind;
+    let isCurrent = false;
+    if (kind === "track") {
+      isCurrent = !!(trackId && row.dataset.trackId === trackId);
+    } else if (kind === "game") {
+      isCurrent =
+        state.queueIndex >= 0 &&
+        state.queue[state.queueIndex]?.gameId === row.dataset.gameId;
+    }
+    row.classList.toggle("playing", isCurrent);
+    if (!isCurrent) {
+      row.classList.remove("audio-on");
+      clearEqInline(row);
+      return;
+    }
+    if (state.playing) {
+      clearEqInline(row);
+      row.classList.add("audio-on");
+    } else {
+      smoothPauseEq(row);
+      row.classList.remove("audio-on");
+    }
+  });
 }
 
 function clearEqInline(row) {
