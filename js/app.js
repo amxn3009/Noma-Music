@@ -22,6 +22,7 @@ const DEFAULT_SETTINGS = {
   loopTimes: 2,       // 1-99
   transitionSec: 10,   // 0 | 5 | 10
   volume: 0.5,          // 0-1
+  normalizeVolume: false, // quieter tracks boosted toward same level
   queueLoop: true,      // after last track: restart queue vs stop
   bgMode: "kawarp", // "kawarp" | "css" — switch later in settings
 };
@@ -95,6 +96,10 @@ function loadSettings() {
       typeof parsed.queueLoop === "boolean"
         ? parsed.queueLoop
         : DEFAULT_SETTINGS.queueLoop;
+    settings.normalizeVolume =
+      typeof parsed.normalizeVolume === "boolean"
+        ? parsed.normalizeVolume
+        : DEFAULT_SETTINGS.normalizeVolume;
     settings.bgMode =
       parsed.bgMode === "css" || parsed.bgMode === "kawarp"
         ? parsed.bgMode
@@ -733,11 +738,11 @@ function rescheduleSoftEndAfterResume() {
 
   if (currentGain) {
     currentGain.gain.cancelScheduledValues(now);
-    currentGain.gain.setValueAtTime(masterVolume, now);
+    currentGain.gain.setValueAtTime(effectiveVolume(), now);
     if (fadeSec <= 0) {
       currentGain.gain.setValueAtTime(0, softEndFadeAt);
     } else {
-      currentGain.gain.setValueAtTime(masterVolume, softEndFadeAt);
+      currentGain.gain.setValueAtTime(effectiveVolume(), softEndFadeAt);
       currentGain.gain.linearRampToValueAtTime(0, softEndFadeAt + fadeSec);
     }
   }
@@ -865,6 +870,20 @@ function stopSource(opts = {}) {
     mediaEl = null;
     useMediaEl = false;
   }
+}
+
+/** Bottom player: short on mobile only. Fullscreen: fullscreenName → title → short. */
+function gameNameForPlayer(game) {
+  if (!game) return "";
+  const mobile =
+    window.matchMedia("(max-width: 720px), (hover: none) and (pointer: coarse)").matches;
+  if (mobile) return game.short || game.title || "";
+  return game.title || game.short || "";
+}
+
+function gameNameForFullscreen(game) {
+  if (!game) return "";
+  return game.fullscreenName || game.title || game.short || "";
 }
 
 function formatTime(sec) {
@@ -1023,7 +1042,6 @@ async function playMediaUrl(url, track, offsetSec = 0) {
   mediaEl.onended = null;
   mediaEl.ontimeupdate = null;
   mediaEl.preload = "auto";
-  mediaEl.volume = masterVolume;
   useMediaEl = true;
 
   mediaForceFullLoop = !!track.LoopFromStoE;
@@ -1093,7 +1111,9 @@ async function playMediaUrl(url, track, offsetSec = 0) {
   };
 
   try {
-    mediaEl.volume = masterVolume;
+   setTrackGainForPlay(track, null);
+  // then mediaEl.volume = effectiveVolume();
+    mediaEl.volume = effectiveVolume();
     await mediaEl.play();
     mediaEl.dataset.unlocked = "1";
   } catch (err) {
@@ -1243,7 +1263,7 @@ function handoffStreamLoop(duration) {
 
   try {
     next.currentTime = startAt;
-    next.volume = masterVolume;
+    next.volume = effectiveVolume();
     next.play().catch(() => {});
   } catch (_) {}
 
@@ -1302,7 +1322,8 @@ async function playMediaUrlStreamLoop(url, track, offsetSec = 0) {
 
   const startAt = Math.max(0, Math.min(offsetSec, state.duration - 0.05));
   mediaA.currentTime = startAt;
-  mediaA.volume = masterVolume;
+  setTrackGainForPlay(track, null);
+  mediaA.volume = effectiveVolume();
   mediaB.currentTime = mediaLoopStart;
   mediaB.volume = 0;
   pauseOffset = startAt;
@@ -1428,6 +1449,10 @@ function playBuffer(audioBuffer, offsetSeconds = 0) {
   pauseStopGen++; // cancel any delayed pause stopSource / silence re-arm
   stopSource({ keepMediaAlive: true });   // full stop — no silence under BFSTM
   clearSoftEndTimers();
+  setTrackGainForPlay(
+    state.queue[state.queueIndex]?.track,
+    audioBuffer
+  );
 
   // iOS mute switch: open playback channel via silent HTMLAudio
   startSilentShield();
@@ -1452,7 +1477,7 @@ function playBuffer(audioBuffer, offsetSeconds = 0) {
   // never start at full volume — iOS click
   currentGain.gain.cancelScheduledValues(now);
   currentGain.gain.setValueAtTime(0, now);
-  currentGain.gain.linearRampToValueAtTime(masterVolume, now + CLICK_RAMP);
+  currentGain.gain.linearRampToValueAtTime(effectiveVolume(), now + CLICK_RAMP);
 
   const wantInfiniteLoop = state.loopMode === "one";
   const wantSoftEnd =
@@ -1513,11 +1538,11 @@ function playBuffer(audioBuffer, offsetSeconds = 0) {
     // Don't touch the fade-in window — only schedule after it
     const afterIn = startTime + CLICK_RAMP + 0.001;
     currentGain.gain.cancelScheduledValues(afterIn);
-    currentGain.gain.setValueAtTime(masterVolume, afterIn);
+    currentGain.gain.setValueAtTime(effectiveVolume(), afterIn);
     if (fadeSec <= 0) {
       currentGain.gain.setValueAtTime(0, softEndFadeAt);
     } else {
-      currentGain.gain.setValueAtTime(masterVolume, softEndFadeAt);
+      currentGain.gain.setValueAtTime(effectiveVolume(), softEndFadeAt);
       currentGain.gain.linearRampToValueAtTime(0, softEndFadeAt + fadeSec);
     }
 
@@ -1581,7 +1606,7 @@ function cancelTransition(keepPlaying = false) {
     const now = audioCtx.currentTime;
     currentGain.gain.cancelScheduledValues(now);
     if (keepPlaying) {
-      currentGain.gain.setValueAtTime(masterVolume, now);
+      currentGain.gain.setValueAtTime(effectiveVolume(), now);
     }
   }
 }
@@ -1618,6 +1643,8 @@ function finishTransition() {
   }, 30);
 }
 
+const VOLUME_RAMP = 0.05; // ~40ms — soft step, no click
+
 function setVolume(value) {
   masterVolume = Math.min(1, Math.max(0, value));
 
@@ -1626,30 +1653,108 @@ function setVolume(value) {
     slider.value = masterVolume;
   }
 
-  if (mediaA) mediaA.volume = mediaActive === "A" ? masterVolume : 0;
-  if (mediaB) mediaB.volume = mediaActive === "B" ? masterVolume : 0;
-  if (mediaEl && !mediaA) mediaEl.volume = masterVolume;
-
+  const level = effectiveVolume();
   settings.volume = masterVolume;
   saveSettings();
+
+  // HTMLAudio: short stepped ramp (can't use AudioParam)
+  const rampMedia = (el, target) => {
+    if (!el) return;
+    const from = Number(el.volume) || 0;
+    if (Math.abs(from - target) < 0.001) {
+      el.volume = target;
+      return;
+    }
+    const steps = 6;
+    let i = 0;
+    const tick = () => {
+      i++;
+      el.volume = from + (target - from) * (i / steps);
+      if (i < steps) requestAnimationFrame(tick);
+      else el.volume = target;
+    };
+    requestAnimationFrame(tick);
+  };
+
+  if (mediaA) rampMedia(mediaA, mediaActive === "A" ? level : 0);
+  if (mediaB) rampMedia(mediaB, mediaActive === "B" ? level : 0);
+  if (mediaEl && !mediaA) rampMedia(mediaEl, level);
 
   if (!currentGain || !audioCtx) return;
 
   const now = audioCtx.currentTime;
+  const g = currentGain.gain;
 
   if (transitioning) {
     const elapsed = Math.max(0, now - transitionStartedAt);
     const progress = Math.min(1, elapsed / getTransitionSec());
     const remaining = Math.max(0.05, getTransitionSec() - elapsed);
-    const levelNow = masterVolume * (1 - progress);
+    const levelNow = level * (1 - progress);
 
-    currentGain.gain.cancelScheduledValues(now);
-    currentGain.gain.setValueAtTime(levelNow, now);
-    currentGain.gain.linearRampToValueAtTime(0, now + remaining);
+    g.cancelScheduledValues(now);
+    g.setValueAtTime(g.value, now);
+    g.linearRampToValueAtTime(levelNow, now + VOLUME_RAMP);
+    g.linearRampToValueAtTime(0, now + remaining);
   } else {
-    currentGain.gain.cancelScheduledValues(now);
-    currentGain.gain.setValueAtTime(masterVolume, now);
+    g.cancelScheduledValues(now);
+    g.setValueAtTime(g.value, now);
+    g.linearRampToValueAtTime(level, now + VOLUME_RAMP);
+
+    // Re-arm soft-end after the volume ramp
+    if (
+      state.playing &&
+      softEndFadeAt > now + VOLUME_RAMP &&
+      softEndFadeSec >= 0 &&
+      !bufferCtxSuspended
+    ) {
+      if (softEndFadeSec <= 0) {
+        g.setValueAtTime(0, softEndFadeAt);
+      } else {
+        g.setValueAtTime(level, softEndFadeAt);
+        g.linearRampToValueAtTime(0, softEndFadeAt + softEndFadeSec);
+      }
+    }
   }
+}
+
+let trackGain = 1; // per-track multiplier (peak normalize or JSON)
+
+function effectiveVolume() {
+  return Math.min(1, Math.max(0, masterVolume * trackGain));
+}
+
+/** Peak-based gain so quieter songs sit near the same level (buffer path). */
+function computePeakGain(audioBuffer) {
+  if (!audioBuffer) return 1;
+  let peak = 0;
+  for (let c = 0; c < audioBuffer.numberOfChannels; c++) {
+    const data = audioBuffer.getChannelData(c);
+    for (let i = 0; i < data.length; i++) {
+      const a = Math.abs(data[i]);
+      if (a > peak) peak = a;
+    }
+  }
+  if (!(peak > 0.001)) return 1;
+  // target ~0.9 peak; never boost above 4×
+  return Math.min(4, 0.9 / peak);
+}
+
+function setTrackGainForPlay(track, audioBuffer) {
+  if (!settings.normalizeVolume) {
+    trackGain = 1;
+    return;
+  }
+  // Optional per-track override in games.json: "volume": 0.5–2
+  const jsonVol = Number(track?.volume);
+  if (Number.isFinite(jsonVol) && jsonVol > 0) {
+    trackGain = Math.min(4, Math.max(0.05, jsonVol));
+    return;
+  }
+  if (audioBuffer) {
+    trackGain = computePeakGain(audioBuffer);
+    return;
+  }
+  trackGain = 1;
 }
 
 function bindVolume() {
@@ -1693,18 +1798,17 @@ function bindHotkeys() {
     switch (e.code) {
       case "Space":
         e.preventDefault();
-        // Do NOT close/clear global search on Space — only play/pause
-        if (document.body.classList.contains("games-cat-open")) {
-          closeCategoryFullscreen();
-          handled = true;
-          break;
-        }
         togglePlay();
         handled = true;
         break;
       case "KeyF":
         e.preventDefault();
         toggleFullscreen();
+        handled = true;
+        break;
+      case "ShiftLeft":
+        e.preventDefault();
+        toggleGameHeaderCollapse();
         handled = true;
         break;
       case "Escape":
@@ -1792,8 +1896,14 @@ function toggleFullscreen() {
     }
 
     // Always mirror bottom player (works for idle + playing)
-    const nowTitle = $("#now-title")?.textContent?.trim() || "Nichts läuft";
-    const nowGame = $("#now-game")?.textContent?.trim() || "Keinen Song ausgewählt";
+    const item = state.queue[state.queueIndex];
+    const game = item ? LIBRARY.find((g) => g.id === item.gameId) : null;
+    const track = item?.track;
+
+    const nowTitle = track?.title || $("#now-title")?.textContent?.trim() || "Nichts läuft";
+    const nowGame = game
+      ? gameNameForFullscreen(game)
+      : $("#now-game")?.textContent?.trim() || "Keinen Song ausgewählt";
     const nowCover = $("#now-cover")?.getAttribute("src") || PLACEHOLDER;
 
     const fsTitle = $("#fs-title");
@@ -1860,6 +1970,15 @@ function toggleShuffle() {
 
   updatePlayerUI();
   renderQueue();
+
+  // If queue panel is open, keep the playing row in view after reorder
+  const panel = $("#queue-panel");
+  if (panel && !panel.classList.contains("hidden")) {
+    requestAnimationFrame(() => {
+      const current = $("#queue-list .queue-item.current");
+      current?.scrollIntoView({ block: "center", behavior: "smooth" });
+    });
+  }
 }
 
 function releaseDecodedBuffer() {
@@ -2155,6 +2274,18 @@ function renderGames(opts = {}) {
       e.preventDefault();
       openCategoryFullscreen(cat, gamesViewMode);
     });
+  });
+
+    browse.querySelectorAll(".games-row-scroll").forEach((scroller) => {
+    if (scroller.dataset.scrollBound) return;
+    scroller.dataset.scrollBound = "1";
+    scroller.addEventListener(
+      "scroll",
+      () => {
+        if (scroller.scrollLeft < 0) scroller.scrollLeft = 0;
+      },
+      { passive: true }
+    );
   });
 
   markPlayingGameCards();
@@ -3138,14 +3269,36 @@ function bindTabs() {
 
 function playFromGame(game, track) {
   unlockMediaElement().catch(() => {});
-  unshuffledQueue = null;
-  const idx = game.tracks.findIndex((t) => t.id === track.id);
-  state.queue = game.tracks.map((t) => ({
+
+  const albumItems = game.tracks.map((t) => ({
     gameId: game.id,
     track: t,
     insert: null,
   }));
-  state.queueIndex = Math.max(0, idx);
+  const idx = Math.max(
+    0,
+    game.tracks.findIndex((t) => t.id === track.id)
+  );
+
+  // Always keep album order as the unshuffle baseline
+  unshuffledQueue = cloneQueue(albumItems);
+
+  if (state.shuffle) {
+    // Current song first, rest of THIS game shuffled after it
+    const current = albumItems[idx];
+    const rest = albumItems.filter((_, i) => i !== idx);
+    for (let i = rest.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [rest[i], rest[j]] = [rest[j], rest[i]];
+    }
+    state.queue = [current, ...rest];
+    state.queueIndex = 0;
+  } else {
+    unshuffledQueue = null;
+    state.queue = albumItems;
+    state.queueIndex = idx;
+  }
+
   if (state.loopMode === "count") {
     state.loopsRemaining = settings.loopTimes;
   } else {
@@ -3153,6 +3306,7 @@ function playFromGame(game, track) {
   }
   playCurrent();
   renderQueue();
+  updatePlayerUI();
 }
 
 async function playCurrent() {
@@ -3179,10 +3333,10 @@ async function playCurrent() {
 
   $("#now-cover").src = game?.cover || PLACEHOLDER;
   $("#now-title").textContent = track.title;
-  $("#now-game").textContent = game?.title || game?.short || "";
+  $("#now-game").textContent = gameNameForPlayer(game);
   $("#fs-cover").src = game?.cover || PLACEHOLDER;
   $("#fs-title").textContent = track.title;
-  $("#fs-game").textContent = game?.title || game?.short || "";
+  $("#fs-game").textContent = gameNameForFullscreen(game);
   // set cover only once we know the track — avoids idle→placeholder→cover flash
   if (game?.cover) {
     setAmbientBackground(game.cover);
@@ -3512,7 +3666,7 @@ async function togglePlay() {
       cur.volume = 0;
       await cur.play();
       // short volume ramp
-      const target = masterVolume;
+      const target = effectiveVolume();
       const steps = 6;
       let i = 0;
       const tick = () => {
@@ -3799,11 +3953,11 @@ function toggleLoop() {
 
     const now = audioCtx.currentTime;
     currentGain.gain.cancelScheduledValues(now);
-    currentGain.gain.setValueAtTime(masterVolume, now);
+    currentGain.gain.setValueAtTime(effectiveVolume(), now);
     if (fadeSec <= 0) {
       currentGain.gain.setValueAtTime(0, softEndFadeAt);
     } else {
-      currentGain.gain.setValueAtTime(masterVolume, softEndFadeAt);
+      currentGain.gain.setValueAtTime(effectiveVolume(), softEndFadeAt);
       currentGain.gain.linearRampToValueAtTime(0, softEndFadeAt + fadeSec);
     }
 
@@ -3960,8 +4114,8 @@ function updateMediaSession() {
   try {
     navigator.mediaSession.metadata = new MediaMetadata({
       title: track.title || "Noma Music",
-      artist: game?.composer || "Noma Music",
-      album: game?.short || game?.title || "Noma Music",
+      artist: game?.short || game?.title || "Noma Music",
+      album: game?.title || game?.short || "Noma Music",
       artwork: [
         { src: cover, sizes: "96x96", type: "image/jpeg" },
         { src: cover, sizes: "128x128", type: "image/jpeg" },
@@ -4835,28 +4989,26 @@ function setupGameTrackSearch() {
   applyFilter();
 }
 
-function bindGameHeaderToggle() {
-  const btn = $("#game-header-toggle");
-  if (!btn || btn.dataset.bound) return;
-  btn.dataset.bound = "1";
+function toggleGameHeaderCollapse() {
+  if (!state.currentGame || !gameDetail?.classList.contains("active")) return;
+  if (gameDetail.classList.contains("hidden")) return;
 
-  btn.addEventListener("click", () => {
   const sticky = document.querySelector(".game-sticky-top");
   const detail = $("#game-detail");
   const titleEl = $("#game-title");
+  const btn = $("#game-header-toggle");
   if (!sticky || !detail) return;
 
   const collapsed = sticky.classList.toggle("is-collapsed");
   detail.classList.toggle("header-collapsed", collapsed);
-  btn.setAttribute("aria-expanded", collapsed ? "false" : "true");
+  btn?.setAttribute("aria-expanded", collapsed ? "false" : "true");
 
   if (titleEl) {
     titleEl.textContent = collapsed
-      ? (titleEl.dataset.short || titleEl.dataset.full || titleEl.textContent)
-      : (titleEl.dataset.full || titleEl.textContent);
+      ? titleEl.dataset.short || titleEl.dataset.full || titleEl.textContent
+      : titleEl.dataset.full || titleEl.textContent;
   }
 
-  // keep center alignment during size tween, then settle
   sticky.classList.add("is-animating-header");
   window.clearTimeout(sticky._headerAnimTimer);
   sticky._headerAnimTimer = window.setTimeout(() => {
@@ -4869,7 +5021,13 @@ function bindGameHeaderToggle() {
     if (performance.now() - start < 480) requestAnimationFrame(tick);
   };
   requestAnimationFrame(tick);
-});
+}
+
+function bindGameHeaderToggle() {
+  const btn = $("#game-header-toggle");
+  if (!btn || btn.dataset.bound) return;
+  btn.dataset.bound = "1";
+  btn.addEventListener("click", () => toggleGameHeaderCollapse());
 }
 
 
@@ -5395,13 +5553,24 @@ $("#setting-queue-loop")?.addEventListener("change", (e) => {
     saveSettings();
   });
 
+    $("#setting-normalize-volume")?.addEventListener("change", (e) => {
+    settings.normalizeVolume = !!e.target.checked;
+    saveSettings();
+    // apply immediately if something is playing
+    if (decodedBuffer && state.playing) {
+      setTrackGainForPlay(state.queue[state.queueIndex]?.track, decodedBuffer);
+      setVolume(masterVolume);
+    } else if (useMediaEl) {
+      setTrackGainForPlay(state.queue[state.queueIndex]?.track, null);
+      setVolume(masterVolume);
+    }
+  });
+
   $("#settings-reset")?.addEventListener("click", () => {
     const keepVolume = masterVolume;
     settings = {
-      loopTimes: DEFAULT_SETTINGS.loopTimes,
-      transitionSec: DEFAULT_SETTINGS.transitionSec,
+      ...DEFAULT_SETTINGS,
       volume: keepVolume,
-      queueLoop: DEFAULT_SETTINGS.queueLoop,
     };
     saveSettings();
     syncSettingsForm();
@@ -5421,6 +5590,9 @@ function syncSettingsForm() {
 
   const label = $("#setting-transition-label");
   if (label) label.textContent = `${settings.transitionSec} s`;
+
+  const norm = $("#setting-normalize-volume");
+  if (norm) norm.checked = !!settings.normalizeVolume;
 
   $("#setting-transition-menu")?.querySelectorAll("li").forEach((li) => {
     li.setAttribute(

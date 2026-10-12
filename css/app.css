@@ -3196,18 +3196,24 @@ body.search-mode .search-close-btn {
 
 .games-row-scroll {
   overflow-x: auto;
-  overflow-y: visible; /* allow vertical shadow */
+  overflow-y: visible;
   -webkit-overflow-scrolling: touch;
   margin: 0 -28px;
-  padding: 4px 28px 36px; /* top same as before, extra bottom for shadow */
+  padding: 4px 28px 36px;
   scroll-snap-type: x proximity;
+  overscroll-behavior-x: contain; /* stop rubber-band / sideways page scroll */
+  touch-action: pan-x pan-y;
 }
 
 .games-row-track {
   display: flex;
   gap: 16px;
   width: max-content;
+  min-width: 100%;
+  padding-left: 0;
+  padding-right: 4px;
 }
+
 .games-row-track .game-card {
   width: 160px;
   flex-shrink: 0;
