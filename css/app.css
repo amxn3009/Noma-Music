@@ -21,8 +21,9 @@
 }
 
 html {
-  touch-action: manipulation;
-  -ms-touch-action: manipulation;
+  /* pan-y keeps vertical momentum scroll on iOS/iPad while still blocking double-tap zoom */
+  touch-action: pan-y;
+  -ms-touch-action: pan-y;
   height: 100%;
   height: -webkit-fill-available;
   background: var(--bg);
@@ -352,6 +353,7 @@ html.ipad-standalone .topbar {
   overflow-y: auto;
   overflow-x: hidden; /* no page-level horizontal scroll */
   overscroll-behavior-x: none;
+  overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
   padding-bottom: calc(var(--player-h) + env(safe-area-inset-bottom, 0px) + 40px);
   touch-action: pan-y; /* vertical page scroll only */
@@ -2440,15 +2442,24 @@ body.fs-open .progress-row {
   border-radius: 12px;
   border: 1px solid rgba(255,255,255,0.1);
   background: rgba(255,255,255,0.06);
-  color: var(--text);
+  color: rgb(255, 64, 64);
   font-weight: 600;
   cursor: pointer;
   font-family: inherit;
-}
-.settings-reset-btn:hover {
-  background: rgba(255,255,255,0.1);
+  transition: background 0.25s, transform 0.12s;
+  transition-duration: 0.12s;
 }
 
+.settings-reset-btn:hover {
+  background: rgba(255, 0, 0, 0.1);
+  border-color: rgba(255, 66, 66, 0.137);
+}
+
+.settings-reset-btn:active {
+  transform: scale(0.97);
+  background: rgba(255, 0, 0, 0.1);
+  border-color: rgba(255, 66, 66, 0.137);
+}
 /* ── Sleep timer (topbar) ── */
 .sleep-wrap {
   position: relative;
@@ -4338,10 +4349,14 @@ body.fs-open.fs-queue-open .fs-cover {
 body.fs-open.fs-queue-open .fs-title {
   font-size: 1.35rem;
   max-width: min(320px, 48vw);
+  margin-bottom: 0;
+  line-height: 1.15;
 }
 
 body.fs-open.fs-queue-open .fs-game {
   max-width: min(320px, 48vw);
+  margin-top: 0;
+  line-height: 1.2;
 }
 
 /* Queue panel: default floating (non-fs) unchanged.
@@ -4378,11 +4393,12 @@ body.fs-open.fs-queue-open #queue-panel {
 
 /* Enter from the right */
 body.fs-open #queue-panel:not(.hidden):not(.is-closing) {
-  animation: fsQueueIn 0.42s var(--ease) both;
+  animation: none;
 }
 
 body.fs-open #queue-panel.is-closing {
-  animation: fsQueueOut 0.36s var(--ease) both;
+  animation: none;
+  opacity: 0;
   pointer-events: none;
 }
 
@@ -4443,14 +4459,18 @@ body.fs-queue-open .queue-item .q-cover {
   }
 
   body.fs-open.fs-queue-open #queue-panel {
-    top: auto;
     left: 12px;
     right: 12px;
     width: auto;
-    bottom: calc(var(--player-h) + env(safe-area-inset-bottom, 0px) + 10px);
+    top: calc(56px + env(safe-area-inset-top, 0px)); /* leave space for sleep */
+    bottom: calc(var(--player-h) + env(safe-area-inset-bottom, 0px) + 28px);
     max-height: min(48dvh, 380px);
     border-radius: 18px 18px 16px 16px;
   }
+
+  body.fs-open.fs-queue-open .fs-stage {
+  gap: 8px;               /* was ~14–18 */
+}
 
   @keyframes fsQueueIn {
     from {
@@ -4612,6 +4632,7 @@ body.fs-queue-open .fs-title {
 /* Expanded mode: hide floating window */
 body.fs-queue-open #queue-panel {
   display: none !important;
+  animation: none !important;
 }
 
 @media (max-width: 720px) {
@@ -4626,4 +4647,39 @@ body.fs-queue-open #queue-panel {
   body.fs-queue-open .fs-cover {
     width: min(180px, 42vw);
   }
+}
+
+.fs-queue-bar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 4px 6px 2px;
+  flex-shrink: 0;
+}
+.fs-queue-close {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  color: var(--muted);
+}
+.fs-queue-close:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* While FS is closing, freeze stage position (no slide-to-center) */
+body.fs-closing-layout .fs-stage {
+  transition: none !important;
+  transform: none !important;
+  max-width: 100% !important;
+}
+body.fs-closing-layout .fs-cover,
+body.fs-closing-layout .fs-title,
+body.fs-closing-layout .fs-game {
+  transition: none !important;
+}
+body.fs-closing-layout .fs-queue {
+  transition: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
 }

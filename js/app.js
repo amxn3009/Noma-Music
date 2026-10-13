@@ -604,6 +604,8 @@ function resetPlayerToIdle() {
   state.duration = 0;
   state.queue = [];
   state.queueIndex = -1;
+  fsQueuePreferOpen = false;
+  setFsQueueOpen(false);
   unshuffledQueue = null;
 
   document.body.classList.remove("is-playing", "is-transitioning");
@@ -1925,29 +1927,38 @@ function toggleFullscreen() {
     fs.classList.remove("hidden");
     document.body.classList.add("fs-open");
 
-    // Restore last mode only — do NOT open the floating panel on top of it
-    if (fsQueuePreferOpen) {
-      setFsQueueOpen(true);
-    } else {
-      setFsQueueOpen(false);
-      // optional: leave floating panel closed until user taps ☰
+    // Never auto-open expanded mode on enter.
+    // Keep floating panel only if it was already open for the bottom player.
+    setFsQueueOpen(false);
+    const panel = $("#queue-panel");
+    const wasFloatingOpen =
+      panel &&
+      !panel.classList.contains("hidden") &&
+      !panel.classList.contains("is-closing");
+    if (!wasFloatingOpen) {
+      // leave closed; user opens via ☰ or expand arrow
     }
+    // if floating was open, it stays as the small window — no fs-queue-open
 
     btnFs?.classList.add("hidden");
     btnMin?.classList.remove("hidden");
-  }  else {
+  } else {
     if (fs.classList.contains("is-closing")) return;
     fs.classList.add("is-closing");
-    document.body.classList.remove("fs-open");
-    // keep fsQueuePreferOpen as-is; only hide the layout class
+
+    // Kill layout shift instantly (no stage sliding back to center mid-exit)
+    document.body.classList.add("fs-closing-layout");
     document.body.classList.remove("fs-queue-open");
+    document.body.classList.remove("fs-open");
     document.body.classList.add("fs-leaving");
+
     btnMin?.classList.add("hidden");
     btnFs?.classList.remove("hidden");
+
     setTimeout(() => {
       fs.classList.add("hidden");
       fs.classList.remove("is-closing");
-      document.body.classList.remove("fs-leaving");
+      document.body.classList.remove("fs-leaving", "fs-closing-layout");
     }, 340);
   }
 }
@@ -4884,19 +4895,21 @@ function isQueuePanelOpen() {
   );
 }
 
-function openQueuePanel({ fromFs = false } = {}) {
+function openQueuePanel() {
   const panel = $("#queue-panel");
   if (!panel) return;
-
-  clearTimeout(queuePanelCloseTimer);
-  panel.classList.remove("is-closing");
-  panel.classList.remove("hidden");
-
-  // Window mode — not the big inline list
+  // If expanded mode is on, just ensure list is rendered
   if (document.body.classList.contains("fs-queue-open")) {
-    setFsQueueOpen(false);
+    renderQueue();
+    requestAnimationFrame(() => {
+      $("#fs-queue-list .queue-item.current")?.scrollIntoView({
+        block: "center",
+        behavior: "smooth",
+      });
+    });
+    return;
   }
-
+  panel.classList.remove("hidden", "is-closing");
   renderQueue();
   requestAnimationFrame(() => {
     $("#queue-list .queue-item.current")?.scrollIntoView({
@@ -4906,52 +4919,46 @@ function openQueuePanel({ fromFs = false } = {}) {
   });
 }
 
-function closeQueuePanel({ animate = true } = {}) {
+function closeQueuePanel() {
   const panel = $("#queue-panel");
-  if (!panel) return;
-  if (panel.classList.contains("hidden")) {
-    document.body.classList.remove("fs-queue-open");
-    return;
-  }
-
-  const inFs = document.body.classList.contains("fs-open");
-
-  if (inFs && animate) {
-    panel.classList.add("is-closing");
-    document.body.classList.remove("fs-queue-open");
-    fsQueuePreferOpen = false;
-    clearTimeout(queuePanelCloseTimer);
-    queuePanelCloseTimer = setTimeout(() => {
-      panel.classList.add("hidden");
-      panel.classList.remove("is-closing");
-    }, 360);
-  } else {
+  if (!panel || panel.classList.contains("hidden")) return;
+  // Just close – do NOT touch fsQueuePreferOpen
+  setFsQueueOpen(false);
+  panel.classList.add("is-closing");
+  setTimeout(() => {
     panel.classList.add("hidden");
     panel.classList.remove("is-closing");
-    document.body.classList.remove("fs-queue-open");
-    if (inFs) fsQueuePreferOpen = false;
-  }
+  }, 360);
 }
+
 
 function bindQueuePanel() {
   $("#btn-queue")?.addEventListener("click", () => {
-    if (isQueuePanelOpen()) {
-      closeQueuePanel({ animate: true });
+    const panel = $("#queue-panel");
+    const isOpen = panel && !panel.classList.contains("hidden");
+    if (isOpen) {
+      closeQueuePanel();
     } else {
       openQueuePanel();
     }
   });
 
-  $("#queue-close")?.addEventListener("click", () => {
-    closeQueuePanel({ animate: true });
-  });
+  $("#queue-close")?.addEventListener("click", closeQueuePanel);
 
   $("#queue-clear")?.addEventListener("click", () => {
     if (!state.queue.length) return;
     openClearQueueConfirm();
   });
 
-    $("#queue-fs-expand")?.addEventListener("click", (e) => {
+  $("#fs-queue-close")?.addEventListener("click", (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  fsQueuePreferOpen = false;
+  setFsQueueOpen(false);
+});
+
+  // single handler only
+  $("#queue-fs-expand")?.addEventListener("click", (e) => {
     e.preventDefault();
     e.stopPropagation();
     toggleFsQueueMode();
@@ -5008,25 +5015,32 @@ function bindFullscreen() {
   });
 }
 
+
 function setFsQueueOpen(open) {
+  if (open && (state.queue.length === 0 || state.queueIndex < 0)) {
+    open = false;
+  }
+  const wasOpen = document.body.classList.contains("fs-queue-open");
   document.body.classList.toggle("fs-queue-open", !!open);
-  fsQueuePreferOpen = !!open;
 
   const expandBtn = $("#queue-fs-expand");
-  expandBtn?.setAttribute("aria-expanded", open ? "true" : "false");
-  expandBtn?.setAttribute(
-    "title",
-    open ? "Fenster-Warteschlange" : "Große Warteschlange"
-  );
+  if (expandBtn) {
+    expandBtn.setAttribute("aria-expanded", open ? "true" : "false");
+    expandBtn.title = open ? "Kleine Warteschlange" : "Große Warteschlange";
+  }
+  const fsQ = $("#fs-queue");
+  if (fsQ) fsQ.setAttribute("aria-hidden", open ? "false" : "true");
 
-  const box = $("#fs-queue");
-  box?.setAttribute("aria-hidden", open ? "false" : "true");
+  // Closing expanded → never flash the floating window
+  if (wasOpen && !open) {
+    const panel = $("#queue-panel");
+    if (panel) {
+      panel.classList.add("hidden");
+      panel.classList.remove("is-closing");
+    }
+  }
 
   if (open) {
-    // big inline list — hide window
-    const panel = $("#queue-panel");
-    panel?.classList.add("hidden");
-    panel?.classList.remove("is-closing");
     renderQueue();
     requestAnimationFrame(() => {
       $("#fs-queue-list .queue-item.current")?.scrollIntoView({
@@ -5034,22 +5048,20 @@ function setFsQueueOpen(open) {
         behavior: "smooth",
       });
     });
-  } else {
-    // back to floating window only if still in fullscreen and user wants panel
-    // (caller decides whether to open panel)
   }
 }
 
 function toggleFsQueueMode() {
   if (!document.body.classList.contains("fs-open")) return;
-  const next = !document.body.classList.contains("fs-queue-open");
-  if (next) {
-    setFsQueueOpen(true);
-  } else {
+  // nothing playing / empty queue → never open expanded
+  if (state.queue.length === 0 || state.queueIndex < 0) {
+    fsQueuePreferOpen = false;
     setFsQueueOpen(false);
-    // restore floating panel
-    openQueuePanel({ fromFs: false });
+    return;
   }
+  const willOpen = !document.body.classList.contains("fs-queue-open");
+  fsQueuePreferOpen = willOpen;
+  setFsQueueOpen(willOpen);
 }
 
 function saveAlbumViewState() {
@@ -5218,12 +5230,29 @@ function bindTrackListFade() {
   }
   scroller.dataset.fadeBound = "1";
 
-  // Collapse only while scrolling down past this; expand only while scrolling up to top
   const COLLAPSE_AT = 72;
   const EXPAND_AT = 2;
   let lastY = 0;
   let ignoreUntil = 0;
+  let ignoreDir = 0; // +1 ignore further collapse, -1 ignore further expand
   let ticking = false;
+
+  const tryExpandIfAtTop = () => {
+    if (!settings.autoCollapseAlbum) return;
+    if (!state.currentGame || !gameDetail?.classList.contains("active")) return;
+    const sticky = document.querySelector(".game-sticky-top");
+    if (!sticky) return;
+    if (!sticky.classList.contains("is-collapsed")) return;
+    if (sticky.classList.contains("is-animating-header")) return;
+    if (performance.now() < ignoreUntil && ignoreDir < 0) return;
+    if (scroller.scrollTop > EXPAND_AT) return;
+
+    toggleGameHeaderCollapse();
+    scroller.scrollTop = 0;
+    ignoreUntil = performance.now() + 500;
+    ignoreDir = -1;
+    lastY = 0;
+  };
 
   const onScroll = () => {
     if (ticking) return;
@@ -5252,24 +5281,28 @@ function bindTrackListFade() {
       const goingUp = y < lastY - 0.5;
       const collapsed = sticky.classList.contains("is-collapsed");
       const animating = sticky.classList.contains("is-animating-header");
-      const locked = performance.now() < ignoreUntil;
+      const locked =
+        performance.now() < ignoreUntil &&
+        ((ignoreDir > 0 && goingDown) || (ignoreDir < 0 && goingUp));
 
       if (!animating && !locked) {
         if (!collapsed && y >= COLLAPSE_AT && goingDown) {
           const h0 = sticky.offsetHeight;
           toggleGameHeaderCollapse();
           const delta = Math.max(0, h0 - sticky.offsetHeight);
-          // Stay in the collapsed band — never drop into the expand zone
           scroller.scrollTop = Math.max(COLLAPSE_AT, y - delta);
-          ignoreUntil = performance.now() + 600;
+          ignoreUntil = performance.now() + 500;
+          ignoreDir = 1;
           lastY = scroller.scrollTop;
           return;
         }
 
-        if (collapsed && y <= EXPAND_AT && goingUp) {
+        // expand as soon as you're at the top (no goingUp required)
+        if (collapsed && y <= EXPAND_AT) {
           toggleGameHeaderCollapse();
           scroller.scrollTop = 0;
-          ignoreUntil = performance.now() + 600;
+          ignoreUntil = performance.now() + 500;
+          ignoreDir = -1;
           lastY = 0;
           return;
         }
@@ -5280,7 +5313,14 @@ function bindTrackListFade() {
   };
 
   scroller.addEventListener("scroll", onScroll, { passive: true });
-  scroller.addEventListener("scrollend", () => updateTrackFade(), { passive: true });
+  scroller.addEventListener(
+    "scrollend",
+    () => {
+      updateTrackFade();
+      tryExpandIfAtTop();
+    },
+    { passive: true }
+  );
   window.addEventListener("resize", updateTrackFade, { passive: true });
   updateTrackFade();
 }
@@ -5346,6 +5386,9 @@ function showContextMenu(x, y, payload, anchorEl = null) {
   contextMenu?.querySelectorAll(".ctx-album-only").forEach((btn) => {
     btn.classList.toggle("hidden", !isAlbum);
   });
+  contextMenu?.querySelectorAll(".ctx-track-only").forEach((btn) => {
+    btn.classList.toggle("hidden", isAlbum); // hide on album menus
+});
   // For album menu, relabel the two shared actions
   const playNextBtn = contextMenu?.querySelector('[data-action="play-next"]');
   const addEndBtn = contextMenu?.querySelector('[data-action="add-end"]');
@@ -5389,10 +5432,26 @@ function bindContextMenu() {
       } else if (game && track) {
         if (action === "play-next") addPlayNext(game, track);
         if (action === "add-end") addToEnd(game, track);
+        if (action === "open-album") {
+          hideContextMenu();
+          if (!$("#fullscreen-player")?.classList.contains("hidden")) {
+            toggleFullscreen();
+          }
+          // same as clicking a game in search: keep query for “Zurück”
+          if (globalSearchOpen) {
+            const q = $("#global-search-input")?.value?.trim() || "";
+            if (q) searchReturn = { type: "search", query: q };
+            globalSearchOpen = false;
+            document.body.classList.remove("search-open", "search-mode");
+            $("#global-search-results")?.classList.add("hidden");
+          }
+          openGame(game.id);
+          return;
+        }
       }
-      hideContextMenu();
     });
   });
+
 
   document.addEventListener("click", (e) => {
     if (performance.now() < suppressDocClickUntil) return;
@@ -5401,7 +5460,7 @@ function bindContextMenu() {
     if (e.target.closest("#album-menu-btn")) return;
     if (e.target.closest("#player-left")) return;
     if (e.target.closest("#fs-cover, #fs-title, #fs-game")) return;
-    hideContextMenu();
+      hideContextMenu();
   });
 
   const closeOnScroll = () => {
@@ -5497,7 +5556,7 @@ function pressMinMs(e) {
 
 function bindPressMinHold(root = document) {
   const selector =
-    ".ctrl-btn, .play-btn, #btn-play, .primary-btn, .tab, .back-btn, .settings-btn, .circle-btn, .header-toggle-btn, .fs-back-btn, .confirm-btn, .game-card, .games-view-btn, .games-row-title, #play-all-btn, #shuffle-all-btn, #album-menu-btn";
+    ".ctrl-btn, .play-btn, #btn-play, .primary-btn, .tab, .back-btn, .settings-btn, .circle-btn, .header-toggle-btn, .fs-back-btn, .confirm-btn, .game-card, .games-view-btn, .games-row-title, #play-all-btn, #shuffle-all-btn, #album-menu-btn, #settings-reset-btn";
 
   root.querySelectorAll(selector).forEach((btn) => {
     if (btn.dataset.pressBound === "1") return;
