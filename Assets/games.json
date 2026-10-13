@@ -430,7 +430,8 @@
     "id": "smg-super-mario-galaxy",
     "title": "Super Mario Galaxy",
     "file": "Assets/Games/SuperMarioGalaxy/Tracks/Super Mario Galaxy.bfstm",
-    "duration": 240.025
+    "duration": 240.025,
+    "LoopFromStoE": true
   },
   {
     "id": "smg-purple-comet",
@@ -463,10 +464,10 @@
     "duration": 60.404
   },
   {
-    "id": "smg-gateway-galaxy-main",
-    "title": "Gateway Galaxy - Main",
-    "file": "Assets/Games/SuperMarioGalaxy/Tracks/Gateway Galaxy - Main.bfstm",
-    "duration": 64.577
+    "id": "smg-to-the-gateway",
+    "title": "To the Gateway",
+    "file": "Assets/Games/SuperMarioGalaxy/Tracks/To the Gateway.bfstm",
+    "duration": 182.07
   },
   {
     "id": "smg-to-the-observatory-grounds-1",

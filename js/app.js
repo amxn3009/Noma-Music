@@ -25,6 +25,7 @@ const DEFAULT_SETTINGS = {
   normalizeVolume: false, // quieter tracks boosted toward same level
   queueLoop: true,      // after last track: restart queue vs stop
   bgMode: "kawarp", // "kawarp" | "css" — switch later in settings
+  autoCollapseAlbum: true, // collapse album header when scrolling down
 };
 
 const CONSOLE_META = {
@@ -104,6 +105,10 @@ function loadSettings() {
       parsed.bgMode === "css" || parsed.bgMode === "kawarp"
         ? parsed.bgMode
         : DEFAULT_SETTINGS.bgMode;
+    settings.autoCollapseAlbum =
+      typeof parsed.autoCollapseAlbum === "boolean"
+        ? parsed.autoCollapseAlbum
+        : DEFAULT_SETTINGS.autoCollapseAlbum;
   } catch (_) {}
 }
 
@@ -146,6 +151,10 @@ let softEndStartRemainMs = 0;
 let sleepEndsAt = 0;       // Date.now() deadline (duration mode)
 let sleepMode = null;      // null | "duration" | "end"
 let sleepTickId = null;
+
+// Fullscreen queue: remember open preference across fs open/close
+let fsQueuePreferOpen = false;
+let queuePanelCloseTimer = null;
 
 const PLACEHOLDER = "Assets/MusicPlayer/PlaceholderImage.jpg";
 
@@ -1915,12 +1924,23 @@ function toggleFullscreen() {
 
     fs.classList.remove("hidden");
     document.body.classList.add("fs-open");
+
+    // Restore last mode only — do NOT open the floating panel on top of it
+    if (fsQueuePreferOpen) {
+      setFsQueueOpen(true);
+    } else {
+      setFsQueueOpen(false);
+      // optional: leave floating panel closed until user taps ☰
+    }
+
     btnFs?.classList.add("hidden");
     btnMin?.classList.remove("hidden");
-  } else {
+  }  else {
     if (fs.classList.contains("is-closing")) return;
     fs.classList.add("is-closing");
     document.body.classList.remove("fs-open");
+    // keep fsQueuePreferOpen as-is; only hide the layout class
+    document.body.classList.remove("fs-queue-open");
     document.body.classList.add("fs-leaving");
     btnMin?.classList.add("hidden");
     btnFs?.classList.remove("hidden");
@@ -1977,6 +1997,15 @@ function toggleShuffle() {
     requestAnimationFrame(() => {
       const current = $("#queue-list .queue-item.current");
       current?.scrollIntoView({ block: "center", behavior: "smooth" });
+    });
+  }
+
+  if (document.body.classList.contains("fs-queue-open")) {
+    requestAnimationFrame(() => {
+      $("#fs-queue-list .queue-item.current")?.scrollIntoView({
+        block: "center",
+        behavior: "smooth",
+      });
     });
   }
 }
@@ -2274,18 +2303,6 @@ function renderGames(opts = {}) {
       e.preventDefault();
       openCategoryFullscreen(cat, gamesViewMode);
     });
-  });
-
-    browse.querySelectorAll(".games-row-scroll").forEach((scroller) => {
-    if (scroller.dataset.scrollBound) return;
-    scroller.dataset.scrollBound = "1";
-    scroller.addEventListener(
-      "scroll",
-      () => {
-        if (scroller.scrollLeft < 0) scroller.scrollLeft = 0;
-      },
-      { passive: true }
-    );
   });
 
   markPlayingGameCards();
@@ -4297,25 +4314,26 @@ function shuffleAlbumIntoQueue(game) {
 }
 
 function renderQueue() {
-  const list = $("#queue-list");
-  if (!list) return;
+  const lists = [$("#queue-list"), $("#fs-queue-list")].filter(Boolean);
+  if (!lists.length) return;
 
   // While dragging: only refresh "current" / EQ classes — never destroy the DOM
-    if (queueDragging) {
-    list.querySelectorAll(".queue-item").forEach((row) => {
-      const i = +row.dataset.index;
-      const isCurrent = i === state.queueIndex;
-      row.classList.toggle("current", isCurrent);
-      row.classList.toggle("audio-on", isCurrent && state.playing);
+  if (queueDragging) {
+    lists.forEach((list) => {
+      list.querySelectorAll(".queue-item").forEach((row) => {
+        const i = +row.dataset.index;
+        const isCurrent = i === state.queueIndex;
+        row.classList.toggle("current", isCurrent);
+        row.classList.toggle("audio-on", isCurrent && state.playing);
+      });
     });
-    return; // DOM + ghost stay intact
+    return;
   }
 
-  list.innerHTML = state.queue
+  const html = state.queue
     .map((item, i) => {
       const game = LIBRARY.find((g) => g.id === item.gameId);
       const isCurrent = i === state.queueIndex;
-      const file = item.track.file;
       return `
       <li class="queue-item ${isCurrent ? "current" : ""} ${
         isCurrent && state.playing ? "audio-on" : ""
@@ -4338,7 +4356,7 @@ function renderQueue() {
           <div class="q-title">${escapeHtml(item.track.title)}</div>
           <div class="q-game muted">${escapeHtml(game?.short || game?.title || "")}</div>
         </div>
-          <span class="q-duration" data-track-id="${escapeHtml(item.track.id)}">${
+        <span class="q-duration" data-track-id="${escapeHtml(item.track.id)}">${
           Number.isFinite(Number(item.track.duration)) && Number(item.track.duration) > 0
             ? formatTime(Number(item.track.duration))
             : "–:––"
@@ -4351,28 +4369,35 @@ function renderQueue() {
     })
     .join("");
 
+  lists.forEach((list) => {
+    list.innerHTML = html;
+  });
+
+  // Duration fill on all lists
   state.queue.forEach(async (item) => {
     if (Number.isFinite(Number(item.track.duration)) && Number(item.track.duration) > 0) return;
     const url = typeof getTrackUrl === "function" ? getTrackUrl(item.track) : item.track.file;
     const sec = await getTrackDuration(url, item.track);
     if (sec == null) return;
-    list
+    document
       .querySelectorAll(`.q-duration[data-track-id="${CSS.escape(item.track.id)}"]`)
       .forEach((el) => {
         el.textContent = formatTime(sec);
       });
   });
 
-  bindQueueItemEvents(list);
-  // NO scrollIntoView here — only when opening the panel
+  lists.forEach((list) => bindQueueItemEvents(list));
+  // NO scrollIntoView here — only when opening the panel / fs queue
 }
 
 function bindQueueItemEvents(list) {
+  if (!list) return;
+
   // Click row → play / toggle
   list.querySelectorAll(".queue-item").forEach((row) => {
     row.addEventListener("click", (e) => {
       if (row.dataset.suppressClick === "1") {
-          delete row.dataset.suppressClick;
+        delete row.dataset.suppressClick;
         return;
       }
       if (
@@ -4411,15 +4436,13 @@ function bindQueueItemEvents(list) {
       });
     });
 
-        // Long-press → context menu (mobile)
+    // Long-press → context menu (mobile)
     let lpTimer = null;
     let lpMoved = false;
-    const LP_MS = 480;
 
     row.addEventListener(
       "pointerdown",
       (e) => {
-        // PC: use right-click / ⋮ only — no long-press on mouse
         if (e.pointerType === "mouse") return;
         if (e.button != null && e.button !== 0) return;
         if (
@@ -4454,7 +4477,6 @@ function bindQueueItemEvents(list) {
       "pointermove",
       (e) => {
         if (!lpTimer) return;
-        // cancel if finger moved (scrolling / drag intent)
         if (Math.abs(e.movementX) + Math.abs(e.movementY) > 6) {
           lpMoved = true;
           clearTimeout(lpTimer);
@@ -4650,7 +4672,7 @@ function bindQueuePointerDrag(list) {
         stopAutoScroll();
         return;
       }
-      const scrolled = autoScrollQueue(lastClientY);
+      const scrolled = autoScrollQueue(lastClientY, list);
       // only recompute drop target after scroll moved the list
       if (scrolled) {
         placeSlot(computeDropIndex(lastClientY));
@@ -4755,8 +4777,8 @@ function bindQueuePointerDrag(list) {
   });
 }
 
-function autoScrollQueue(clientY) {
-  const list = $("#queue-list");
+function autoScrollQueue(clientY, listEl) {
+  const list = listEl || $("#queue-list") || $("#fs-queue-list");
   if (!list) return false;
   const rect = list.getBoundingClientRect();
   const edge = 48;
@@ -4806,20 +4828,22 @@ function reorderQueue(from, to, flash = false) {
     });
   }
 
-  if (flash) {
+   if (flash) {
     requestAnimationFrame(() => {
-      const row = document.querySelector(
-        `#queue-list .queue-item[data-index="${to}"]`
-      );
-      if (!row) return;
-      row.classList.remove("drop-flash");
-      void row.offsetWidth;
-      row.classList.add("drop-flash");
-      row.addEventListener(
-        "animationend",
-        () => row.classList.remove("drop-flash"),
-        { once: true }
-      );
+      document
+        .querySelectorAll(
+          `#queue-list .queue-item[data-index="${to}"], #fs-queue-list .queue-item[data-index="${to}"]`
+        )
+        .forEach((row) => {
+          row.classList.remove("drop-flash");
+          void row.offsetWidth;
+          row.classList.add("drop-flash");
+          row.addEventListener(
+            "animationend",
+            () => row.classList.remove("drop-flash"),
+            { once: true }
+          );
+        });
     });
   }
 }
@@ -4851,27 +4875,86 @@ function removeFromQueue(index) {
 }
 
 
+function isQueuePanelOpen() {
+  const panel = $("#queue-panel");
+  return (
+    panel &&
+    !panel.classList.contains("hidden") &&
+    !panel.classList.contains("is-closing")
+  );
+}
+
+function openQueuePanel({ fromFs = false } = {}) {
+  const panel = $("#queue-panel");
+  if (!panel) return;
+
+  clearTimeout(queuePanelCloseTimer);
+  panel.classList.remove("is-closing");
+  panel.classList.remove("hidden");
+
+  // Window mode — not the big inline list
+  if (document.body.classList.contains("fs-queue-open")) {
+    setFsQueueOpen(false);
+  }
+
+  renderQueue();
+  requestAnimationFrame(() => {
+    $("#queue-list .queue-item.current")?.scrollIntoView({
+      block: "center",
+      behavior: "smooth",
+    });
+  });
+}
+
+function closeQueuePanel({ animate = true } = {}) {
+  const panel = $("#queue-panel");
+  if (!panel) return;
+  if (panel.classList.contains("hidden")) {
+    document.body.classList.remove("fs-queue-open");
+    return;
+  }
+
+  const inFs = document.body.classList.contains("fs-open");
+
+  if (inFs && animate) {
+    panel.classList.add("is-closing");
+    document.body.classList.remove("fs-queue-open");
+    fsQueuePreferOpen = false;
+    clearTimeout(queuePanelCloseTimer);
+    queuePanelCloseTimer = setTimeout(() => {
+      panel.classList.add("hidden");
+      panel.classList.remove("is-closing");
+    }, 360);
+  } else {
+    panel.classList.add("hidden");
+    panel.classList.remove("is-closing");
+    document.body.classList.remove("fs-queue-open");
+    if (inFs) fsQueuePreferOpen = false;
+  }
+}
+
 function bindQueuePanel() {
   $("#btn-queue")?.addEventListener("click", () => {
-    const panel = $("#queue-panel");
-    const opening = panel.classList.contains("hidden");
-    panel.classList.toggle("hidden");
-    if (opening) {
-      renderQueue();
-      requestAnimationFrame(() => {
-        const current = $("#queue-list .queue-item.current");
-        current?.scrollIntoView({ block: "center", behavior: "smooth" });
-      });
+    if (isQueuePanelOpen()) {
+      closeQueuePanel({ animate: true });
+    } else {
+      openQueuePanel();
     }
   });
 
   $("#queue-close")?.addEventListener("click", () => {
-    $("#queue-panel").classList.add("hidden");
+    closeQueuePanel({ animate: true });
   });
 
   $("#queue-clear")?.addEventListener("click", () => {
     if (!state.queue.length) return;
     openClearQueueConfirm();
+  });
+
+    $("#queue-fs-expand")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleFsQueueMode();
   });
 }
 
@@ -4923,6 +5006,50 @@ function bindFullscreen() {
       toggleFullscreen();
     }
   });
+}
+
+function setFsQueueOpen(open) {
+  document.body.classList.toggle("fs-queue-open", !!open);
+  fsQueuePreferOpen = !!open;
+
+  const expandBtn = $("#queue-fs-expand");
+  expandBtn?.setAttribute("aria-expanded", open ? "true" : "false");
+  expandBtn?.setAttribute(
+    "title",
+    open ? "Fenster-Warteschlange" : "Große Warteschlange"
+  );
+
+  const box = $("#fs-queue");
+  box?.setAttribute("aria-hidden", open ? "false" : "true");
+
+  if (open) {
+    // big inline list — hide window
+    const panel = $("#queue-panel");
+    panel?.classList.add("hidden");
+    panel?.classList.remove("is-closing");
+    renderQueue();
+    requestAnimationFrame(() => {
+      $("#fs-queue-list .queue-item.current")?.scrollIntoView({
+        block: "center",
+        behavior: "smooth",
+      });
+    });
+  } else {
+    // back to floating window only if still in fullscreen and user wants panel
+    // (caller decides whether to open panel)
+  }
+}
+
+function toggleFsQueueMode() {
+  if (!document.body.classList.contains("fs-open")) return;
+  const next = !document.body.classList.contains("fs-queue-open");
+  if (next) {
+    setFsQueueOpen(true);
+  } else {
+    setFsQueueOpen(false);
+    // restore floating panel
+    openQueuePanel({ fromFs: false });
+  }
 }
 
 function saveAlbumViewState() {
@@ -5091,22 +5218,68 @@ function bindTrackListFade() {
   }
   scroller.dataset.fadeBound = "1";
 
+  // Collapse only while scrolling down past this; expand only while scrolling up to top
+  const COLLAPSE_AT = 72;
+  const EXPAND_AT = 2;
+  let lastY = 0;
+  let ignoreUntil = 0;
   let ticking = false;
+
   const onScroll = () => {
     if (ticking) return;
     ticking = true;
     requestAnimationFrame(() => {
+      ticking = false;
       updateTrackFade();
-      // Safari: second frame after momentum/layout settles
-      requestAnimationFrame(() => {
-        updateTrackFade();
-        ticking = false;
-      });
+
+      if (!settings.autoCollapseAlbum) {
+        lastY = scroller.scrollTop;
+        return;
+      }
+      if (!state.currentGame || !gameDetail?.classList.contains("active")) {
+        lastY = scroller.scrollTop;
+        return;
+      }
+
+      const sticky = document.querySelector(".game-sticky-top");
+      if (!sticky) {
+        lastY = scroller.scrollTop;
+        return;
+      }
+
+      const y = scroller.scrollTop;
+      const goingDown = y > lastY + 0.5;
+      const goingUp = y < lastY - 0.5;
+      const collapsed = sticky.classList.contains("is-collapsed");
+      const animating = sticky.classList.contains("is-animating-header");
+      const locked = performance.now() < ignoreUntil;
+
+      if (!animating && !locked) {
+        if (!collapsed && y >= COLLAPSE_AT && goingDown) {
+          const h0 = sticky.offsetHeight;
+          toggleGameHeaderCollapse();
+          const delta = Math.max(0, h0 - sticky.offsetHeight);
+          // Stay in the collapsed band — never drop into the expand zone
+          scroller.scrollTop = Math.max(COLLAPSE_AT, y - delta);
+          ignoreUntil = performance.now() + 600;
+          lastY = scroller.scrollTop;
+          return;
+        }
+
+        if (collapsed && y <= EXPAND_AT && goingUp) {
+          toggleGameHeaderCollapse();
+          scroller.scrollTop = 0;
+          ignoreUntil = performance.now() + 600;
+          lastY = 0;
+          return;
+        }
+      }
+
+      lastY = y;
     });
   };
 
   scroller.addEventListener("scroll", onScroll, { passive: true });
-  // fires when finger/momentum stops (Safari 16.4+)
   scroller.addEventListener("scrollend", () => updateTrackFade(), { passive: true });
   window.addEventListener("resize", updateTrackFade, { passive: true });
   updateTrackFade();
@@ -5225,7 +5398,9 @@ function bindContextMenu() {
     if (performance.now() < suppressDocClickUntil) return;
     if (e.target.closest("#context-menu")) return;
     if (e.target.closest(".track-actions")) return;
-    if (e.target.closest(".track-actions") || e.target.closest("#album-menu-btn")) return;
+    if (e.target.closest("#album-menu-btn")) return;
+    if (e.target.closest("#player-left")) return;
+    if (e.target.closest("#fs-cover, #fs-title, #fs-game")) return;
     hideContextMenu();
   });
 
@@ -5242,6 +5417,67 @@ function bindContextMenu() {
     .querySelector(".content")
     ?.addEventListener("scroll", closeOnScroll, { passive: true });
   window.addEventListener("scroll", closeOnScroll, { passive: true, capture: true });
+
+  // ── Now-playing (bottom bar + fullscreen) ──
+  function openNowPlayingContext(x, y) {
+    if (state.queueIndex < 0 || !state.queue.length) return;
+    const item = state.queue[state.queueIndex];
+    if (!item) return;
+    const game = LIBRARY.find((g) => g.id === item.gameId);
+    if (!game) return;
+    showContextMenu(x, y, { game, track: item.track, fromQueue: true });
+  }
+
+  function bindNowPlayingTarget(el) {
+    if (!el || el.dataset.ctxBound === "1") return;
+    el.dataset.ctxBound = "1";
+
+    el.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+      openNowPlayingContext(e.clientX, e.clientY);
+    });
+
+    let lpTimer = null;
+    let lpMoved = false;
+    el.addEventListener(
+      "pointerdown",
+      (e) => {
+        if (e.pointerType === "mouse") return;
+        lpMoved = false;
+        const x = e.clientX;
+        const y = e.clientY;
+        lpTimer = setTimeout(() => {
+          lpTimer = null;
+          if (lpMoved) return;
+          openNowPlayingContext(x, y);
+        }, 480);
+      },
+      { passive: true }
+    );
+    el.addEventListener(
+      "pointermove",
+      (e) => {
+        if (!lpTimer) return;
+        if (Math.abs(e.movementX) + Math.abs(e.movementY) > 6) {
+          lpMoved = true;
+          clearTimeout(lpTimer);
+          lpTimer = null;
+        }
+      },
+      { passive: true }
+    );
+    const cancelLp = () => {
+      clearTimeout(lpTimer);
+      lpTimer = null;
+    };
+    el.addEventListener("pointerup", cancelLp);
+    el.addEventListener("pointercancel", cancelLp);
+  }
+
+  bindNowPlayingTarget($("#player-left"));
+  bindNowPlayingTarget($("#fs-cover"));
+  bindNowPlayingTarget($("#fs-title"));
+  bindNowPlayingTarget($("#fs-game"));
 }
 
 const PRESS_MIN_MS_MOUSE = 120; // lower on mouse
@@ -5564,6 +5800,11 @@ $("#setting-queue-loop")?.addEventListener("change", (e) => {
       setTrackGainForPlay(state.queue[state.queueIndex]?.track, null);
       setVolume(masterVolume);
     }
+  });
+
+    $("#setting-auto-collapse")?.addEventListener("change", (e) => {
+    settings.autoCollapseAlbum = !!e.target.checked;
+    saveSettings();
   });
 
   $("#settings-reset")?.addEventListener("click", () => {
