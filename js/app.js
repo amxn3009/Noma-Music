@@ -4940,7 +4940,7 @@ function isFsExpandedOpen() {
   return document.body.classList.contains("fs-queue-open");
 }
 
-function openQueuePanel() {
+function openQueuePanel({ animate = true } = {}) {
   const panel = $("#queue-panel");
   if (!panel) return;
 
@@ -4963,16 +4963,26 @@ function openQueuePanel() {
 
   clearTimeout(queuePanelCloseTimer);
   panel.classList.remove("hidden", "is-closing");
-  panel.style.animation = "none";
-  void panel.offsetWidth;
-  panel.style.animation = "";
+
+  if (animate) {
+    panel.style.animation = "none";
+    void panel.offsetWidth;
+    panel.style.animation = "";
+  } else {
+    // Instant show (collapse from expanded / FS enter with small prefer)
+    panel.style.animation = "none";
+  }
 
   renderQueue();
   requestAnimationFrame(() => {
-    $("#queue-list .queue-item.current")?.scrollIntoView({
-      block: "center",
-      behavior: "smooth",
-    });
+    const list = $("#queue-list");
+    const cur = list?.querySelector(".queue-item.current");
+    if (cur && list) {
+      // instant scroll — smooth scroll fights animations on iPad
+      const top =
+        cur.offsetTop - list.clientHeight / 2 + cur.clientHeight / 2;
+      list.scrollTop = Math.max(0, top);
+    }
   });
 }
 
@@ -5066,10 +5076,10 @@ function toggleFsQueueMode() {
     fsQueuePreferOpen = true;
     setFsQueueOpen(true);
   } else {
-    // Arrow: leave expanded → open normal floating
+    // Collapse → small: no second open animation (same place / less work on iPad)
     fsQueuePreferOpen = false;
     setFsQueueOpen(false);
-    openQueuePanel();
+    openQueuePanel({ animate: false });
   }
 }
 
