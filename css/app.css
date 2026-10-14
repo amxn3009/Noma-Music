@@ -1522,7 +1522,9 @@ body.is-transitioning .time {
 /* ===== Fullscreen stage (cover only) ===== */
 .fullscreen-player {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
   bottom: var(--player-h);
   z-index: 55;
   display: flex;
@@ -1530,7 +1532,9 @@ body.is-transitioning .time {
   align-items: center;
   justify-content: center;
   gap: 18px;
-  padding: 40px 24px;
+  /* safe-area so center is in the middle of the *visible* area under the status bar */
+  padding: max(24px, env(safe-area-inset-top, 0px)) 24px 24px;
+  box-sizing: border-box;
   pointer-events: none;
   animation: fadeIn 0.35s var(--ease);
 }
@@ -4532,11 +4536,14 @@ body.fs-queue-open .queue-item .q-cover {
 }
 
 /* ── Queue expand control (header, fullscreen only) ── */
-.queue-fs-expand {
-  display: none;
+/* Expand arrow only in fullscreen floating queue — never outside FS */
+.queue-fs-expand,
+#queue-fs-expand {
+  display: none !important;
 }
-body.fs-open .queue-fs-expand {
-  display: grid;
+body.fs-open .queue-fs-expand,
+body.fs-open #queue-fs-expand {
+  display: grid !important;
   place-items: center;
 }
 body.fs-open .queue-fs-expand svg {
