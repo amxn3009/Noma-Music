@@ -457,13 +457,25 @@
 
 <div id="fs-queue" class="fs-queue" aria-hidden="true">
   <div class="fs-queue-bar">
-    <button id="fs-queue-close" class="ctrl-btn fs-queue-close" type="button"
-            title="Kleine Warteschlange" aria-label="Warteschlange einklappen">
+
+    <!-- Arrow: collapse expanded → small floating -->
+    <button id="fs-queue-collapse" class="ctrl-btn fs-queue-collapse" type="button"
+            title="Kleine Warteschlange" aria-label="Kleine Warteschlange">
       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
            stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
         <polyline points="9 18 15 12 9 6"/>
       </svg>
     </button>
+
+    <button id="fs-queue-clear" class="ctrl-btn fs-queue-clear" type="button"
+            title="Warteschlange leeren" aria-label="Warteschlange leeren">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+      </svg>
+    </button>
+    <!-- X: fully close queue -->
+    <button id="fs-queue-close" class="ctrl-btn fs-queue-close" type="button"
+            title="Schließen" aria-label="Warteschlange schließen">✕</button>
   </div>
   <ul id="fs-queue-list" class="fs-queue-list"></ul>
 </div>

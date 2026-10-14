@@ -1605,13 +1605,39 @@ body.is-transitioning .time {
   gap: 4px;
 }
 
-#queue-clear {
+/* Same circular size as expanded FS bar buttons */
+.queue-header-actions .ctrl-btn,
+#queue-clear,
+#queue-close,
+#queue-fs-expand {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0 !important;
+  border-radius: 50%;
+  display: grid !important;
+  place-items: center;
+  line-height: 1;
+  font-size: 1.05rem;
   color: var(--muted);
+}
+
+#queue-close {
+  font-size: 1.1rem;
+  font-weight: 500;
+  transform: translateY(0.5px);
 }
 
 #queue-clear:hover {
   color: #ff6b6b;
   background: rgba(255, 100, 100, 0.12);
+}
+
+#queue-close:hover,
+#queue-fs-expand:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .queue-header h2 {
@@ -3226,9 +3252,21 @@ body.search-mode .search-close-btn {
   margin: 0 -28px;
   padding: 4px 28px 36px;
   scroll-snap-type: x proximity;
-  overscroll-behavior-x: contain; /* don't leak horizontal scroll to page */
+  overscroll-behavior-x: contain;
   overscroll-behavior-y: none;
-  touch-action: pan-x; /* horizontal only inside the row */
+  /* never steal vertical scroll unless the row actually overflows */
+  touch-action: pan-y;
+}
+
+/* only when the row actually overflows */
+.games-row-scroll.needs-x-scroll {
+  touch-action: pan-x pan-y;
+}
+
+/* rows that don't overflow: no horizontal scroll at all */
+.games-row-scroll:not(.needs-x-scroll) {
+  overflow-x: hidden;
+  touch-action: pan-y;
 }
 
 .games-row-track {
@@ -4362,15 +4400,7 @@ body.fs-open.fs-queue-open .fs-game {
 /* Queue panel: default floating (non-fs) unchanged.
    In fullscreen + open → docked column with slide animation */
 #queue-panel {
-  transition:
-    transform 0.42s var(--ease),
-    opacity 0.35s ease,
-    width 0.42s var(--ease),
-    max-height 0.42s var(--ease),
-    top 0.42s var(--ease),
-    bottom 0.42s var(--ease),
-    right 0.42s var(--ease),
-    border-radius 0.35s ease;
+  transition: none;
 }
 
 
@@ -4392,38 +4422,45 @@ body.fs-open.fs-queue-open #queue-panel {
 }
 
 /* Enter from the right */
-body.fs-open #queue-panel:not(.hidden):not(.is-closing) {
-  animation: none;
+/* Non-fullscreen open/close */
+#queue-panel:not(.hidden):not(.is-closing) {
+  animation: queuePanelIn 0.28s var(--ease) both;
 }
 
-body.fs-open #queue-panel.is-closing {
-  animation: none;
-  opacity: 0;
+#queue-panel.is-closing {
+  animation: queuePanelOut 0.24s var(--ease) both;
   pointer-events: none;
 }
 
-@keyframes fsQueueIn {
+@keyframes queuePanelIn {
   from {
     opacity: 0;
-    transform: translateX(28px);
+    transform: translateY(12px) scale(0.98);
   }
   to {
     opacity: 1;
-    transform: translateX(0);
+    transform: none;
   }
 }
-
-@keyframes fsQueueOut {
+@keyframes queuePanelOut {
   from {
     opacity: 1;
-    transform: translateX(0);
+    transform: none;
   }
   to {
     opacity: 0;
-    transform: translateX(28px);
+    transform: translateY(10px) scale(0.98);
   }
 }
 
+/* Fullscreen floating (not expanded): slide from right */
+body.fs-open #queue-panel:not(.hidden):not(.is-closing) {
+  animation: fsQueueIn 0.36s var(--ease) both;
+}
+body.fs-open #queue-panel.is-closing {
+  animation: fsQueueOut 0.28s var(--ease) both;
+  pointer-events: none;
+}
 /* Search-like queue rows only in fullscreen dock */
 
 body.fs-queue-open .queue-item:hover {
@@ -4470,28 +4507,27 @@ body.fs-queue-open .queue-item .q-cover {
 
   body.fs-open.fs-queue-open .fs-stage {
   gap: 8px;               /* was ~14–18 */
+  }
 }
 
-  @keyframes fsQueueIn {
-    from {
-      opacity: 0;
-      transform: translateY(24px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+@keyframes fsQueueIn {
+  from {
+    opacity: 0;
+    transform: translateX(28px);
   }
-
-  @keyframes fsQueueOut {
-    from {
-      opacity: 1;
-      transform: translateY(0);
-    }
-    to {
-      opacity: 0;
-      transform: translateY(24px);
-    }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@keyframes fsQueueOut {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(28px);
   }
 }
 
@@ -4532,6 +4568,12 @@ body.fs-queue-open .queue-fs-expand svg {
 }
 .fs-title,
 .fs-game {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: min(420px, 70vw);
+  margin: 0;
+  line-height: 1.2;
   transition: font-size 0.42s var(--ease), max-width 0.42s var(--ease);
 }
 
@@ -4608,10 +4650,11 @@ body.fs-queue-open .fs-queue {
   pointer-events: none;
   transition: height 0.15s var(--ease);
 }
+/* Drop slot in expanded list = same height as a song row */
 .fs-queue-list .queue-drop-slot.active {
-  height: 48px;
-  margin: 2px 0;
-  border-radius: 8px;
+  height: 64px;
+  margin: 0 0 8px;
+  border-radius: 14px;
   background: rgba(124, 156, 255, 0.12);
   box-shadow: inset 0 0 0 1px rgba(124, 156, 255, 0.35);
 }
@@ -4653,30 +4696,64 @@ body.fs-queue-open #queue-panel {
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  padding: 4px 6px 2px;
+  gap: 4px;
+  padding: 4px 6px 6px;
   flex-shrink: 0;
 }
+.fs-queue-clear,
+.fs-queue-collapse,
 .fs-queue-close {
   width: 36px;
   height: 36px;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0 !important;
   border-radius: 50%;
   color: var(--muted);
+  display: grid !important;
+  place-items: center;
+  line-height: 1;
+  font-size: 1.05rem;
+  opacity: 1 !important;
+  visibility: visible !important;
 }
+.fs-queue-close {
+  font-size: 1.1rem;
+  font-weight: 500;
+  /* center “✕” glyph (often sits high in the line box) */
+  transform: translateY(0.5px);
+}
+.fs-queue-clear:hover {
+  color: #ff6b6b;
+  background: rgba(255, 100, 100, 0.12);
+}
+
+.fs-queue-collapse:hover,
 .fs-queue-close:hover {
   color: var(--text);
   background: rgba(255, 255, 255, 0.08);
 }
 
 /* While FS is closing, freeze stage position (no slide-to-center) */
+/* While FS is closing from expanded: freeze stage (no center slide) */
+/* Freeze stage while closing FS from expanded — no slide-to-center */
 body.fs-closing-layout .fs-stage {
   transition: none !important;
-  transform: none !important;
-  max-width: 100% !important;
+  transform: translateX(calc(-1 * min(60px, 6vw))) !important;
+  max-width: calc(100% - min(520px, 52vw) - 24px) !important;
 }
-body.fs-closing-layout .fs-cover,
+body.fs-closing-layout .fs-cover {
+  transition: none !important;
+  width: min(300px, 42vw) !important;
+  max-width: min(300px, 42vw) !important;
+}
 body.fs-closing-layout .fs-title,
 body.fs-closing-layout .fs-game {
   transition: none !important;
+  max-width: min(320px, 48vw) !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
 }
 body.fs-closing-layout .fs-queue {
   transition: none !important;

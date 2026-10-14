@@ -152,9 +152,10 @@ let sleepEndsAt = 0;       // Date.now() deadline (duration mode)
 let sleepMode = null;      // null | "duration" | "end"
 let sleepTickId = null;
 
-// Fullscreen queue: remember open preference across fs open/close
-let fsQueuePreferOpen = false;
+// Fullscreen queue: true = prefer expanded in FS; false = prefer small floating
+let fsQueuePreferOpen = true;
 let queuePanelCloseTimer = null;
+let queueOpenOutsideFs = false; // was floating open when entering FS?
 
 const PLACEHOLDER = "Assets/MusicPlayer/PlaceholderImage.jpg";
 
@@ -1818,8 +1819,14 @@ function bindHotkeys() {
         handled = true;
         break;
       case "ShiftLeft":
+      case "ShiftRight":
         e.preventDefault();
-        toggleGameHeaderCollapse();
+        if (document.body.classList.contains("fs-open")) {
+          // same as FS queue arrow: expand ↔ small floating
+          toggleFsQueueMode();
+        } else {
+          toggleGameHeaderCollapse();
+        }
         handled = true;
         break;
       case "Escape":
@@ -1897,7 +1904,6 @@ function toggleFullscreen() {
   const fs = $("#fullscreen-player");
   const btnFs = $("#btn-fullscreen");
   const btnMin = $("#btn-minimize");
-
   if (!fs) return;
 
   const open = fs.classList.contains("hidden");
@@ -1906,12 +1912,12 @@ function toggleFullscreen() {
       closeSettings();
     }
 
-    // Always mirror bottom player (works for idle + playing)
     const item = state.queue[state.queueIndex];
     const game = item ? LIBRARY.find((g) => g.id === item.gameId) : null;
     const track = item?.track;
 
-    const nowTitle = track?.title || $("#now-title")?.textContent?.trim() || "Nichts läuft";
+    const nowTitle =
+      track?.title || $("#now-title")?.textContent?.trim() || "Nichts läuft";
     const nowGame = game
       ? gameNameForFullscreen(game)
       : $("#now-game")?.textContent?.trim() || "Keinen Song ausgewählt";
@@ -1924,36 +1930,66 @@ function toggleFullscreen() {
     if (fsGame) fsGame.textContent = nowGame;
     if (fsCover) fsCover.src = nowCover;
 
-    fs.classList.remove("hidden");
-    document.body.classList.add("fs-open");
+    // Snapshot: was the normal queue open outside FS?
+    queueOpenOutsideFs = isQueuePanelOpen();
 
-    // Never auto-open expanded mode on enter.
-    // Keep floating panel only if it was already open for the bottom player.
-    setFsQueueOpen(false);
-    const panel = $("#queue-panel");
-    const wasFloatingOpen =
-      panel &&
-      !panel.classList.contains("hidden") &&
-      !panel.classList.contains("is-closing");
-    if (!wasFloatingOpen) {
-      // leave closed; user opens via ☰ or expand arrow
+    fs.classList.remove("hidden", "is-closing");
+    document.body.classList.add("fs-open");
+    document.body.classList.remove("fs-leaving", "fs-closing-layout");
+
+    // Only auto-open a queue in FS if it was open in the player bar
+    if (queueOpenOutsideFs && state.queue.length > 0 && state.queueIndex >= 0) {
+      if (fsQueuePreferOpen) {
+        // Expanded: hide floating without re-anim, show expanded
+        closeQueuePanel({ animate: false });
+        setFsQueueOpen(true);
+      } else {
+        // Prefer small: floating already open in same place → no open animation
+        setFsQueueOpen(false);
+        // leave panel as-is (already open)
+      }
+    } else {
+      // Was closed outside → stay closed in FS
+      setFsQueueOpen(false);
+      closeQueuePanel({ animate: false });
     }
-    // if floating was open, it stays as the small window — no fs-queue-open
 
     btnFs?.classList.add("hidden");
     btnMin?.classList.remove("hidden");
   } else {
     if (fs.classList.contains("is-closing")) return;
+
+    const hadExpanded = isFsExpandedOpen();
+    const hadFloating = isQueuePanelOpen();
+    const anyQueueOpen = hadExpanded || hadFloating;
+
+    // Remember mode for next FS open
+    if (hadExpanded) fsQueuePreferOpen = true;
+    else if (hadFloating) fsQueuePreferOpen = false;
+
     fs.classList.add("is-closing");
 
-    // Kill layout shift instantly (no stage sliding back to center mid-exit)
-    document.body.classList.add("fs-closing-layout");
+    // Freeze expanded layout so stage doesn't slide to center mid-exit
+    if (hadExpanded) {
+      document.body.classList.add("fs-closing-layout");
+    }
     document.body.classList.remove("fs-queue-open");
     document.body.classList.remove("fs-open");
     document.body.classList.add("fs-leaving");
 
+    const fsQ = $("#fs-queue");
+    if (fsQ) fsQ.setAttribute("aria-hidden", "true");
+
+    // Outside FS: expanded doesn't exist — open normal floating if any was open
+    closeQueuePanel({ animate: false });
+
     btnMin?.classList.add("hidden");
     btnFs?.classList.remove("hidden");
+
+    // Open floating immediately (no delay) if any queue was open in FS
+    if (anyQueueOpen && state.queue.length > 0) {
+      openQueuePanel();
+    }
 
     setTimeout(() => {
       fs.classList.add("hidden");
@@ -2301,6 +2337,11 @@ function renderGames(opts = {}) {
 
   browse.querySelectorAll(".game-card").forEach((card) => {
     card.addEventListener("click", () => openGame(card.dataset.id));
+  });
+
+  browse.querySelectorAll(".games-row-scroll").forEach((el) => {
+    const needsX = el.scrollWidth > el.clientWidth + 2;
+    el.classList.toggle("needs-x-scroll", needsX);
   });
 
   // was: only .games-row-expand
@@ -4895,11 +4936,15 @@ function isQueuePanelOpen() {
   );
 }
 
+function isFsExpandedOpen() {
+  return document.body.classList.contains("fs-queue-open");
+}
+
 function openQueuePanel() {
   const panel = $("#queue-panel");
   if (!panel) return;
-  // If expanded mode is on, just ensure list is rendered
-  if (document.body.classList.contains("fs-queue-open")) {
+
+  if (isFsExpandedOpen()) {
     renderQueue();
     requestAnimationFrame(() => {
       $("#fs-queue-list .queue-item.current")?.scrollIntoView({
@@ -4909,7 +4954,19 @@ function openQueuePanel() {
     });
     return;
   }
+
+  // Already open → only refresh, no second open animation
+  if (isQueuePanelOpen()) {
+    renderQueue();
+    return;
+  }
+
+  clearTimeout(queuePanelCloseTimer);
   panel.classList.remove("hidden", "is-closing");
+  panel.style.animation = "none";
+  void panel.offsetWidth;
+  panel.style.animation = "";
+
   renderQueue();
   requestAnimationFrame(() => {
     $("#queue-list .queue-item.current")?.scrollIntoView({
@@ -4919,45 +4976,169 @@ function openQueuePanel() {
   });
 }
 
-function closeQueuePanel() {
+function closeQueuePanel({ animate = true } = {}) {
   const panel = $("#queue-panel");
   if (!panel || panel.classList.contains("hidden")) return;
-  // Just close – do NOT touch fsQueuePreferOpen
-  setFsQueueOpen(false);
-  panel.classList.add("is-closing");
-  setTimeout(() => {
+
+  clearTimeout(queuePanelCloseTimer);
+
+  if (!animate) {
     panel.classList.add("hidden");
     panel.classList.remove("is-closing");
-  }, 360);
+    return;
+  }
+
+  panel.classList.add("is-closing");
+  queuePanelCloseTimer = setTimeout(() => {
+    panel.classList.add("hidden");
+    panel.classList.remove("is-closing");
+  }, 280);
 }
 
+/** Fully close any queue UI (floating + expanded). Saves preference. */
+function closeAnyQueue({ remember = true } = {}) {
+  if (remember) {
+    // last mode: expanded vs floating vs closed
+    if (isFsExpandedOpen()) {
+      fsQueuePreferOpen = true; // expanded was the active UI
+    } else if (isQueuePanelOpen()) {
+      fsQueuePreferOpen = false; // floating was active
+    }
+    // if both closed, leave fsQueuePreferOpen as-is
+  }
+
+  document.body.classList.remove("fs-queue-open");
+  const fsQ = $("#fs-queue");
+  if (fsQ) fsQ.setAttribute("aria-hidden", "true");
+
+  const expandBtn = $("#queue-fs-expand");
+  if (expandBtn) {
+    expandBtn.setAttribute("aria-expanded", "false");
+    expandBtn.title = "Große Warteschlange";
+  }
+
+  closeQueuePanel({ animate: true });
+}
+
+function setFsQueueOpen(open) {
+  if (open && (state.queue.length === 0 || state.queueIndex < 0)) {
+    open = false;
+  }
+
+  const wasOpen = document.body.classList.contains("fs-queue-open");
+  document.body.classList.toggle("fs-queue-open", !!open);
+
+  const expandBtn = $("#queue-fs-expand");
+  if (expandBtn) {
+    expandBtn.setAttribute("aria-expanded", open ? "true" : "false");
+    expandBtn.title = open ? "Kleine Warteschlange" : "Große Warteschlange";
+  }
+  const fsQ = $("#fs-queue");
+  if (fsQ) fsQ.setAttribute("aria-hidden", open ? "false" : "true");
+
+  if (open) {
+    // Expanded on → hide floating without delay/flash
+    closeQueuePanel({ animate: false });
+    renderQueue();
+    requestAnimationFrame(() => {
+      $("#fs-queue-list .queue-item.current")?.scrollIntoView({
+        block: "center",
+        behavior: "smooth",
+      });
+    });
+  } else if (wasOpen) {
+    // Caller decides: arrow → open floating; X → stay closed
+  }
+}
+
+/** Arrow on expanded bar / floating header: expand ↔ collapse-to-small */
+function toggleFsQueueMode() {
+  if (!document.body.classList.contains("fs-open")) return;
+  if (state.queue.length === 0 || state.queueIndex < 0) {
+    fsQueuePreferOpen = true;
+    setFsQueueOpen(false);
+    closeQueuePanel({ animate: false });
+    return;
+  }
+
+  const willExpand = !document.body.classList.contains("fs-queue-open");
+  if (willExpand) {
+    fsQueuePreferOpen = true;
+    setFsQueueOpen(true);
+  } else {
+    // Arrow: leave expanded → open normal floating
+    fsQueuePreferOpen = false;
+    setFsQueueOpen(false);
+    openQueuePanel();
+  }
+}
 
 function bindQueuePanel() {
   $("#btn-queue")?.addEventListener("click", () => {
-    const panel = $("#queue-panel");
-    const isOpen = panel && !panel.classList.contains("hidden");
-    if (isOpen) {
+    const inFs = document.body.classList.contains("fs-open");
+
+    if (inFs) {
+      // Fully close whatever is open
+      if (isFsExpandedOpen() || isQueuePanelOpen()) {
+        if (isFsExpandedOpen()) fsQueuePreferOpen = true;
+        else fsQueuePreferOpen = false;
+        setFsQueueOpen(false);
+        closeQueuePanel({ animate: true });
+        return;
+      }
+      // Open last preferred mode
+      if (fsQueuePreferOpen) {
+        setFsQueueOpen(true);
+      } else {
+        openQueuePanel();
+      }
+      return;
+    }
+
+    // Outside FS: only floating
+    if (isQueuePanelOpen()) {
       closeQueuePanel();
     } else {
       openQueuePanel();
     }
   });
 
-  $("#queue-close")?.addEventListener("click", closeQueuePanel);
+  $("#queue-close")?.addEventListener("click", () => {
+    closeQueuePanel();
+    if (document.body.classList.contains("fs-open")) {
+      fsQueuePreferOpen = false;
+    }
+  });
 
   $("#queue-clear")?.addEventListener("click", () => {
     if (!state.queue.length) return;
     openClearQueueConfirm();
   });
 
+  // Expanded: X = close expanded only (prefer stays big → next ☰ opens expanded)
   $("#fs-queue-close")?.addEventListener("click", (e) => {
-  e.preventDefault();
-  e.stopPropagation();
-  fsQueuePreferOpen = false;
-  setFsQueueOpen(false);
-});
+    e.preventDefault();
+    e.stopPropagation();
+    fsQueuePreferOpen = true;
+    setFsQueueOpen(false);
+    closeQueuePanel({ animate: false });
+  });
 
-  // single handler only
+  // Expanded: arrow = collapse to small
+  $("#fs-queue-collapse")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleFsQueueMode();
+  });
+
+  $("#fs-queue-clear")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!state.queue.length) return;
+    openClearQueueConfirm();
+  });
+
+  // Floating header arrow: expand / collapse-to-small
   $("#queue-fs-expand")?.addEventListener("click", (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -5013,55 +5194,6 @@ function bindFullscreen() {
       toggleFullscreen();
     }
   });
-}
-
-
-function setFsQueueOpen(open) {
-  if (open && (state.queue.length === 0 || state.queueIndex < 0)) {
-    open = false;
-  }
-  const wasOpen = document.body.classList.contains("fs-queue-open");
-  document.body.classList.toggle("fs-queue-open", !!open);
-
-  const expandBtn = $("#queue-fs-expand");
-  if (expandBtn) {
-    expandBtn.setAttribute("aria-expanded", open ? "true" : "false");
-    expandBtn.title = open ? "Kleine Warteschlange" : "Große Warteschlange";
-  }
-  const fsQ = $("#fs-queue");
-  if (fsQ) fsQ.setAttribute("aria-hidden", open ? "false" : "true");
-
-  // Closing expanded → never flash the floating window
-  if (wasOpen && !open) {
-    const panel = $("#queue-panel");
-    if (panel) {
-      panel.classList.add("hidden");
-      panel.classList.remove("is-closing");
-    }
-  }
-
-  if (open) {
-    renderQueue();
-    requestAnimationFrame(() => {
-      $("#fs-queue-list .queue-item.current")?.scrollIntoView({
-        block: "center",
-        behavior: "smooth",
-      });
-    });
-  }
-}
-
-function toggleFsQueueMode() {
-  if (!document.body.classList.contains("fs-open")) return;
-  // nothing playing / empty queue → never open expanded
-  if (state.queue.length === 0 || state.queueIndex < 0) {
-    fsQueuePreferOpen = false;
-    setFsQueueOpen(false);
-    return;
-  }
-  const willOpen = !document.body.classList.contains("fs-queue-open");
-  fsQueuePreferOpen = willOpen;
-  setFsQueueOpen(willOpen);
 }
 
 function saveAlbumViewState() {
