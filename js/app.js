@@ -126,8 +126,14 @@ function getTransitionSec() {
   return settings.transitionSec;
 }
 
+function isMobileLike() {
+  return isIOS() || /Android/i.test(navigator.userAgent || "") ||
+    (navigator.maxTouchPoints > 1 && window.innerWidth < 900);
+}
+
 const RESTART_THRESHOLD = 10; // seconds
-const CLICK_RAMP = 0.03; // ~30ms, all devices
+// iOS 27 is picky about short gain ramps → audible clicks on start
+const CLICK_RAMP = isIOS() || isMobileLike?.() ? 0.09 : 0.04;
 
 let transitioning = false;
 let transitionStartedAt = 0; // audioCtx.currentTime
@@ -536,11 +542,6 @@ async function unlockMediaElement() {
   } catch (err) {
     console.warn("[Noma] media unlock failed", err);
   }
-}
-
-function isMobileLike() {
-  return isIOS() || /Android/i.test(navigator.userAgent || "") ||
-    (navigator.maxTouchPoints > 1 && window.innerWidth < 900);
 }
 
 function hardPausePersistentMedia() {
@@ -1486,10 +1487,12 @@ function playBuffer(audioBuffer, offsetSeconds = 0) {
   currentGain.connect(ctx.destination);
 
   const now = ctx.currentTime;
-  // never start at full volume — iOS click
+  const vol = effectiveVolume();
+
+  // Smooth open — never jump gain (iOS 27 clicks hard on discontinuities)
   currentGain.gain.cancelScheduledValues(now);
   currentGain.gain.setValueAtTime(0, now);
-  currentGain.gain.linearRampToValueAtTime(effectiveVolume(), now + CLICK_RAMP);
+  currentGain.gain.linearRampToValueAtTime(vol, now + CLICK_RAMP);
 
   const wantInfiniteLoop = state.loopMode === "one";
   const wantSoftEnd =
@@ -1520,8 +1523,13 @@ function playBuffer(audioBuffer, offsetSeconds = 0) {
     offset = Math.min(offset, Math.max(0, duration - 0.01));
   }
 
+  // Guard: iOS 27 sometimes fires onended immediately after start/skip → rapid “click” skips
+  const sourceGen = playGen;
+  const startedWall = performance.now();
   currentSource.onended = () => {
     if (!state.playing || transitioning) return;
+    if (sourceGen !== playGen) return;
+    if (performance.now() - startedWall < 400) return; // ignore bogus early end
     nextTrack(true);
   };
 
@@ -1529,8 +1537,8 @@ function playBuffer(audioBuffer, offsetSeconds = 0) {
   startTime = ctx.currentTime;
   currentSource.start(0, offset);
 
-  // Pre-schedule soft-end fade in the audio graph (runs even if tab is minimized).
-  // loopMode "off": after first full playthrough. "count": after last remaining loop.
+  // Soft-end: schedule AFTER the fade-in without cancelScheduledValues mid-ramp
+  // (cancel at afterIn was a major click source on iOS 27)
   if (wantSoftEnd) {
     const fadeSec = getTransitionSec();
     let loopsAfterFirst = 0;
@@ -1541,27 +1549,23 @@ function playBuffer(audioBuffer, offsetSeconds = 0) {
       ? Math.max(0.001, duration)
       : Math.max(0.001, duration - loopStart);
     const timeToFadeStart =
-      Math.max(0.01, duration - offset) + loopsAfterFirst * loopLen;
+      Math.max(0.05, duration - offset) + loopsAfterFirst * loopLen;
 
     softEndFadeAt = startTime + timeToFadeStart;
     softEndFadeSec = fadeSec;
 
-    // keep the short fade-in; only schedule the later outro
-    // Don't touch the fade-in window — only schedule after it
-    const afterIn = startTime + CLICK_RAMP + 0.001;
-    currentGain.gain.cancelScheduledValues(afterIn);
-    currentGain.gain.setValueAtTime(effectiveVolume(), afterIn);
+    // Only schedule future automation — leave the fade-in alone
     if (fadeSec <= 0) {
       currentGain.gain.setValueAtTime(0, softEndFadeAt);
     } else {
-      currentGain.gain.setValueAtTime(effectiveVolume(), softEndFadeAt);
+      currentGain.gain.setValueAtTime(vol, softEndFadeAt);
       currentGain.gain.linearRampToValueAtTime(0, softEndFadeAt + fadeSec);
     }
 
-    // Enter transition mode when fade starts (so progress bar uses transition UI)
     softEndStartTimer = setTimeout(() => {
       softEndStartTimer = null;
       if (!state.playing || !currentGain) return;
+      if (sourceGen !== playGen) return;
       transitioning = true;
       transitionStartedAt = softEndFadeAt;
       document.body.classList.add("is-transitioning");
@@ -1572,6 +1576,7 @@ function playBuffer(audioBuffer, offsetSeconds = 0) {
     softEndTimer = setTimeout(() => {
       softEndTimer = null;
       if (!state.playing) return;
+      if (sourceGen !== playGen) return;
       finishTransition();
     }, (timeToFadeStart + Math.max(0, fadeSec)) * 1000 + 40);
   }

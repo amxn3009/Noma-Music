@@ -4773,3 +4773,19 @@ body.fs-closing-layout .fs-queue {
   opacity: 0 !important;
   pointer-events: none !important;
 }
+
+
+/* iOS 27 standalone PWA: remove system progressive blur over status bar
+   (WebKit only samples fixed elements ≥ ~11px; background-clip:text keeps it invisible) */
+.ios-status-fix {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 11px;
+  z-index: 2147483647;
+  pointer-events: none;
+  background-color: #0a0a0a; /* same as --bg */
+  -webkit-background-clip: text;
+  background-clip: text;
+}
