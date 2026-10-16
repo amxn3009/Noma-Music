@@ -2,7 +2,7 @@ import { Bfstm } from './bfstm.js';
 import { Kawarp } from 'https://cdn.jsdelivr.net/npm/@kawarp/core@1.3.1/+esm';
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = "16.10.26 fix ios 27 try #5";
+const APP_VERSION = "16.10.26 fix ios 27 try #6";
 
 let LIBRARY = [];
 
@@ -328,12 +328,34 @@ function getPersistentMedia() {
 let silentShieldEl = null;
 let bgSessionKeepAliveId = null;
 
-/* Tiny seamless silent WAV (no runtime build — was a one-shot hitch on iPad). */
-const SILENT_WAV_URI =
-  "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==";
-
+/** 1s pure-zero WAV as blob: URL — valid for iOS Media Session, no m4a loop clicks, cheap to build once. */
+let _silentWavUrl = null;
 function silentWavUri() {
-  return SILENT_WAV_URI;
+  if (_silentWavUrl) return _silentWavUrl;
+  const sampleRate = 44100;
+  const numSamples = sampleRate; // 1 second of zeros
+  const dataSize = numSamples * 2;
+  const buffer = new ArrayBuffer(44 + dataSize);
+  const view = new DataView(buffer);
+  const w = (o, s) => {
+    for (let i = 0; i < s.length; i++) view.setUint8(o + i, s.charCodeAt(i));
+  };
+  w(0, "RIFF");
+  view.setUint32(4, 36 + dataSize, true);
+  w(8, "WAVE");
+  w(12, "fmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  w(36, "data");
+  view.setUint32(40, dataSize, true);
+  // PCM samples left as 0
+  _silentWavUrl = URL.createObjectURL(new Blob([buffer], { type: "audio/wav" }));
+  return _silentWavUrl;
 }
 
 function getSilentShieldEl() {
@@ -353,8 +375,9 @@ async function startSilentShield() {
   ensurePlaybackAudioSession();
   const el = getSilentShieldEl();
   try {
-    if (!el.src || !el.src.startsWith("data:audio/wav")) {
-      el.src = silentWavUri();
+    const url = silentWavUri();
+    if (el.src !== url) {
+      el.src = url;
       el.loop = true;
     }
     el.volume = 0.001;
