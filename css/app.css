@@ -269,6 +269,19 @@ html.ipad-standalone .topbar {
   -webkit-backdrop-filter: none;
 }
 
+/* All iOS / iPadOS installed web apps: extra top inset under status area */
+html.ios-standalone .topbar {
+  padding-top: calc(14px + env(safe-area-inset-top, 0px) + 10px);
+}
+
+/* Fullscreen: push back + sleep chip below status area a bit more */
+html.ios-standalone .fs-back-btn {
+  top: max(20px, calc(env(safe-area-inset-top, 0px) + 14px));
+}
+html.ios-standalone body.fs-open .sleep-wrap {
+  top: calc(20px + env(safe-area-inset-top, 0px));
+}
+
 .logo {
   display: flex;
   align-items: center;

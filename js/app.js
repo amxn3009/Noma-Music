@@ -2,7 +2,7 @@ import { Bfstm } from './bfstm.js';
 import { Kawarp } from 'https://cdn.jsdelivr.net/npm/@kawarp/core@1.3.1/+esm';
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = "16.10.26 fix ios 27 bugs try #3";
+const APP_VERSION = "16.10.26 fix ios 27 try #4";
 
 let LIBRARY = [];
 
@@ -320,50 +320,81 @@ function getPersistentMedia() {
   return persistentMediaEl;
 }
 
-/** Web Audio near-silent loop — silence.m4a loop seams click on iOS 27. */
-let silentShieldSource = null;
-let silentShieldGain = null;
+/**
+ * HTMLAudio silent anchor for iOS Media Session (lock screen play/pause).
+ * Pure Web Audio alone does NOT drive session controls on iOS.
+ * Uses a generated silent WAV (zeros) — not silence.m4a (that file’s loop seams clicked).
+ */
+let silentShieldEl = null;
 let bgSessionKeepAliveId = null;
+
+/** 1s mono 44.1kHz silent WAV as data-URI (seamless loop, no encoder priming). */
+function getSilentWavDataUri() {
+  const sampleRate = 44100;
+  const numSamples = sampleRate; // 1 second
+  const dataSize = numSamples * 2;
+  const buffer = new ArrayBuffer(44 + dataSize);
+  const view = new DataView(buffer);
+  const writeStr = (o, s) => {
+    for (let i = 0; i < s.length; i++) view.setUint8(o + i, s.charCodeAt(i));
+  };
+  writeStr(0, "RIFF");
+  view.setUint32(4, 36 + dataSize, true);
+  writeStr(8, "WAVE");
+  writeStr(12, "fmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true); // PCM
+  view.setUint16(22, 1, true); // mono
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  writeStr(36, "data");
+  view.setUint32(40, dataSize, true);
+  // samples already 0
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  return "data:audio/wav;base64," + btoa(binary);
+}
+
+let _silentWavUri = null;
+function silentWavUri() {
+  if (!_silentWavUri) _silentWavUri = getSilentWavDataUri();
+  return _silentWavUri;
+}
+
+function getSilentShieldEl() {
+  if (!silentShieldEl) {
+    silentShieldEl = new Audio();
+    silentShieldEl.preload = "auto";
+    silentShieldEl.loop = true;
+    silentShieldEl.volume = 0.001;
+    silentShieldEl.setAttribute("playsinline", "");
+    silentShieldEl.setAttribute("webkit-playsinline", "");
+  }
+  return silentShieldEl;
+}
 
 async function startSilentShield() {
   if (!isIOS()) return;
   ensurePlaybackAudioSession();
-  const ctx = await resumeAudio();
-  if (ctx.state === "suspended") {
-    try { await ctx.resume(); } catch (_) {}
-  }
-  // Already running
-  if (silentShieldSource) return;
-
+  const el = getSilentShieldEl();
   try {
-    // ~0.25s of digital zeros, looped — no file, no encoder seams
-    const frames = Math.max(1, Math.floor(ctx.sampleRate * 0.25));
-    const buf = ctx.createBuffer(1, frames, ctx.sampleRate);
-    const src = ctx.createBufferSource();
-    const g = ctx.createGain();
-    g.gain.value = 0.0001; // not 0 — keeps session “alive” without audible ticks
-    src.buffer = buf;
-    src.loop = true;
-    src.connect(g);
-    g.connect(ctx.destination);
-    src.start(0);
-    silentShieldSource = src;
-    silentShieldGain = g;
+    if (!el.src || !el.src.startsWith("data:audio/wav")) {
+      el.src = silentWavUri();
+      el.loop = true;
+    }
+    el.volume = 0.001;
+    if (el.paused) await el.play();
   } catch (_) {}
 }
 
 function stopSilentShield() {
-  if (silentShieldSource) {
-    try {
-      silentShieldSource.stop();
-      silentShieldSource.disconnect();
-    } catch (_) {}
-    silentShieldSource = null;
-  }
-  if (silentShieldGain) {
-    try { silentShieldGain.disconnect(); } catch (_) {}
-    silentShieldGain = null;
-  }
+  if (!silentShieldEl) return;
+  try {
+    silentShieldEl.pause();
+  } catch (_) {}
 }
 
 function clearBgSessionKeepAlive() {
@@ -2093,11 +2124,14 @@ async function decodeBfstm(url) {
     meta.sampleRate
   );
 
+  const scale = 0.98 / 32768;
   for (let c = 0; c < meta.numberChannels; c++) {
     const channelData = audioBuffer.getChannelData(c);
     const src = channels[c];
-    for (let i = 0; i < src.length; i++) {
-      channelData[i] = (src[i] / 32768) * 0.98;
+    const n = src.length;
+    // tight loop — avoids repeated / 32768
+    for (let i = 0; i < n; i++) {
+      channelData[i] = src[i] * scale;
     }
   }
 
@@ -2109,6 +2143,19 @@ async function decodeBfstm(url) {
   };
   decodeCacheSet(url, out);
   return out;
+}
+
+/** Decode next (+ prev) queue BFSTMs in background so skip feels instant. */
+function prefetchNearbyBfstm() {
+  const idxs = [state.queueIndex + 1, state.queueIndex + 2, state.queueIndex - 1];
+  for (const i of idxs) {
+    if (i < 0 || i >= state.queue.length) continue;
+    const t = state.queue[i]?.track;
+    const url = t?.url || t?.file || t?.src;
+    if (!url || isWebAudioFile(url)) continue;
+    if (decodeCacheGet(url)?.audioBuffer) continue;
+    decodeBfstm(url).catch(() => {});
+  }
 }
 
 // ─── App UI ────────────────────────────────────────────────────
@@ -3510,6 +3557,7 @@ async function playCurrent() {
 
     playBuffer(decodedBuffer, 0);
     if (!$("#queue-panel")?.classList.contains("hidden")) renderQueue();
+    prefetchNearbyBfstm();
   } catch (err) {
     if (gen !== playGen) return; // ignore errors from cancelled loads
     console.error("[Noma] decode/play failed:", err);
@@ -3645,7 +3693,14 @@ async function togglePlay() {
       clearBgSessionKeepAlive();
       markPlayingTrack(getCurrentTrackId());
       updatePlayerUI();
-      syncKawarpPlayback()
+      syncKawarpPlayback();
+      try {
+        if ("mediaSession" in navigator) {
+          navigator.mediaSession.playbackState = "paused";
+        }
+      } catch (_) {}
+      updateMediaSession();
+      bindMediaSession();
       return;
     }
 
@@ -3663,7 +3718,14 @@ async function togglePlay() {
       clearBgSessionKeepAlive();
       markPlayingTrack(getCurrentTrackId());
       updatePlayerUI();
-      syncKawarpPlayback()
+      syncKawarpPlayback();
+      try {
+        if ("mediaSession" in navigator) {
+          navigator.mediaSession.playbackState = "paused";
+        }
+      } catch (_) {}
+      updateMediaSession();
+      bindMediaSession();
       return;
     }
 
@@ -3705,12 +3767,18 @@ async function togglePlay() {
 
     state.playing = false;
     document.body.classList.remove("is-playing");
-    // so iOS doesn't keep treating silence.m4a as "still playing"
     clearBgSessionKeepAlive();
     stopSilentShield();
     markPlayingTrack(getCurrentTrackId());
     updatePlayerUI();
     syncKawarpPlayback();
+    try {
+      if ("mediaSession" in navigator) {
+        navigator.mediaSession.playbackState = "paused";
+      }
+    } catch (_) {}
+    updateMediaSession();
+    bindMediaSession(); // re-attach play/pause after pause (iOS drops handlers)
 
     setTimeout(() => {
       if (myPauseGen !== pauseStopGen) return;
@@ -3791,9 +3859,15 @@ async function togglePlay() {
     bufferCtxSuspended = false;
     ensurePlaybackAudioSession();
     await resumeAudio();
-    startSilentShield(); // re-arm for mute switch
+    startSilentShield(); // Media Session + mute-switch anchor
     playBuffer(decodedBuffer, pauseOffset);
+    try {
+      if ("mediaSession" in navigator) {
+        navigator.mediaSession.playbackState = "playing";
+      }
+    } catch (_) {}
     updateMediaSession();
+    bindMediaSession();
 
     // restore soft-end after playBuffer if we had one
     if (softEndRemainMs > 0 || softEndStartRemainMs > 0) {
@@ -6065,6 +6139,7 @@ function applyIpadStandaloneClass() {
     window.navigator.standalone === true; // older iOS
 
   document.documentElement.classList.toggle("ipad-standalone", isIPad && isStandalone);
+  document.documentElement.classList.toggle("ios-standalone", isIOS() && isStandalone);
 }
 
 // call it
