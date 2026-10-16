@@ -276,10 +276,10 @@ html.ios-standalone .topbar {
 
 /* Fullscreen: push back + sleep chip below status area a bit more */
 html.ios-standalone .fs-back-btn {
-  top: max(20px, calc(env(safe-area-inset-top, 0px) + 14px));
+  top: max(30px, calc(env(safe-area-inset-top, 0px) + 10px));
 }
 html.ios-standalone body.fs-open .sleep-wrap {
-  top: calc(20px + env(safe-area-inset-top, 0px));
+  top: calc(30px + env(safe-area-inset-top, 0px));
 }
 
 .logo {

@@ -2,7 +2,7 @@ import { Bfstm } from './bfstm.js';
 import { Kawarp } from 'https://cdn.jsdelivr.net/npm/@kawarp/core@1.3.1/+esm';
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = "16.10.26 fix ios 27 try #4";
+const APP_VERSION = "16.10.26 fix ios 27 try #5";
 
 let LIBRARY = [];
 
@@ -328,40 +328,12 @@ function getPersistentMedia() {
 let silentShieldEl = null;
 let bgSessionKeepAliveId = null;
 
-/** 1s mono 44.1kHz silent WAV as data-URI (seamless loop, no encoder priming). */
-function getSilentWavDataUri() {
-  const sampleRate = 44100;
-  const numSamples = sampleRate; // 1 second
-  const dataSize = numSamples * 2;
-  const buffer = new ArrayBuffer(44 + dataSize);
-  const view = new DataView(buffer);
-  const writeStr = (o, s) => {
-    for (let i = 0; i < s.length; i++) view.setUint8(o + i, s.charCodeAt(i));
-  };
-  writeStr(0, "RIFF");
-  view.setUint32(4, 36 + dataSize, true);
-  writeStr(8, "WAVE");
-  writeStr(12, "fmt ");
-  view.setUint32(16, 16, true);
-  view.setUint16(20, 1, true); // PCM
-  view.setUint16(22, 1, true); // mono
-  view.setUint32(24, sampleRate, true);
-  view.setUint32(28, sampleRate * 2, true);
-  view.setUint16(32, 2, true);
-  view.setUint16(34, 16, true);
-  writeStr(36, "data");
-  view.setUint32(40, dataSize, true);
-  // samples already 0
-  const bytes = new Uint8Array(buffer);
-  let binary = "";
-  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-  return "data:audio/wav;base64," + btoa(binary);
-}
+/* Tiny seamless silent WAV (no runtime build — was a one-shot hitch on iPad). */
+const SILENT_WAV_URI =
+  "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==";
 
-let _silentWavUri = null;
 function silentWavUri() {
-  if (!_silentWavUri) _silentWavUri = getSilentWavDataUri();
-  return _silentWavUri;
+  return SILENT_WAV_URI;
 }
 
 function getSilentShieldEl() {
@@ -714,7 +686,7 @@ async function resumeAudio() {
 const durationCache = new Map(); // url → seconds
 
 // Decode cache (BFSTM / web audio). Cap memory — long tracks are heavy.
-const DECODE_CACHE_MAX = isIOS() ? 4 : 8;
+const DECODE_CACHE_MAX = isIOS() ? 6 : 10;
 const decodeCache = new Map(); // url → { audioBuffer, loopStartSample, sampleRate, loopFlag? }
 
 function decodeCacheGet(url) {
@@ -2145,16 +2117,38 @@ async function decodeBfstm(url) {
   return out;
 }
 
-/** Decode next (+ prev) queue BFSTMs in background so skip feels instant. */
+let prefetchTimer = null;
+let prefetchRunning = false;
+
+/** Only warm the *next* track, deferred, one at a time — aggressive prefetch was jamming iPad. */
 function prefetchNearbyBfstm() {
-  const idxs = [state.queueIndex + 1, state.queueIndex + 2, state.queueIndex - 1];
-  for (const i of idxs) {
-    if (i < 0 || i >= state.queue.length) continue;
-    const t = state.queue[i]?.track;
-    const url = t?.url || t?.file || t?.src;
-    if (!url || isWebAudioFile(url)) continue;
-    if (decodeCacheGet(url)?.audioBuffer) continue;
-    decodeBfstm(url).catch(() => {});
+  if (prefetchTimer) {
+    clearTimeout(prefetchTimer);
+    prefetchTimer = null;
+  }
+  // Wait until current song is decoding/playing so we don't fight the main load
+  prefetchTimer = setTimeout(() => {
+    prefetchTimer = null;
+    void runPrefetchNext();
+  }, 1200);
+}
+
+async function runPrefetchNext() {
+  if (prefetchRunning) return;
+  const i = state.queueIndex + 1;
+  if (i < 0 || i >= state.queue.length) return;
+  const t = state.queue[i]?.track;
+  const url = t?.url || t?.file || t?.src;
+  if (!url || isWebAudioFile(url)) return;
+  if (decodeCacheGet(url)?.audioBuffer) return;
+
+  prefetchRunning = true;
+  try {
+    await decodeBfstm(url);
+  } catch (_) {
+    /* ignore */
+  } finally {
+    prefetchRunning = false;
   }
 }
 
