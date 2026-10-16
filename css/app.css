@@ -4775,17 +4775,28 @@ body.fs-closing-layout .fs-queue {
 }
 
 
-/* iOS 27 standalone PWA: remove system progressive blur over status bar
-   (WebKit only samples fixed elements ≥ ~11px; background-clip:text keeps it invisible) */
+/*
+  iOS 27 PWA status area:
+  - Solid strip (no background-clip) so WebKit paints a real top fixed color
+    and drops the progressive blur.
+  - Height covers safe-area so clock/battery sit on #0a0a0a, not over UI.
+*/
 .ios-status-fix {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
-  height: 11px;
+  height: max(14px, env(safe-area-inset-top, 14px));
   z-index: 2147483647;
   pointer-events: none;
-  background-color: #0a0a0a; /* same as --bg */
-  -webkit-background-clip: text;
-  background-clip: text;
+  background-color: #0a0a0a;
+}
+
+.settings-version {
+  margin-top: 16px;
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--muted);
+  opacity: 0.85;
+  letter-spacing: 0.02em;
 }

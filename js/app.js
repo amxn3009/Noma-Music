@@ -1,6 +1,9 @@
 import { Bfstm } from './bfstm.js';
 import { Kawarp } from 'https://cdn.jsdelivr.net/npm/@kawarp/core@1.3.1/+esm';
 
+/** Bump this every time you deploy so Settings shows you’re on the build you think. */
+const APP_VERSION = "2026.10.16-b";
+
 let LIBRARY = [];
 
 const DEV_DURATION_TOOL = false; // true only when scanning
@@ -1489,7 +1492,7 @@ function playBuffer(audioBuffer, offsetSeconds = 0) {
   const now = ctx.currentTime;
   const vol = effectiveVolume();
 
-  // Smooth open — never jump gain (iOS 27 clicks hard on discontinuities)
+  // Smooth open only — do NOT cancelScheduledValues mid-ramp later (iOS 27 clicks)
   currentGain.gain.cancelScheduledValues(now);
   currentGain.gain.setValueAtTime(0, now);
   currentGain.gain.linearRampToValueAtTime(vol, now + CLICK_RAMP);
@@ -1523,13 +1526,13 @@ function playBuffer(audioBuffer, offsetSeconds = 0) {
     offset = Math.min(offset, Math.max(0, duration - 0.01));
   }
 
-  // Guard: iOS 27 sometimes fires onended immediately after start/skip → rapid “click” skips
+  // iOS 27 can fire onended immediately after a bad start → rapid track skipping
   const sourceGen = playGen;
   const startedWall = performance.now();
   currentSource.onended = () => {
     if (!state.playing || transitioning) return;
     if (sourceGen !== playGen) return;
-    if (performance.now() - startedWall < 400) return; // ignore bogus early end
+    if (performance.now() - startedWall < 500) return;
     nextTrack(true);
   };
 
@@ -1537,8 +1540,6 @@ function playBuffer(audioBuffer, offsetSeconds = 0) {
   startTime = ctx.currentTime;
   currentSource.start(0, offset);
 
-  // Soft-end: schedule AFTER the fade-in without cancelScheduledValues mid-ramp
-  // (cancel at afterIn was a major click source on iOS 27)
   if (wantSoftEnd) {
     const fadeSec = getTransitionSec();
     let loopsAfterFirst = 0;
@@ -1554,7 +1555,7 @@ function playBuffer(audioBuffer, offsetSeconds = 0) {
     softEndFadeAt = startTime + timeToFadeStart;
     softEndFadeSec = fadeSec;
 
-    // Only schedule future automation — leave the fade-in alone
+    // Schedule only the future outro — leave fade-in alone
     if (fadeSec <= 0) {
       currentGain.gain.setValueAtTime(0, softEndFadeAt);
     } else {
@@ -2071,7 +2072,11 @@ function releaseDecodedBuffer() {
 }
 
 async function decodeBfstm(url) {
-  const hit = decodeCacheGet(url);
+  const ctx = await resumeAudio();
+  const targetRate = ctx.sampleRate || 48000;
+  const cacheKey = `${url}#sr=${targetRate}`;
+
+  const hit = decodeCacheGet(cacheKey);
   if (hit?.audioBuffer) {
     return {
       audioBuffer: hit.audioBuffer,
@@ -2088,28 +2093,56 @@ async function decodeBfstm(url) {
   const meta = bfstm.metadata;
   const channels = bfstm.getAllSamples();
 
-  const ctx = ensureAudioContext();
+  const nativeRate = meta.sampleRate;
+  const ratio = targetRate / nativeRate;
+  // Always build at AudioContext rate — mismatched rates cause iOS 27 start clicks / bogus onended
+  const totalOut =
+    targetRate === nativeRate
+      ? meta.totalSamples
+      : Math.max(1, Math.floor(meta.totalSamples * ratio));
+
   const audioBuffer = ctx.createBuffer(
     meta.numberChannels,
-    meta.totalSamples,
-    meta.sampleRate
+    totalOut,
+    targetRate
   );
 
   for (let c = 0; c < meta.numberChannels; c++) {
     const channelData = audioBuffer.getChannelData(c);
     const src = channels[c];
-    for (let i = 0; i < src.length; i++) {
-      channelData[i] = (src[i] / 32768) * 0.98;
+    const srcLen = src.length;
+    if (targetRate === nativeRate) {
+      for (let i = 0; i < srcLen && i < totalOut; i++) {
+        channelData[i] = (src[i] / 32768) * 0.98;
+      }
+    } else {
+      // linear resample nativeRate → targetRate
+      for (let i = 0; i < totalOut; i++) {
+        const srcPos = i / ratio;
+        const i0 = Math.min(srcLen - 1, Math.floor(srcPos));
+        const i1 = Math.min(srcLen - 1, i0 + 1);
+        const frac = srcPos - i0;
+        const s = src[i0] * (1 - frac) + src[i1] * frac;
+        channelData[i] = (s / 32768) * 0.98;
+      }
     }
+  }
+
+  let loopStartSample = 0;
+  if (meta.loopFlag && meta.loopStartSample > 0) {
+    loopStartSample = Math.min(
+      totalOut - 1,
+      Math.round(meta.loopStartSample * ratio)
+    );
   }
 
   const out = {
     audioBuffer,
-    loopStartSample: meta.loopFlag ? meta.loopStartSample : 0,
-    sampleRate: meta.sampleRate,
+    loopStartSample,
+    sampleRate: targetRate,
     loopFlag: !!meta.loopFlag,
   };
-  decodeCacheSet(url, out);
+  decodeCacheSet(cacheKey, out);
   return out;
 }
 
@@ -6008,7 +6041,7 @@ $("#setting-queue-loop")?.addEventListener("change", (e) => {
     }
   });
 
-    $("#setting-auto-collapse")?.addEventListener("change", (e) => {
+  $("#setting-auto-collapse")?.addEventListener("change", (e) => {
     settings.autoCollapseAlbum = !!e.target.checked;
     saveSettings();
   });
@@ -6026,6 +6059,9 @@ $("#setting-queue-loop")?.addEventListener("change", (e) => {
       updatePlayerUI();
     }
   });
+
+  const verEl = $("#settings-version");
+  if (verEl) verEl.textContent = `Version ${APP_VERSION}`;
 }
 
 function syncSettingsForm() {

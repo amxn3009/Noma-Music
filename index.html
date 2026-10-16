@@ -10,20 +10,22 @@
   <link rel="icon" type="image/svg+xml" href="/Assets/Logo/Favicon/favicon.svg">
   <link rel="apple-touch-icon" href="/Assets/Logo/Favicon/apple-touch-icon.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="mobile-web-app-capable" content="yes">
+  <!-- "black" = solid status bar (avoids iOS 27 progressive blur over content) -->
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)">
   <meta name="apple-mobile-web-app-title" content="Noma Music">
   <meta name="theme-color" content="#0a0a0a">
   <link rel="manifest" href="/Assets/Logo/Favicon/site.webmanifest">
 </head>
 <body>
+  <div class="ios-status-fix" aria-hidden="true"></div>
   <div id="bg-wrap" class="bg-wrap" aria-hidden="true">
     <canvas id="bg-kawarp" class="bg-kawarp-canvas"></canvas>
     <div id="bg-layer" class="bg-layer"></div>
   </div>
   <div class="bg-overlay" aria-hidden="true"></div>
     <!-- iOS 27 PWA: kills forced top progressive blur / black status band -->
-  <div class="ios-status-fix" aria-hidden="true"></div>
 
   <div class="app">
 <header class="topbar">
@@ -374,6 +376,7 @@
       </div>
 
       <button id="settings-reset" class="settings-reset-btn" type="button">Zurücksetzen auf Standard</button>
+      <p id="settings-version" class="settings-version">Version …</p>
     </div>
   </section>
 
