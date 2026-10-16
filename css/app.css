@@ -4781,15 +4781,19 @@ body.fs-closing-layout .fs-queue {
     and drops the progressive blur.
   - Height covers safe-area so clock/battery sit on #0a0a0a, not over UI.
 */
+/* iOS 27: >10px fixed element with a real background-color kills progressive blur.
+   background-clip:text → color is sampled, nothing is painted (no black bar). */
 .ios-status-fix {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
-  height: max(14px, env(safe-area-inset-top, 14px));
+  height: 11px;
   z-index: 2147483647;
   pointer-events: none;
   background-color: #0a0a0a;
+  -webkit-background-clip: text;
+  background-clip: text;
 }
 
 .settings-version {

@@ -2,7 +2,7 @@ import { Bfstm } from './bfstm.js';
 import { Kawarp } from 'https://cdn.jsdelivr.net/npm/@kawarp/core@1.3.1/+esm';
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = "2026.10.16-b";
+const APP_VERSION = "16.10.26 fix ios 27 bugs try #3";
 
 let LIBRARY = [];
 
@@ -320,43 +320,50 @@ function getPersistentMedia() {
   return persistentMediaEl;
 }
 
-/** Dedicated silence element — must NOT share persistentMediaEl (Media Session tracks HTMLAudio). */
-let silentShieldEl = null;
+/** Web Audio near-silent loop — silence.m4a loop seams click on iOS 27. */
+let silentShieldSource = null;
+let silentShieldGain = null;
 let bgSessionKeepAliveId = null;
 
-function getSilentShieldEl() {
-  if (!silentShieldEl) {
-    silentShieldEl = new Audio();
-    silentShieldEl.preload = "auto";
-    silentShieldEl.loop = true;
-    silentShieldEl.volume = 0.001; // not 0 — some iOS builds treat 0 as "not playing"
-    silentShieldEl.setAttribute("playsinline", "");
-    silentShieldEl.setAttribute("webkit-playsinline", "");
-  }
-  return silentShieldEl;
-}
-
-/** Keep silent <audio> looping so Web Audio (BFSTM) is audible under mute + Media Session stays "playing". */
 async function startSilentShield() {
   if (!isIOS()) return;
   ensurePlaybackAudioSession();
-  const el = getSilentShieldEl();
+  const ctx = await resumeAudio();
+  if (ctx.state === "suspended") {
+    try { await ctx.resume(); } catch (_) {}
+  }
+  // Already running
+  if (silentShieldSource) return;
+
   try {
-    const silenceUrl = new URL("Assets/Audio/silence.m4a", location.href).href;
-    if (!el.src || !el.src.includes("silence.m4a")) {
-      el.src = silenceUrl;
-      el.loop = true;
-    }
-    el.volume = 0.001;
-    await el.play();
+    // ~0.25s of digital zeros, looped — no file, no encoder seams
+    const frames = Math.max(1, Math.floor(ctx.sampleRate * 0.25));
+    const buf = ctx.createBuffer(1, frames, ctx.sampleRate);
+    const src = ctx.createBufferSource();
+    const g = ctx.createGain();
+    g.gain.value = 0.0001; // not 0 — keeps session “alive” without audible ticks
+    src.buffer = buf;
+    src.loop = true;
+    src.connect(g);
+    g.connect(ctx.destination);
+    src.start(0);
+    silentShieldSource = src;
+    silentShieldGain = g;
   } catch (_) {}
 }
 
 function stopSilentShield() {
-  if (!silentShieldEl) return;
-  try {
-    silentShieldEl.pause();
-  } catch (_) {}
+  if (silentShieldSource) {
+    try {
+      silentShieldSource.stop();
+      silentShieldSource.disconnect();
+    } catch (_) {}
+    silentShieldSource = null;
+  }
+  if (silentShieldGain) {
+    try { silentShieldGain.disconnect(); } catch (_) {}
+    silentShieldGain = null;
+  }
 }
 
 function clearBgSessionKeepAlive() {
@@ -382,10 +389,7 @@ function startBgSessionKeepAlive() {
     } catch (_) {}
     // Silence element often gets paused by iOS on lock — restart it
     if (!useMediaEl) {
-      const el = getSilentShieldEl();
-      if (el.paused) {
-        el.play().catch(() => {});
-      }
+      startSilentShield();
     } else if (mediaEl && mediaEl.paused) {
       mediaEl.play().catch(() => {});
     }
@@ -469,15 +473,7 @@ function teardownOnAppKill() {
     mediaA = mediaB = null;
 
     // Silence shield — destroy, not just pause
-    if (silentShieldEl) {
-      try {
-        silentShieldEl.onended = null;
-        silentShieldEl.pause();
-        silentShieldEl.removeAttribute("src");
-        silentShieldEl.load();
-      } catch (_) {}
-      silentShieldEl = null;
-    }
+    stopSilentShield();
     if (typeof stopSilentShield === "function") {
       try {
         stopSilentShield();
@@ -2072,11 +2068,7 @@ function releaseDecodedBuffer() {
 }
 
 async function decodeBfstm(url) {
-  const ctx = await resumeAudio();
-  const targetRate = ctx.sampleRate || 48000;
-  const cacheKey = `${url}#sr=${targetRate}`;
-
-  const hit = decodeCacheGet(cacheKey);
+  const hit = decodeCacheGet(url);
   if (hit?.audioBuffer) {
     return {
       audioBuffer: hit.audioBuffer,
@@ -2093,56 +2085,29 @@ async function decodeBfstm(url) {
   const meta = bfstm.metadata;
   const channels = bfstm.getAllSamples();
 
-  const nativeRate = meta.sampleRate;
-  const ratio = targetRate / nativeRate;
-  // Always build at AudioContext rate — mismatched rates cause iOS 27 start clicks / bogus onended
-  const totalOut =
-    targetRate === nativeRate
-      ? meta.totalSamples
-      : Math.max(1, Math.floor(meta.totalSamples * ratio));
-
+  const ctx = ensureAudioContext();
+  // Native BFSTM rate — Web Audio resamples; manual 48k resample was the slowdown
   const audioBuffer = ctx.createBuffer(
     meta.numberChannels,
-    totalOut,
-    targetRate
+    meta.totalSamples,
+    meta.sampleRate
   );
 
   for (let c = 0; c < meta.numberChannels; c++) {
     const channelData = audioBuffer.getChannelData(c);
     const src = channels[c];
-    const srcLen = src.length;
-    if (targetRate === nativeRate) {
-      for (let i = 0; i < srcLen && i < totalOut; i++) {
-        channelData[i] = (src[i] / 32768) * 0.98;
-      }
-    } else {
-      // linear resample nativeRate → targetRate
-      for (let i = 0; i < totalOut; i++) {
-        const srcPos = i / ratio;
-        const i0 = Math.min(srcLen - 1, Math.floor(srcPos));
-        const i1 = Math.min(srcLen - 1, i0 + 1);
-        const frac = srcPos - i0;
-        const s = src[i0] * (1 - frac) + src[i1] * frac;
-        channelData[i] = (s / 32768) * 0.98;
-      }
+    for (let i = 0; i < src.length; i++) {
+      channelData[i] = (src[i] / 32768) * 0.98;
     }
-  }
-
-  let loopStartSample = 0;
-  if (meta.loopFlag && meta.loopStartSample > 0) {
-    loopStartSample = Math.min(
-      totalOut - 1,
-      Math.round(meta.loopStartSample * ratio)
-    );
   }
 
   const out = {
     audioBuffer,
-    loopStartSample,
-    sampleRate: targetRate,
+    loopStartSample: meta.loopFlag ? meta.loopStartSample : 0,
+    sampleRate: meta.sampleRate,
     loopFlag: !!meta.loopFlag,
   };
-  decodeCacheSet(cacheKey, out);
+  decodeCacheSet(url, out);
   return out;
 }
 
