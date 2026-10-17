@@ -282,6 +282,11 @@ html.ios-standalone body.fs-open .sleep-wrap {
   top: calc(30px + env(safe-area-inset-top, 0px));
 }
 
+/* Expanded FS queue: clear sleep chip (same top offset as sleep + ~chip height + gap) */
+html.ios-standalone body.fs-open.fs-queue-open #queue-panel {
+  top: calc(30px + env(safe-area-inset-top, 0px) + 52px);
+}
+
 .logo {
   display: flex;
   align-items: center;
@@ -4525,6 +4530,10 @@ body.fs-queue-open .queue-item .q-cover {
     bottom: calc(var(--player-h) + env(safe-area-inset-bottom, 0px) + 28px);
     max-height: min(48dvh, 380px);
     border-radius: 18px 18px 16px 16px;
+  }
+
+  html.ios-standalone body.fs-open.fs-queue-open #queue-panel {
+    top: calc(30px + env(safe-area-inset-top, 0px) + 52px);
   }
 
   body.fs-open.fs-queue-open .fs-stage {
