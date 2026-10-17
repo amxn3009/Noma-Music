@@ -363,18 +363,29 @@ html.ios-standalone .fs-queue {
   padding: 28px 28px calc(var(--player-h) + env(safe-area-inset-bottom, 0px) + 40px);
 }
 
-/* scroll bodies under sticky chrome */
+
 #games-browse,
 #global-search-results {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  overflow-x: hidden; /* no page-level horizontal scroll */
+  overflow-x: hidden;
   overscroll-behavior-x: none;
   overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
-  padding-bottom: calc(var(--player-h) + env(safe-area-inset-bottom, 0px) + 40px);
-  touch-action: pan-y; /* vertical page scroll only */
+  margin-bottom: calc(var(--player-h) + env(safe-area-inset-bottom, 0px));
+  padding-bottom: 48px;
+  padding-right: 40px;
+  touch-action: pan-y;
+  scrollbar-gutter: stable;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Category view: browse doesn't scroll; inner list fills to the player */
+body.games-cat-open #games-browse {
+  overflow: hidden;
+  padding-bottom: 0;
 }
 
 body.search-mode #global-search-results {
@@ -713,7 +724,8 @@ body.search-mode #global-search-results {
   min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  padding: 0 28px calc(var(--player-h) + env(safe-area-inset-bottom, 0px) + 28px);
+  margin-bottom: calc(var(--player-h) + env(safe-area-inset-bottom, 0px));
+  padding: 0 28px 48px;
   position: relative;
 }
 
@@ -3274,15 +3286,33 @@ body.search-mode .search-close-btn {
 
 .games-row-scroll {
   overflow-x: auto;
-  overflow-y: hidden;
+  overflow-y: hidden; /* required with overflow-x; shadows need padding, not visible */
   -webkit-overflow-scrolling: touch;
-  margin: 0 -28px;
-  padding: 4px 28px 36px;
+  margin: 0;
+  /* room for hover lift + drop shadow above/below cards */
+  padding: 14px 0 35px;
   scroll-snap-type: x proximity;
   overscroll-behavior-x: contain;
-  overscroll-behavior-y: none;
-  /* never steal vertical scroll unless the row actually overflows */
+  overscroll-behavior-y: auto;
   touch-action: pan-y;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.28) transparent;
+}
+
+.games-row-scroll::-webkit-scrollbar {
+  height: 4px;
+}
+/* Shorter TRACK (not thickness) — Chromium / Safari */
+.games-row-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.games-row-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+}
+.games-row-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.42);
 }
 
 /* only when the row actually overflows */
@@ -3290,19 +3320,33 @@ body.search-mode .search-close-btn {
   touch-action: pan-x pan-y;
 }
 
-/* rows that don't overflow: no horizontal scroll at all */
+/* rows that don't overflow: hide bar completely */
 .games-row-scroll:not(.needs-x-scroll) {
   overflow-x: hidden;
   touch-action: pan-y;
+  scrollbar-width: none;
+}
+.games-row-scroll:not(.needs-x-scroll)::-webkit-scrollbar {
+  display: none;
+  height: 0;
 }
 
 .games-row-track {
   display: flex;
   gap: 16px;
   width: max-content;
-  min-width: 100%;
+  /* no min-width: 100% + side padding — that forced a scrollbar with few games */
+  min-width: 0;
   padding-left: 0;
-  padding-right: 4px;
+  padding-right: 0;
+}
+
+/* shadow room on ends without widening the scroll width permanently */
+.games-row-track .game-card:first-child {
+  margin-left: 4px;
+}
+.games-row-track .game-card:last-child {
+  margin-right: 4px;
 }
 
 .games-row-track .game-card {
@@ -3401,18 +3445,15 @@ body.search-mode .search-close-btn {
   font-size: 1.5rem;
   font-weight: 700;
 }
-.games-cat-fs-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 18px;
-}
+
 
 /* Category expanded = same games page, other rows replaced */
 .games-cat-inline {
   display: flex;
   flex-direction: column;
-  flex: 1;
+  flex: 1 1 auto;
   min-height: 0;
+  height: 100%;
   gap: 0;
   padding-bottom: 0;
   animation: gamesCatIn 0.32s var(--ease) both;
@@ -3488,7 +3529,12 @@ body.search-mode .search-close-btn {
   min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  padding-bottom: calc(var(--player-h) + env(safe-area-inset-bottom, 0px) + 24px);
+  /* parent #games-browse already ends above the player — don't double the margin */
+  margin-bottom: 0;
+  padding-top: 10px;
+  padding-bottom: 48px;
+  padding-right: 12px; /* same kind of gap vs vertical scrollbar */
+  scrollbar-gutter: stable;
 }
 
 @keyframes gamesCatIn {
@@ -3539,6 +3585,9 @@ body.search-mode .search-close-btn {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   gap: 18px;
+  /* hover translateY / shadow on the first row */
+  padding-top: 6px;
+  padding-bottom: 8px;
 }
 
 .games-page-top.is-entering {
@@ -3562,24 +3611,6 @@ body.games-cat-open .games-page-top {
 
 body.games-cat-open .games-view-toggle {
   display: none !important;
-}
-
-/* Soft edge on horizontal game rows — opacity only, no gradient bar */
-.games-row-scroll {
-  -webkit-mask-image: linear-gradient(
-    to right,
-    transparent 0,
-    #000 12px,
-    #000 calc(100% - 28px),
-    transparent 100%
-  );
-  mask-image: linear-gradient(
-    to right,
-    transparent 0,
-    #000 12px,
-    #000 calc(100% - 28px),
-    transparent 100%
-  );
 }
 
 body.games-cat-open .games-page-top.is-leaving {
@@ -4825,4 +4856,8 @@ body.fs-closing-layout .fs-queue {
   color: var(--muted);
   opacity: 0.85;
   letter-spacing: 0.02em;
+}
+
+.player-left {
+  cursor: pointer;
 }

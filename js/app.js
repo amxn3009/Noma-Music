@@ -32,52 +32,53 @@ const DEFAULT_SETTINGS = {
 };
 
 const CONSOLE_META = {
-  n64: {
-    id: "n64",
-    label: "Nintendo 64",
-    logo: "Assets/Filter/Console/Nintendo64_Logo.webp",
-  },
-  gamecube: {
-    id: "gamecube",
-    label: "GameCube",
-    logo: "Assets/Filter/Console/GameCube_Logo.png",
-  },
-  wii: {
-    id: "wii",
-    label: "Wii",
-    logo: "Assets/Filter/Console/Wii_Logo.png",
-  },
-  wiiu: {
-    id: "wiiu",
-    label: "Wii U",
-    logo: "Assets/Filter/Console/WiiU_Logo.webp",
+  ps5: {
+    id: "ps5",
+    label: "PlayStation 5",
+    logo: "Assets/Filter/Console/PS5_Logo.png",
   },
   switch: {
     id: "switch",
     label: "Nintendo Switch",
     logo: "Assets/Filter/Console/Nintendo_Switch_Logo.png",
   },
-  ps5: {
-    id: "ps5",
-    label: "PlayStation 5",
-    logo: "Assets/Filter/Console/PS5_Logo.png",
+  wiiu: {
+    id: "wiiu",
+    label: "Wii U",
+    logo: "Assets/Filter/Console/WiiU_Logo.webp",
+  },
+  wii: {
+    id: "wii",
+    label: "Wii",
+    logo: "Assets/Filter/Console/Wii_Logo.png",
+  },
+  gamecube: {
+    id: "gamecube",
+    label: "GameCube",
+    logo: "Assets/Filter/Console/GameCube_Logo.png",
+  },
+  n64: {
+    id: "n64",
+    label: "Nintendo 64",
+    logo: "Assets/Filter/Console/Nintendo64_Logo.webp",
   },
 };
 
 const FRANCHISE_META = {
+    mario: {
+    id: "mario",
+    label: "Super Mario",
+    logo: "Assets/Filter/Franchise/SuperMario_Logo.png",
+  },
   zelda: {
     id: "zelda",
     label: "The Legend of Zelda",
     logo: "Assets/Filter/Franchise/Zelda_Logo.webp",
   },
-  mario: {
-    id: "mario",
-    label: "Super Mario",
-    logo: "Assets/Filter/Franchise/SuperMario_Logo.png",
-  },
 };
 
 let gamesViewMode = "console"; // "console" | "franchise"
+let gamesNavLocked = false;
 const albumViewMemory = new Map(); // gameId -> { scrollTop, query }
 let searchReturn = null; // { type: "games"|"game"|"playlists"|"category", ... }
 let globalSearchOpen = false;
@@ -117,6 +118,18 @@ function loadSettings() {
 
 function saveSettings() {
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+}
+
+function withGamesNavLock(fn, ms = 420) {
+  if (gamesNavLocked) return;
+  gamesNavLocked = true;
+  try {
+    fn();
+  } finally {
+    setTimeout(() => {
+      gamesNavLocked = false;
+    }, ms);
+  }
 }
 
 function clampInt(v, min, max, fallback) {
@@ -1808,15 +1821,27 @@ function bindVolume() {
     setVolume(Number(slider.value));
   });
 
-  wrap.addEventListener(
-    "wheel",
-    (e) => {
-      e.preventDefault();
-      const delta = e.deltaY > 0 ? -0.1 : 0.1;
-      setVolume(masterVolume + delta);
-    },
-    { passive: false }
-  );
+  function onVolumeWheel(e) {
+    // only vertical scroll — don’t fight horizontal trackpads
+    if (Math.abs(e.deltaY) < Math.abs(e.deltaX)) return;
+    e.preventDefault();
+    const step = e.deltaMode === 1 ? 0.08 : 0.05; // line vs pixel
+    const delta = e.deltaY > 0 ? -step : step;
+    setVolume(masterVolume + delta);
+    showVolumeSlider();
+  }
+
+  wrap.addEventListener("wheel", onVolumeWheel, { passive: false });
+
+  // Bottom player: cover + title + game
+  document
+    .querySelector(".player-left")
+    ?.addEventListener("wheel", onVolumeWheel, { passive: false });
+
+  // Fullscreen: cover + song + game name
+  ["#fs-cover", "#fs-title", "#fs-game"].forEach((sel) => {
+    $(sel)?.addEventListener("wheel", onVolumeWheel, { passive: false });
+  });
 }
 
 function bindHotkeys() {
@@ -2369,6 +2394,101 @@ function fadeOutGamesBrowse(browse, then) {
   setTimeout(done, 240);
 }
 
+function bindGameCardInteractions(root) {
+  if (!root) return;
+  root.querySelectorAll(".game-card").forEach((card) => {
+    if (card.dataset.ctxBound === "1") return;
+    card.dataset.ctxBound = "1";
+
+    card.addEventListener("click", (e) => {
+      if (card.dataset.suppressClick === "1") {
+        delete card.dataset.suppressClick;
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+      if (
+        typeof suppressNextClickUntil === "number" &&
+        performance.now() < suppressNextClickUntil
+      ) {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+      openGame(card.dataset.id);
+    });
+
+    card.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const game = LIBRARY.find((g) => g.id === card.dataset.id);
+      if (!game) return;
+      showContextMenu(e.clientX, e.clientY, { game, album: true });
+    });
+
+    let lpTimer = null;
+    let lpMoved = false;
+    card.addEventListener(
+      "pointerdown",
+      (e) => {
+        if (e.pointerType === "mouse") return;
+        lpMoved = false;
+        const x = e.clientX;
+        const y = e.clientY;
+        lpTimer = setTimeout(() => {
+          lpTimer = null;
+          if (lpMoved) return;
+          const game = LIBRARY.find((g) => g.id === card.dataset.id);
+          if (!game) return;
+          card.dataset.suppressClick = "1";
+          if (typeof armClickSuppress === "function") armClickSuppress(600);
+          showContextMenu(x, y, { game, album: true });
+        }, 480);
+      },
+      { passive: true }
+    );
+    card.addEventListener(
+      "pointermove",
+      (e) => {
+        if (!lpTimer) return;
+        if (Math.abs(e.movementX) + Math.abs(e.movementY) > 6) {
+          lpMoved = true;
+          clearTimeout(lpTimer);
+          lpTimer = null;
+        }
+      },
+      { passive: true }
+    );
+    const cancelLp = () => {
+      clearTimeout(lpTimer);
+      lpTimer = null;
+    };
+    card.addEventListener("pointerup", cancelLp);
+    card.addEventListener("pointercancel", cancelLp);
+  });
+}
+
+/** Vertical wheel over a horizontal row → scroll the games page */
+function bindGamesRowWheel(scrollEl) {
+  if (!scrollEl || scrollEl.dataset.wheelBound === "1") return;
+  scrollEl.dataset.wheelBound = "1";
+  scrollEl.addEventListener(
+    "wheel",
+    (e) => {
+      // Prefer vertical page scroll when the gesture is mostly vertical
+      if (Math.abs(e.deltaY) < Math.abs(e.deltaX)) return;
+      const parent =
+        scrollEl.closest("#games-browse") ||
+        scrollEl.closest(".games-cat-scroll") ||
+        $("#games-browse");
+      if (!parent) return;
+      parent.scrollTop += e.deltaY;
+      e.preventDefault();
+    },
+    { passive: false }
+  );
+}
+
 function renderGames(opts = {}) {
   const browse = $("#games-browse");
   if (!browse) return;
@@ -2402,9 +2522,7 @@ function renderGames(opts = {}) {
     })
     .join("");
 
-  browse.querySelectorAll(".game-card").forEach((card) => {
-    card.addEventListener("click", () => openGame(card.dataset.id));
-  });
+  bindGameCardInteractions(browse);
 
   browse.querySelectorAll(".games-row-scroll").forEach((el) => {
     const needsX = el.scrollWidth > el.clientWidth + 2;
@@ -2480,6 +2598,13 @@ function markPlayingGameCards() {
 }
 
 function openCategoryFullscreen(catKey, mode, opts = {}) {
+  if (gamesNavLocked && !opts.instant) return;
+  if (!opts.instant) {
+    gamesNavLocked = true;
+    setTimeout(() => {
+      gamesNavLocked = false;
+    }, 450);
+  }
   const metaMap = mode === "franchise" ? FRANCHISE_META : CONSOLE_META;
   const meta = metaMap[catKey];
   if (!meta) return;
@@ -2534,9 +2659,7 @@ function openCategoryFullscreen(catKey, mode, opts = {}) {
     `;
 
     $("#games-cat-back")?.addEventListener("click", closeCategoryFullscreen);
-    browse.querySelectorAll(".game-card").forEach((card) => {
-      card.addEventListener("click", () => openGame(card.dataset.id));
-    });
+    bindGameCardInteractions(browse);
 
     // Category-local search (same filter as main page)
     const catInput = $("#games-cat-search");
@@ -2601,6 +2724,11 @@ function openCategoryFullscreen(catKey, mode, opts = {}) {
 
 function closeCategoryFullscreen() {
   if (!document.body.classList.contains("games-cat-open")) return;
+  if (gamesNavLocked) return;
+  gamesNavLocked = true;
+  setTimeout(() => {
+    gamesNavLocked = false;
+  }, 450);
 
   const browse = $("#games-browse");
   const panel = browse?.querySelector(".games-cat-inline");
@@ -2660,12 +2788,17 @@ function bindGamesViewToggle() {
     btn.addEventListener("click", () => {
       const next = btn.dataset.gamesView === "franchise" ? "franchise" : "console";
       if (next === gamesViewMode) return;
+      if (gamesNavLocked) return;
+
+      gamesNavLocked = true;
+      setTimeout(() => {
+        gamesNavLocked = false;
+      }, 480);
 
       document.querySelectorAll(".games-view-btn").forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
       gamesViewMode = next;
 
-      // leave category view if open
       if (document.body.classList.contains("games-cat-open")) {
         document.body.classList.remove("games-cat-open");
         const browse = $("#games-browse");
@@ -2904,6 +3037,17 @@ function runGlobalSearch(raw) {
 function bindGlobalSearchResults(box) {
   box.querySelectorAll(".gs-row").forEach((row) => {
     row.addEventListener("click", (e) => {
+      if (row.dataset.suppressClick === "1") {
+        delete row.dataset.suppressClick;
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+      if (performance.now() < suppressNextClickUntil) {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
       if (e.target.closest(".gs-menu")) return;
       const kind = row.dataset.kind;
       const gameId = row.dataset.gameId;
@@ -2939,17 +3083,36 @@ function bindGlobalSearchResults(box) {
   });
 
   // long-press mobile
-  let lpTimer = null;
   box.querySelectorAll(".gs-row").forEach((row) => {
+    let lpTimer = null;
+    let lpMoved = false;
     row.addEventListener("pointerdown", (e) => {
       if (e.pointerType === "mouse") return;
+      lpMoved = false;
+      const x = e.clientX;
+      const y = e.clientY;
       lpTimer = setTimeout(() => {
-        openSearchContextMenu(row, e.clientX, e.clientY);
+        lpTimer = null;
+        if (lpMoved) return;
+        row.dataset.suppressClick = "1";
+        armClickSuppress(600);
+        openSearchContextMenu(row, x, y);
       }, 480);
     });
-    row.addEventListener("pointerup", () => clearTimeout(lpTimer));
-    row.addEventListener("pointercancel", () => clearTimeout(lpTimer));
-    row.addEventListener("pointermove", () => clearTimeout(lpTimer));
+    row.addEventListener("pointermove", (e) => {
+      if (!lpTimer) return;
+      if (Math.abs(e.movementX) + Math.abs(e.movementY) > 6) {
+        lpMoved = true;
+        clearTimeout(lpTimer);
+        lpTimer = null;
+      }
+    });
+    const cancelLp = () => {
+      clearTimeout(lpTimer);
+      lpTimer = null;
+    };
+    row.addEventListener("pointerup", cancelLp);
+    row.addEventListener("pointercancel", cancelLp);
   });
 }
 
@@ -3203,11 +3366,18 @@ function openGame(id) {
   requestAnimationFrame(updateTrackFade);
 
   trackListEl.querySelectorAll(".track-row").forEach((row) => {
+    row.addEventListener("click", (e) => {
       if (row.dataset.suppressClick === "1") {
         delete row.dataset.suppressClick;
+        e.preventDefault();
+        e.stopPropagation();
         return;
       }
-    row.addEventListener("click", (e) => {
+      if (performance.now() < suppressNextClickUntil) {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
       if (e.target.closest(".track-actions")) {
         e.preventDefault();
         e.stopPropagation();
@@ -4476,17 +4646,19 @@ function renderQueue() {
     return;
   }
 
-  const html = state.queue
-    .map((item, i) => {
-      const game = LIBRARY.find((g) => g.id === item.gameId);
-      const isCurrent = i === state.queueIndex;
-      return `
+  function queueRowHtml(item, i, useLongGameName) {
+    const game = LIBRARY.find((g) => g.id === item.gameId);
+    const isCurrent = i === state.queueIndex;
+    const gameLabel = useLongGameName
+      ? game?.title || game?.short || ""
+      : game?.short || game?.title || "";
+    return `
       <li class="queue-item ${isCurrent ? "current" : ""} ${
         isCurrent && state.playing ? "audio-on" : ""
       }"
           data-index="${i}" data-game-id="${item.gameId}" data-track-id="${escapeHtml(
-        item.track.id
-      )}">
+      item.track.id
+    )}">
         <span class="q-drag" title="Ziehen" data-drag-handle="1">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M9 5h2v2H9V5zm0 6h2v2H9v-2zm0 6h2v2H9v-2zm4-12h2v2h-2V5zm0 6h2v2h-2v-2zm0 6h2v2h-2v-2z"/></svg>
         </span>
@@ -4500,7 +4672,7 @@ function renderQueue() {
         </span>
         <div class="q-meta">
           <div class="q-title">${escapeHtml(item.track.title)}</div>
-          <div class="q-game muted">${escapeHtml(game?.short || game?.title || "")}</div>
+          <div class="q-game muted">${escapeHtml(gameLabel)}</div>
         </div>
         <span class="q-duration" data-track-id="${escapeHtml(item.track.id)}">${
           Number.isFinite(Number(item.track.duration)) && Number(item.track.duration) > 0
@@ -4512,11 +4684,13 @@ function renderQueue() {
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
         </button>
       </li>`;
-    })
-    .join("");
+  }
 
   lists.forEach((list) => {
-    list.innerHTML = html;
+    const useLong = list.id === "fs-queue-list";
+    list.innerHTML = state.queue
+      .map((item, i) => queueRowHtml(item, i, useLong))
+      .join("");
   });
 
   // Duration fill on all lists
@@ -5563,12 +5737,20 @@ function bindTrackListFade() {
 
 let contextMenuAnchor = null;
 let suppressDocClickUntil = 0;
+/** After long-press opens the menu, ignore the following synthetic click */
+let suppressNextClickUntil = 0;
+
+function armClickSuppress(ms = 600) {
+  suppressNextClickUntil = performance.now() + ms;
+  suppressDocClickUntil = Math.max(suppressDocClickUntil, suppressNextClickUntil);
+}
 
 let contextMenuCloseTimer = null;
 
 function hideContextMenu() {
   contextMenuAnchor = null;
   contextTrack = null;
+  document.body.classList.remove("context-menu-open");
   if (
     !contextMenu ||
     contextMenu.classList.contains("hidden") ||
@@ -5651,7 +5833,8 @@ function showContextMenu(x, y, payload, anchorEl = null) {
   contextMenu.style.left = `${Math.min(x, window.innerWidth - menuW - 8)}px`;
   contextMenu.style.top = `${Math.min(y, window.innerHeight - menuH - 8)}px`;
 
-  suppressDocClickUntil = performance.now() + 450;
+  armClickSuppress(600);
+  document.body.classList.add("context-menu-open");
 }
 
 function bindContextMenu() {
@@ -5689,14 +5872,24 @@ function bindContextMenu() {
   });
 
 
+  // Capture: kill the ghost click that fires after a long-press opens the menu
+  document.addEventListener(
+    "click",
+    (e) => {
+      if (performance.now() >= suppressNextClickUntil) return;
+      e.preventDefault();
+      e.stopPropagation();
+    },
+    true
+  );
+
   document.addEventListener("click", (e) => {
     if (performance.now() < suppressDocClickUntil) return;
     if (e.target.closest("#context-menu")) return;
     if (e.target.closest(".track-actions")) return;
     if (e.target.closest("#album-menu-btn")) return;
-    if (e.target.closest("#player-left")) return;
-    if (e.target.closest("#fs-cover, #fs-title, #fs-game")) return;
-      hideContextMenu();
+    // player-left / fs now-playing use click for fullscreen — don't special-case them here
+    hideContextMenu();
   });
 
   const closeOnScroll = () => {
@@ -5732,6 +5925,25 @@ function bindContextMenu() {
       openNowPlayingContext(e.clientX, e.clientY);
     });
 
+    // FS cover / title / game → play / pause (not player-left)
+    const isFsArt =
+      el.id === "fs-cover" || el.id === "fs-title" || el.id === "fs-game";
+    if (isFsArt) {
+      el.style.cursor = "pointer";
+      el.addEventListener("click", (e) => {
+        if (el.dataset.suppressClick === "1") {
+          delete el.dataset.suppressClick;
+          return;
+        }
+        // ignore if a context menu was just opened
+        if (performance.now() < (typeof suppressDocClickUntil !== "undefined" ? suppressDocClickUntil : 0)) {
+          return;
+        }
+        e.preventDefault();
+        togglePlay();
+      });
+    }
+
     let lpTimer = null;
     let lpMoved = false;
     el.addEventListener(
@@ -5745,6 +5957,8 @@ function bindContextMenu() {
           lpTimer = null;
           if (lpMoved) return;
           openNowPlayingContext(x, y);
+          el.dataset.suppressClick = "1";
+          if (typeof armClickSuppress === "function") armClickSuppress(600);
         }, 480);
       },
       { passive: true }
