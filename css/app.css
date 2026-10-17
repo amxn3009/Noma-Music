@@ -282,9 +282,9 @@ html.ios-standalone body.fs-open .sleep-wrap {
   top: calc(30px + env(safe-area-inset-top, 0px));
 }
 
-/* Expanded FS queue: clear sleep chip (same top offset as sleep + ~chip height + gap) */
-html.ios-standalone body.fs-open.fs-queue-open #queue-panel {
-  top: calc(30px + env(safe-area-inset-top, 0px) + 60px);
+/* Expanded FS queue (#fs-queue) — sit below sleep chip on iOS web app */
+html.ios-standalone .fs-queue {
+  top: calc(30px + env(safe-area-inset-top, 0px) + 56px);
 }
 
 .logo {
@@ -4532,8 +4532,8 @@ body.fs-queue-open .queue-item .q-cover {
     border-radius: 18px 18px 16px 16px;
   }
 
-  html.ios-standalone body.fs-open.fs-queue-open #queue-panel {
-    top: calc(30px + env(safe-area-inset-top, 0px) + 60px);
+  html.ios-standalone .fs-queue {
+    top: calc(30px + env(safe-area-inset-top, 0px) + 56px);
   }
 
   body.fs-open.fs-queue-open .fs-stage {

@@ -2,7 +2,7 @@ import { Bfstm } from './bfstm.js';
 import { Kawarp } from 'https://cdn.jsdelivr.net/npm/@kawarp/core@1.3.1/+esm';
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = "17.10.26 queue ios adjust fix #2";
+const APP_VERSION = "17.10.26 queue ios adjust fix #3";
 
 let LIBRARY = [];
 
