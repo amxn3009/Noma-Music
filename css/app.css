@@ -5135,3 +5135,12 @@ body.search-mode .gs-toolbar {
   transform: scale(1);
 }
 
+html.ios-standalone .settings-view {
+  padding-top: calc(env(safe-area-inset-top, 0px) + 14px);
+}
+html.ios-standalone .settings-inner {
+  padding-top: 24px;
+}
+html.ios-standalone .settings-top {
+  margin-top: 4px;
+}

@@ -2,7 +2,7 @@ import { Bfstm } from './bfstm.js';
 import { Kawarp } from 'https://cdn.jsdelivr.net/npm/@kawarp/core@1.3.1/+esm';
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = "18.10.26, 16:30: added filters and sort in GS, fixed multiple issues.";
+const APP_VERSION = "18.10.26, 16:55: added filters and sort in GS, fixed multiple issues. + mobile fix try #1";
 
 let LIBRARY = [];
 
@@ -5853,10 +5853,51 @@ function bindTrackListFade() {
 
   const COLLAPSE_AT = 72;
   const EXPAND_AT = 2;
+  /** Approximate expanded→collapsed height drop (cover + meta + labels). */
+  const HEADER_COLLAPSE_DELTA = 140;
   let lastY = 0;
   let ignoreUntil = 0;
-  let ignoreDir = 0;
+  let ignoreDir = 0; // +1 ignore further collapse, -1 ignore further expand
   let ticking = false;
+  /** True while a finger/stylus is actively on the scroller (not during fling). */
+  let pointerDown = false;
+
+  // Track touch so we can kill momentum only when the user already released.
+  scroller.addEventListener(
+    "pointerdown",
+    (e) => {
+      if (e.pointerType === "mouse" && e.button !== 0) return;
+      pointerDown = true;
+    },
+    { passive: true }
+  );
+  const clearPointer = () => {
+    pointerDown = false;
+  };
+  scroller.addEventListener("pointerup", clearPointer, { passive: true });
+  scroller.addEventListener("pointercancel", clearPointer, { passive: true });
+  scroller.addEventListener("pointerleave", clearPointer, { passive: true });
+
+  /**
+   * Stop inertial scrolling on iOS/Android after a programmatic scrollTop change.
+   * Without this, releasing during the header collapse animation lets momentum
+   * continue with the new (shorter) header and flings the list far down.
+   */
+  const killMomentum = (targetY) => {
+    const y = Math.max(0, targetY);
+    // Force layout + overflow toggle — reliable way to cancel -webkit-overflow-scrolling inertia
+    scroller.style.overflowY = "hidden";
+    scroller.scrollTop = y;
+    void scroller.offsetHeight;
+    scroller.style.overflowY = "";
+    // Re-apply on next frames in case WebKit restarts inertia from the previous velocity
+    requestAnimationFrame(() => {
+      scroller.scrollTop = y;
+      requestAnimationFrame(() => {
+        scroller.scrollTop = y;
+      });
+    });
+  };
 
   const tryExpandIfAtTop = () => {
     if (!settings.autoCollapseAlbum) return;
@@ -5869,8 +5910,8 @@ function bindTrackListFade() {
     if (scroller.scrollTop > EXPAND_AT) return;
 
     toggleGameHeaderCollapse();
-    scroller.scrollTop = 0;
-    ignoreUntil = performance.now() + 480;
+    killMomentum(0);
+    ignoreUntil = performance.now() + 500;
     ignoreDir = -1;
     lastY = 0;
   };
@@ -5908,21 +5949,30 @@ function bindTrackListFade() {
 
       if (!animating && !locked) {
         if (!collapsed && y >= COLLAPSE_AT && goingDown) {
-          // Keep CSS collapse animation; only briefly stop momentum (not full freeze)
           const y0 = y;
+          const targetY = Math.max(COLLAPSE_AT, y0 - HEADER_COLLAPSE_DELTA);
           toggleGameHeaderCollapse();
-          // Approximate height drop of compact header (~cover 200→48 + meta)
-          scroller.scrollTop = Math.max(COLLAPSE_AT, y0 - 140);
-          ignoreUntil = performance.now() + 480;
+
+          if (pointerDown) {
+            // Finger still down: user is controlling the scroll — soft adjust is fine
+            scroller.scrollTop = targetY;
+          } else {
+            // Released during / before collapse (fling): kill inertia so we don't get
+            // the "shot down the list" jump while the header animates.
+            killMomentum(targetY);
+          }
+
+          ignoreUntil = performance.now() + 500;
           ignoreDir = 1;
-          lastY = scroller.scrollTop;
+          lastY = targetY;
           return;
         }
 
+        // expand as soon as you're at the top (no goingUp required)
         if (collapsed && y <= EXPAND_AT) {
           toggleGameHeaderCollapse();
-          scroller.scrollTop = 0;
-          ignoreUntil = performance.now() + 480;
+          killMomentum(0);
+          ignoreUntil = performance.now() + 500;
           ignoreDir = -1;
           lastY = 0;
           return;
