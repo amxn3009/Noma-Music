@@ -2,7 +2,7 @@ import { Bfstm } from './bfstm.js';
 import { Kawarp } from 'https://cdn.jsdelivr.net/npm/@kawarp/core@1.3.1/+esm';
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = "18.10.26, 16:55: added filters and sort in GS, fixed multiple issues. + mobile fix try #1";
+const APP_VERSION = "18.10.26, 16:55: added filters and sort in GS, fixed multiple issues. + mobile fix try #2";
 
 let LIBRARY = [];
 
@@ -5861,13 +5861,22 @@ function bindTrackListFade() {
   let ticking = false;
   /** True while a finger/stylus is actively on the scroller (not during fling). */
   let pointerDown = false;
+  /**
+   * When non-null, force scroller.scrollTop to this value on every scroll frame.
+   * Used after a fling-triggered collapse so residual inertia cannot shoot the list down
+   * while the header height is animating.
+   */
+  let pinScrollY = null;
+  let pinUntil = 0;
 
-  // Track touch so we can kill momentum only when the user already released.
   scroller.addEventListener(
     "pointerdown",
     (e) => {
       if (e.pointerType === "mouse" && e.button !== 0) return;
       pointerDown = true;
+      // User took control again — release any pin
+      pinScrollY = null;
+      pinUntil = 0;
     },
     { passive: true }
   );
@@ -5878,25 +5887,28 @@ function bindTrackListFade() {
   scroller.addEventListener("pointercancel", clearPointer, { passive: true });
   scroller.addEventListener("pointerleave", clearPointer, { passive: true });
 
-  /**
-   * Stop inertial scrolling on iOS/Android after a programmatic scrollTop change.
-   * Without this, releasing during the header collapse animation lets momentum
-   * continue with the new (shorter) header and flings the list far down.
-   */
-  const killMomentum = (targetY) => {
+  /** Hard-stop inertia and keep the list at targetY for ~durationMs. */
+  const pinScroll = (targetY, durationMs = 520) => {
     const y = Math.max(0, targetY);
-    // Force layout + overflow toggle — reliable way to cancel -webkit-overflow-scrolling inertia
+    pinScrollY = y;
+    pinUntil = performance.now() + durationMs;
+
+    // Immediate stop (overflow toggle + webkit scrolling off)
+    const prevWebkit = scroller.style.webkitOverflowScrolling;
     scroller.style.overflowY = "hidden";
+    scroller.style.webkitOverflowScrolling = "auto";
     scroller.scrollTop = y;
     void scroller.offsetHeight;
     scroller.style.overflowY = "";
-    // Re-apply on next frames in case WebKit restarts inertia from the previous velocity
-    requestAnimationFrame(() => {
-      scroller.scrollTop = y;
-      requestAnimationFrame(() => {
-        scroller.scrollTop = y;
-      });
-    });
+    scroller.style.webkitOverflowScrolling = prevWebkit || "";
+
+    // Keep re-asserting for a few frames (WebKit often restarts inertia once)
+    const reassert = (n) => {
+      if (pinScrollY == null) return;
+      scroller.scrollTop = pinScrollY;
+      if (n > 0) requestAnimationFrame(() => reassert(n - 1));
+    };
+    requestAnimationFrame(() => reassert(4));
   };
 
   const tryExpandIfAtTop = () => {
@@ -5910,17 +5922,40 @@ function bindTrackListFade() {
     if (scroller.scrollTop > EXPAND_AT) return;
 
     toggleGameHeaderCollapse();
-    killMomentum(0);
+    pinScroll(0, 480);
     ignoreUntil = performance.now() + 500;
     ignoreDir = -1;
     lastY = 0;
   };
 
   const onScroll = () => {
+    // While pinned, force position every scroll event (catches late inertia ticks)
+    if (pinScrollY != null) {
+      if (performance.now() < pinUntil) {
+        if (Math.abs(scroller.scrollTop - pinScrollY) > 0.5) {
+          scroller.scrollTop = pinScrollY;
+        }
+        lastY = pinScrollY;
+        updateTrackFade();
+        return;
+      }
+      pinScrollY = null;
+      pinUntil = 0;
+    }
+
     if (ticking) return;
     ticking = true;
     requestAnimationFrame(() => {
       ticking = false;
+
+      // Pin may have been set between scroll and rAF
+      if (pinScrollY != null && performance.now() < pinUntil) {
+        scroller.scrollTop = pinScrollY;
+        lastY = pinScrollY;
+        updateTrackFade();
+        return;
+      }
+
       updateTrackFade();
 
       if (!settings.autoCollapseAlbum) {
@@ -5954,12 +5989,12 @@ function bindTrackListFade() {
           toggleGameHeaderCollapse();
 
           if (pointerDown) {
-            // Finger still down: user is controlling the scroll — soft adjust is fine
+            // Finger still down — user is driving the scroll
             scroller.scrollTop = targetY;
           } else {
-            // Released during / before collapse (fling): kill inertia so we don't get
-            // the "shot down the list" jump while the header animates.
-            killMomentum(targetY);
+            // Fling / released: pin for the whole header animation so residual
+            // momentum cannot shoot the list down while height changes.
+            pinScroll(targetY, 520);
           }
 
           ignoreUntil = performance.now() + 500;
@@ -5968,10 +6003,9 @@ function bindTrackListFade() {
           return;
         }
 
-        // expand as soon as you're at the top (no goingUp required)
         if (collapsed && y <= EXPAND_AT) {
           toggleGameHeaderCollapse();
-          killMomentum(0);
+          pinScroll(0, 480);
           ignoreUntil = performance.now() + 500;
           ignoreDir = -1;
           lastY = 0;
@@ -5988,6 +6022,11 @@ function bindTrackListFade() {
     "scrollend",
     () => {
       updateTrackFade();
+      // Clear pin once native scroll has fully settled
+      if (pinScrollY != null && performance.now() >= pinUntil) {
+        pinScrollY = null;
+        pinUntil = 0;
+      }
       tryExpandIfAtTop();
     },
     { passive: true }
