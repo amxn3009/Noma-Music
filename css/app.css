@@ -2129,6 +2129,11 @@ li.queue-item::marker,
   transform: scale(0.97);
 }
 
+.context-menu button.is-pressed {
+  background: rgba(255, 255, 255, 0.12);
+  transform: scale(0.97);
+}
+
 .context-menu .menu-icon {
   width: 18px;
   height: 18px;
@@ -2939,6 +2944,15 @@ body.fs-open .progress-row {
   .primary-btn:active,
   .circle-btn:active {
     transform: scale(0.92) !important;
+  }
+  .context-menu button:hover {
+    background: transparent;
+    transform: none;
+  }
+  .context-menu button.is-pressed,
+  .context-menu button:active {
+    background: rgba(255, 255, 255, 0.12);
+    transform: scale(0.97);
   }
 }
 

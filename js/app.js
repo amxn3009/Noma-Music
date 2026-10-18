@@ -4689,7 +4689,7 @@ function bindLoopMenu() {
     if (e.target.closest("#btn-loop")) return;
     closeLoopMenu();
   });
-  
+
   bindPressMinHold(menu);
 }
 
@@ -6496,7 +6496,7 @@ function pressMinMs(e) {
 
 function bindPressMinHold(root = document) {
     const selector =
-    ".ctrl-btn, .play-btn, #btn-play, .primary-btn, .tab, .back-btn, .settings-btn, .circle-btn, .header-toggle-btn, .fs-back-btn, .confirm-btn, .game-card, .games-view-btn, .games-row-title, #play-all-btn, #shuffle-all-btn, #album-menu-btn, #settings-reset-btn, .gs-tool-btn, .gs-chip";
+    ".ctrl-btn, .play-btn, #btn-play, .primary-btn, .tab, .back-btn, .settings-btn, .circle-btn, .header-toggle-btn, .fs-back-btn, .confirm-btn, .game-card, .games-view-btn, .games-row-title, #play-all-btn, #shuffle-all-btn, #album-menu-btn, #settings-reset-btn, .gs-tool-btn, .gs-chip, .context-menu button, #loop-menu button, [data-loop-delta]";
 
   root.querySelectorAll(selector).forEach((btn) => {
     if (btn.dataset.pressBound === "1") return;
