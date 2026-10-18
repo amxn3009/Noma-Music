@@ -2215,6 +2215,27 @@ body.fs-open .progress-row {
 }
 .loop-badge.hidden { display: none !important; }
 
+/* Loop quick menu — same glass as .context-menu; slightly narrower */
+.loop-menu {
+  width: 200px;
+  z-index: 210;
+}
+
+.loop-menu-title {
+  padding: 10px 14px 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  margin: 0 0 4px;
+}
+
+.loop-menu .loop-menu-label {
+  flex: 1;
+}
+
 /* Settings cog in topbar */
 .topbar {
   /* if not already: */
@@ -2347,7 +2368,7 @@ body.fs-open .progress-row {
   padding: 12px 0;
   border-top: 1px solid rgba(255,255,255,0.06);
 }
-.settings-row:first-of-type { border-top: none; padding-top: 0; }
+
 .settings-row-text {
   display: flex;
   flex-direction: column;
@@ -2496,10 +2517,6 @@ body.fs-open .progress-row {
   gap: 16px;
   padding: 14px 0;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
-}
-.settings-row:first-of-type {
-  border-top: none;
-  padding-top: 0;
 }
 .settings-reset-btn {
   margin-top: 20px;
@@ -5143,4 +5160,32 @@ html.ios-standalone .settings-inner {
 }
 html.ios-standalone .settings-top {
   margin-top: 4px;
+}
+
+/* Settings row dividers (first-of-type is wrong: transition is a <div>) */
+.settings-section .settings-row {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+.settings-section-title + .settings-row {
+  border-top: none;
+  padding-top: 0;
+}
+
+/* Loop menu: open/close from bottom-left */
+.context-menu.loop-menu:not(.hidden) {
+  animation: loopMenuIn 0.26s var(--ease) both !important;
+  transform-origin: bottom left !important;
+}
+.context-menu.loop-menu.is-closing {
+  animation: loopMenuOut 0.19s var(--ease) both !important;
+  transform-origin: bottom left !important;
+  pointer-events: none;
+}
+@keyframes loopMenuIn {
+  from { opacity: 0; transform: translateY(10px) scale(0.96); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes loopMenuOut {
+  from { opacity: 1; transform: none; }
+  to   { opacity: 0; transform: translateY(10px) scale(0.96); }
 }

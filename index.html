@@ -372,6 +372,40 @@
             inputmode="numeric"
           >
         </label>
+        
+       <label class="settings-row" for="setting-loop-step-plus">
+          <div class="settings-row-text">
+            <span class="settings-label">Loop-Menü: + Schritt</span>
+            <span class="settings-hint">Wie viele Loops „+“ im Loop-Menü addiert (1–20)</span>
+          </div>
+          <input
+            id="setting-loop-step-plus"
+            class="settings-number"
+            type="number"
+            min="1"
+            max="20"
+            step="1"
+            value="1"
+            inputmode="numeric"
+          >
+        </label>
+
+        <label class="settings-row" for="setting-loop-step-minus">
+          <div class="settings-row-text">
+            <span class="settings-label">Loop-Menü: − Schritt</span>
+            <span class="settings-hint">Wie viele Loops „−“ im Loop-Menü entfernt (1–20)</span>
+          </div>
+          <input
+            id="setting-loop-step-minus"
+            class="settings-number"
+            type="number"
+            min="1"
+            max="20"
+            step="1"
+            value="1"
+            inputmode="numeric"
+          >
+        </label>
 
         <div class="settings-row">
           <div class="settings-row-text">
@@ -478,6 +512,23 @@
     <button data-action="shuffle-into" type="button" class="ctx-album-only hidden">
       <svg class="menu-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
       In Queue mischen
+    </button>
+  </div>
+
+  <!-- Loop count quick menu (only when loop ×N mode is active) -->
+  <div id="loop-menu" class="context-menu loop-menu hidden" role="menu" aria-hidden="true">
+    <div class="loop-menu-title">Loop Menü</div>
+    <button type="button" data-loop-delta="minus" role="menuitem">
+      <svg class="menu-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M19 13H5v-2h14v2z"/>
+      </svg>
+      <span class="loop-menu-label" id="loop-menu-minus-label">1 Loop</span>
+    </button>
+    <button type="button" data-loop-delta="plus" role="menuitem">
+      <svg class="menu-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+      </svg>
+      <span class="loop-menu-label" id="loop-menu-plus-label">1 Loop</span>
     </button>
   </div>
 

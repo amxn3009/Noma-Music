@@ -2,7 +2,7 @@ import { Bfstm } from './bfstm.js';
 import { Kawarp } from 'https://cdn.jsdelivr.net/npm/@kawarp/core@1.3.1/+esm';
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = "18.10.26, 16:55: added filters and sort in GS, fixed multiple issues. + mobile fix try #2";
+const APP_VERSION = "18.10.26, added loop menu";
 
 let LIBRARY = [];
 
@@ -23,9 +23,11 @@ const state = {
 const SETTINGS_KEY = "noma-settings-v1";
 const DEFAULT_SETTINGS = {
   loopTimes: 2,       // 1-99
+  loopStepPlus: 1,    // 1-20 — loops added by loop menu "+"
+  loopStepMinus: 1,   // 1-20 — loops removed by loop menu "−"
   transitionSec: 10,   // 0 | 5 | 10
   volume: 0.5,          // 0-1
-  normalizeVolume: false, // quieter tracks boosted toward same level
+  normalizeVolume: true, // quieter tracks boosted toward same level
   queueLoop: true,      // after last track: restart queue vs stop
   bgMode: "kawarp", // "kawarp" | "css" — switch later in settings
   autoCollapseAlbum: true, // collapse album header when scrolling down
@@ -104,6 +106,8 @@ function loadSettings() {
     if (!raw) return;
     const parsed = JSON.parse(raw);
     settings.loopTimes = clampInt(parsed.loopTimes, 1, 99, 2);
+    settings.loopStepPlus = clampInt(parsed.loopStepPlus, 1, 20, DEFAULT_SETTINGS.loopStepPlus);
+    settings.loopStepMinus = clampInt(parsed.loopStepMinus, 1, 20, DEFAULT_SETTINGS.loopStepMinus);
     settings.transitionSec = [0, 5, 10].includes(parsed.transitionSec)
       ? parsed.transitionSec
       : 10;
@@ -1977,6 +1981,8 @@ function showVolumeSlider() {
 
 function toggleFullscreen() {
   closeSleepPanel();
+  if (typeof hideContextMenu === "function") hideContextMenu();
+  if (typeof closeLoopMenu === "function") closeLoopMenu();
 
   const fs = $("#fullscreen-player");
   const btnFs = $("#btn-fullscreen");
@@ -2248,6 +2254,7 @@ async function init() {
   bindClearQueueConfirm();
   bindFullscreen();
   bindContextMenu();
+  bindLoopMenu();
   bindGameHeaderToggle();
   updatePlayerUI();
   bindVolume();
@@ -3303,6 +3310,7 @@ function bindGlobalSearchUI() {
     // Close other popovers
     if (typeof hideContextMenu === "function") hideContextMenu();
     if (typeof closeSleepPanel === "function") closeSleepPanel();
+    if (typeof closeLoopMenu === "function") closeLoopMenu();
 
     if (which === "filter") {
       if (sortP && !sortP.classList.contains("hidden")) closeGsPanel(sortP);
@@ -4514,6 +4522,173 @@ function toggleLoop() {
       finishTransition();
     }, (timeToFadeStart + Math.max(0, fadeSec)) * 1000 + 40);
   }
+}
+
+// ── Loop count quick menu (right-click / long-press on #btn-loop in count mode) ──
+let loopMenuCloseTimer = null;
+
+function updateLoopMenuLabels() {
+  const plus = $("#loop-menu-plus-label");
+  const minus = $("#loop-menu-minus-label");
+  const p = settings.loopStepPlus || 1;
+  const m = settings.loopStepMinus || 1;
+  if (plus) plus.textContent = `${p} Loop${p === 1 ? "" : "s"}`;
+  if (minus) minus.textContent = `${m} Loop${m === 1 ? "" : "s"}`;
+}
+
+function closeLoopMenu() {
+  const menu = $("#loop-menu");
+  if (!menu || menu.classList.contains("hidden") || menu.classList.contains("is-closing")) return;
+  menu.classList.add("is-closing");
+  menu.setAttribute("aria-hidden", "true");
+  clearTimeout(loopMenuCloseTimer);
+  loopMenuCloseTimer = setTimeout(() => {
+    menu.classList.add("hidden");
+    menu.classList.remove("is-closing");
+  }, 190);
+}
+
+function adjustLoopsRemaining(delta) {
+  if (state.loopMode !== "count") return;
+  const next = Math.min(99, Math.max(0, (state.loopsRemaining || 0) + delta));
+  state.loopsRemaining = next;
+  updatePlayerUI();
+}
+
+function showLoopMenu(x, y) {
+  if (state.loopMode !== "count") return;
+  const menu = $("#loop-menu");
+  const btn = $("#btn-loop");
+  if (!menu) return;
+
+  // Only one menu on screen
+  if (typeof hideContextMenu === "function") hideContextMenu();
+  if (typeof closeSleepPanel === "function") closeSleepPanel();
+  $("#gs-filter-panel")?.classList.add("hidden");
+  $("#gs-filter-panel")?.classList.remove("is-closing");
+  $("#gs-sort-panel")?.classList.add("hidden");
+  $("#gs-sort-panel")?.classList.remove("is-closing");
+
+  updateLoopMenuLabels();
+
+  clearTimeout(loopMenuCloseTimer);
+  menu.classList.remove("is-closing", "hidden");
+  menu.setAttribute("aria-hidden", "false");
+  menu.style.animation = "none";
+  void menu.offsetWidth;
+  menu.style.animation = "";
+
+  const menuW = menu.offsetWidth || 200;
+  const menuH = menu.offsetHeight || 120;
+  const pad = 8;
+
+  let left;
+  let top;
+  if (btn) {
+    const r = btn.getBoundingClientRect();
+    // Sit above the button, shifted a bit further right
+    left = r.left + 28;
+    top = r.top - menuH - pad;
+    if (top < pad) {
+      top = r.bottom + pad;
+    }
+  } else {
+    left = x;
+    top = y - menuH - pad;
+    if (top < pad) top = y + pad;
+  }
+
+  left = Math.max(pad, Math.min(left, window.innerWidth - menuW - pad));
+  top = Math.max(pad, Math.min(top, window.innerHeight - menuH - pad));
+
+  menu.style.left = `${left}px`;
+  menu.style.top = `${top}px`;
+
+  armClickSuppress?.(500);
+}
+
+function bindLoopMenu() {
+  const btn = $("#btn-loop");
+  const menu = $("#loop-menu");
+  if (!btn || !menu || btn.dataset.loopMenuBound === "1") return;
+  btn.dataset.loopMenuBound = "1";
+
+  menu.querySelectorAll("[data-loop-delta]").forEach((b) => {
+    b.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (state.loopMode !== "count") {
+        closeLoopMenu();
+        return;
+      }
+      const which = b.dataset.loopDelta;
+      if (which === "plus") {
+        adjustLoopsRemaining(settings.loopStepPlus || 1);
+      } else if (which === "minus") {
+        adjustLoopsRemaining(-(settings.loopStepMinus || 1));
+      }
+      // keep menu open
+    });
+  });
+
+  // Desktop right-click
+  btn.addEventListener("contextmenu", (e) => {
+    if (state.loopMode !== "count") return;
+    e.preventDefault();
+    e.stopPropagation();
+    showLoopMenu(e.clientX, e.clientY);
+  });
+
+  // Mobile long-press
+  let lpTimer = null;
+  let lpMoved = false;
+  btn.addEventListener(
+    "pointerdown",
+    (e) => {
+      if (e.pointerType === "mouse") return;
+      if (state.loopMode !== "count") return;
+      lpMoved = false;
+      const x = e.clientX;
+      const y = e.clientY;
+      lpTimer = setTimeout(() => {
+        lpTimer = null;
+        if (lpMoved) return;
+        showLoopMenu(x, y);
+        armClickSuppress?.(600);
+      }, 480);
+    },
+    { passive: true }
+  );
+  btn.addEventListener(
+    "pointermove",
+    (e) => {
+      if (!lpTimer) return;
+      if (Math.abs(e.movementX) + Math.abs(e.movementY) > 6) {
+        lpMoved = true;
+        clearTimeout(lpTimer);
+        lpTimer = null;
+      }
+    },
+    { passive: true }
+  );
+  const clearLp = () => {
+    if (lpTimer) {
+      clearTimeout(lpTimer);
+      lpTimer = null;
+    }
+  };
+  btn.addEventListener("pointerup", clearLp, { passive: true });
+  btn.addEventListener("pointercancel", clearLp, { passive: true });
+  btn.addEventListener("pointerleave", clearLp, { passive: true });
+
+  // Outside click closes (same pattern as context menu)
+  document.addEventListener("click", (e) => {
+    if (performance.now() < (typeof suppressDocClickUntil !== "undefined" ? suppressDocClickUntil : 0))
+      return;
+    if (e.target.closest("#loop-menu")) return;
+    if (e.target.closest("#btn-loop")) return;
+    closeLoopMenu();
+  });
 }
 
 function updatePlayerUI() {
@@ -6084,6 +6259,7 @@ function showContextMenu(x, y, payload, anchorEl = null) {
   $("#gs-sort-panel")?.classList.add("hidden");
   $("#gs-sort-panel")?.classList.remove("is-closing");
   if (typeof closeSleepPanel === "function") closeSleepPanel();
+  if (typeof closeLoopMenu === "function") closeLoopMenu();
   contextMenuAnchor = anchorEl || null;
 
   // Header: cover + title + subtitle
@@ -6572,6 +6748,22 @@ function bindSettings() {
     e.target.value = e.target.value.replace(/[^\d]/g, "").slice(0, 2);
   });
 
+    const bindLoopStep = (id, key) => {
+    const el = $(id);
+    if (!el) return;
+    el.addEventListener("change", (e) => {
+      settings[key] = clampInt(e.target.value, 1, 20, DEFAULT_SETTINGS[key]);
+      e.target.value = String(settings[key]);
+      saveSettings();
+      updateLoopMenuLabels();
+    });
+    el.addEventListener("input", (e) => {
+      e.target.value = e.target.value.replace(/[^\d]/g, "").slice(0, 2);
+    });
+  };
+  bindLoopStep("#setting-loop-step-plus", "loopStepPlus");
+  bindLoopStep("#setting-loop-step-minus", "loopStepMinus");
+
   const transWrap = $("#setting-transition-wrap");
   const transBtn = $("#setting-transition-btn");
   const transMenu = $("#setting-transition-menu");
@@ -6650,11 +6842,17 @@ function syncSettingsForm() {
   const loopInput = $("#setting-loop-times");
   if (loopInput) loopInput.value = String(settings.loopTimes);
 
-  const qLoop = $("#setting-queue-loop");
-  if (qLoop) qLoop.checked = !!settings.queueLoop;
+  const stepPlus = $("#setting-loop-step-plus");
+  if (stepPlus) stepPlus.value = String(settings.loopStepPlus);
+  const stepMinus = $("#setting-loop-step-minus");
+  if (stepMinus) stepMinus.value = String(settings.loopStepMinus);
 
   const label = $("#setting-transition-label");
   if (label) label.textContent = `${settings.transitionSec} s`;
+
+  const qLoop = $("#setting-queue-loop");
+  if (qLoop) qLoop.checked = !!settings.queueLoop;
+
 
   const norm = $("#setting-normalize-volume");
   if (norm) norm.checked = !!settings.normalizeVolume;
@@ -7034,6 +7232,7 @@ function bindSleepTimer() {
       panel?.classList.contains("hidden") || panel?.classList.contains("is-closing");
     if (opening) {
       if (typeof hideContextMenu === "function") hideContextMenu();
+      if (typeof closeLoopMenu === "function") closeLoopMenu();
       $("#gs-filter-panel")?.classList.add("hidden");
       $("#gs-filter-panel")?.classList.remove("is-closing");
       $("#gs-sort-panel")?.classList.add("hidden");
@@ -7113,6 +7312,7 @@ function bindSleepTimer() {
 
   document.addEventListener("click", (e) => {
     if (e.target.closest(".sleep-wrap") || e.target.closest("#sleep-panel")) return;
+    if (typeof closeLoopMenu === "function") closeLoopMenu();
     closeSleepPanel();
   });
 
