@@ -4689,6 +4689,8 @@ function bindLoopMenu() {
     if (e.target.closest("#btn-loop")) return;
     closeLoopMenu();
   });
+  
+  bindPressMinHold(menu);
 }
 
 function updatePlayerUI() {
