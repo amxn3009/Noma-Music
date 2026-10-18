@@ -2690,7 +2690,7 @@ body.fs-open .progress-row {
   position: relative;
   cursor: pointer;
   flex-shrink: 0;
-  transition: background 0.15s;
+  transition: background 0.28s cubic-bezier(0.34, 1.45, 0.64, 1);
 }
 .settings-toggle::after {
   content: "";
@@ -2701,13 +2701,20 @@ body.fs-open .progress-row {
   height: 18px;
   border-radius: 50%;
   background: #fff;
-  transition: transform 0.15s;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+  transition: transform 0.32s cubic-bezier(0.34, 1.55, 0.64, 1);
 }
 .settings-toggle:checked {
   background: var(--accent);
 }
 .settings-toggle:checked::after {
   transform: translateX(18px);
+}
+.settings-toggle:active::after {
+  transform: scale(0.92);
+}
+.settings-toggle:checked:active::after {
+  transform: translateX(18px) scale(0.92);
 }
 
 
@@ -4105,18 +4112,23 @@ body.games-cat-open .global-search-wrap {
   opacity: 0.85;
 }
 .gs-menu {
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0 !important;
+  border-radius: 50%;
   color: var(--muted);
-  font-size: 1.1rem;
+  font-size: 1.15rem;
   line-height: 1;
-  display: grid;
+  display: grid !important;
   place-items: center;
   background: transparent;
   border: none;
   cursor: pointer;
+  flex-shrink: 0;
   transition: color 0.15s, background 0.15s;
+  transform: translateY(0.5px); /* optical center for ⋮ */
 }
 .gs-menu:hover {
   color: var(--text);
@@ -4861,3 +4873,265 @@ body.fs-closing-layout .fs-queue {
 .player-left {
   cursor: pointer;
 }
+
+/* Match right-side queue / FS / minimize to center transport icons */
+.player-right .ctrl-btn {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 !important;
+  display: grid;
+  place-items: center;
+  font-size: 1.25rem;
+  line-height: 1;
+}
+.player-right .ctrl-btn .ctrl-img,
+.player-right .ctrl-btn .icon {
+  width: 22px;
+  height: 22px;
+}
+
+.games-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1 1 auto;
+  width: 100%;
+}
+
+.gs-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  margin-left: auto; /* → right side of the sticky row */
+}
+.gs-toolbar.hidden { display: none !important; }
+
+/* Search mode: title left, tools right */
+body.search-mode .games-page-sticky {
+  width: 100%;
+}
+body.search-mode .games-title-row,
+body.search-mode #games-page-title {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+body.search-mode .gs-toolbar {
+  margin-left: auto;
+}
+
+.gs-tool-btn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--muted);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition:
+    transform 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+    background 0.18s ease,
+    color 0.15s;
+}
+.gs-tool-btn:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.1);
+}
+.gs-tool-btn.is-pressed,
+.gs-tool-btn:active {
+  transform: scale(0.9);
+  background: rgba(255, 255, 255, 0.14);
+  color: var(--text);
+}
+
+/* Glass panels — same language as context-menu / sleep-panel */
+.gs-tool-wrap {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.gs-pop-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: auto;
+  right: 0;
+  z-index: 40;
+  min-width: 280px;
+  width: min(300px, 92vw);
+  max-width: min(300px, 92vw);
+  padding: 12px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background-color: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 16px 50px rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  transform: none;
+  transform-origin: top right;
+}
+
+.gs-pop-panel.hidden {
+  display: none !important;
+}
+
+.gs-pop-panel:not(.hidden) {
+  animation: gsPanelIn 0.26s var(--ease) both;
+}
+.gs-pop-panel.is-closing {
+  animation: gsPanelOut 0.19s var(--ease) both;
+  pointer-events: none;
+}
+
+@keyframes gsPanelIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes gsPanelOut {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.96);
+  }
+}
+
+.gs-pop-label {
+  width: 100%;
+  margin: 4px 0 0;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.gs-chip {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition:
+    background 0.22s var(--ease),
+    color 0.2s ease,
+    border-color 0.22s ease,
+    transform 0.22s cubic-bezier(0.34, 1.45, 0.64, 1),
+    box-shadow 0.22s ease;
+}
+.gs-chip.is-pressed,
+.gs-chip:active {
+  transform: scale(0.92);
+  transition-duration: 0.1s;
+}
+.gs-chip.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: rgba(124, 156, 255, 0.35);
+  font-weight: 600;
+  box-shadow: 0 0 0 1px rgba(124, 156, 255, 0.2);
+  transform: scale(1.02);
+}
+.gs-chip.active.is-pressed,
+.gs-chip.active:active {
+  transform: scale(0.94);
+}
+
+.gs-check-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.9rem;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.games-page-sticky {
+  position: relative;
+}
+
+/* Volume icons: crossfade, not hard swap */
+.volume-wrap {
+  position: relative;
+}
+.volume-icon {
+  transition: opacity 0.28s ease, transform 0.28s ease;
+  transform-origin: center;
+}
+
+.volume-wrap .volume-icon-on,
+.volume-wrap .volume-icon-mute {
+  transition: opacity 0.28s ease, transform 0.28s ease;
+}
+/* use opacity, not display:none */
+.volume-icon-on.is-faded {
+  opacity: 0;
+  transform: scale(0.85);
+  pointer-events: none;
+  position: absolute;
+}
+.volume-icon-mute {
+  opacity: 0;
+  transform: scale(0.85);
+  pointer-events: none;
+  position: absolute;
+  left: 8px; /* matches volume-wrap padding roughly — adjust if needed */
+  width: 20px;
+  height: 20px;
+}
+.volume-icon-mute.is-shown {
+  opacity: 1;
+  transform: scale(1);
+  pointer-events: auto;
+  position: static;
+}
+.volume-icon-on:not(.is-faded) {
+  position: static;
+  opacity: 1;
+  transform: scale(1);
+}
+/* When mute is shown, hide on-icon from flow */
+.volume-wrap.is-muted .volume-icon-on {
+  position: absolute;
+  opacity: 0;
+  transform: scale(0.85);
+  pointer-events: none;
+}
+.volume-wrap.is-muted .volume-icon-mute {
+  position: static;
+  opacity: 1;
+  transform: scale(1);
+  pointer-events: auto;
+}
+.volume-wrap:not(.is-muted) .volume-icon-mute {
+  position: absolute;
+  opacity: 0;
+  transform: scale(0.85);
+  pointer-events: none;
+}
+.volume-wrap:not(.is-muted) .volume-icon-on {
+  position: static;
+  opacity: 1;
+  transform: scale(1);
+}
+

@@ -32,6 +32,11 @@ const DEFAULT_SETTINGS = {
 };
 
 const CONSOLE_META = {
+  switch2: {
+    id: "switch2",
+    label: "Nintendo Switch 2",
+    logo: "Assets/Filter/Console/Nintendo_Switch2_Logo.png",
+  },
   ps5: {
     id: "ps5",
     label: "PlayStation 5",
@@ -83,6 +88,13 @@ const albumViewMemory = new Map(); // gameId -> { scrollTop, query }
 let searchReturn = null; // { type: "games"|"game"|"playlists"|"category", ... }
 let globalSearchOpen = false;
 let gamesLocalQuery = "";
+
+const gsPrefs = {
+  hideGames: false,
+  filter: "all", // all | game | franchise | console | composer
+  sort: "relevance", // relevance | az | length | year
+  dir: "desc", // desc default
+};
 
 let settings = { ...DEFAULT_SETTINGS };
 
@@ -1706,6 +1718,10 @@ function setVolume(value) {
     slider.value = masterVolume;
   }
 
+  const wrap = $("#volume-wrap");
+  const muted = masterVolume <= 0.001;
+  wrap?.classList.toggle("is-muted", muted);
+
   const level = effectiveVolume();
   settings.volume = masterVolume;
   saveSettings();
@@ -1884,7 +1900,12 @@ function bindHotkeys() {
         break;
       case "Escape":
         e.preventDefault();
-        // Global search first — must not fall through to “back from game”
+        // Settings wins over search / category / game back
+        if (!$("#settings-view")?.classList.contains("hidden")) {
+          closeSettings();
+          handled = true;
+          break;
+        }
         if (globalSearchOpen) {
           closeGlobalSearch();
           handled = true;
@@ -1895,12 +1916,15 @@ function bindHotkeys() {
           handled = true;
           break;
         }
-        if (!$("#settings-view")?.classList.contains("hidden")) {
-          closeSettings();
-        } else if (!$("#fullscreen-player")?.classList.contains("hidden")) {
+        if (!$("#fullscreen-player")?.classList.contains("hidden")) {
           toggleFullscreen();
-        } else if (state.currentGame && gameDetail.classList.contains("active")) {
+          handled = true;
+          break;
+        }
+        if (state.currentGame && gameDetail.classList.contains("active")) {
           $("#back-to-games")?.click();
+          handled = true;
+          break;
         }
         handled = true;
         break;
@@ -2233,6 +2257,7 @@ async function init() {
   masterVolume = settings.volume ?? 1;
   const volSlider = $("#volume-slider");
   if (volSlider) volSlider.value = String(masterVolume);
+  $("#volume-wrap")?.classList.toggle("is-muted", masterVolume <= 0.001);
   window.addEventListener("resize", onBgResize, { passive: true });
   bindSettings();
   bindSleepTimer();
@@ -2872,6 +2897,9 @@ function openGlobalSearch(clearInput = true) {
   const title = $("#games-page-title");
   if (title) title.textContent = "Suche";
 
+  $("#gs-toolbar")?.classList.remove("hidden");
+  syncGsToolbar();
+
   const input = $("#global-search-input");
   if (clearInput && input) {
     input.value = "";
@@ -2901,6 +2929,10 @@ function closeGlobalSearch() {
 
   const title = $("#games-page-title");
   if (title) title.textContent = "Spiele";
+
+  $("#gs-toolbar")?.classList.add("hidden");
+  $("#gs-filter-panel")?.classList.add("hidden");
+  $("#gs-sort-panel")?.classList.add("hidden");
 
   const ret = searchReturn;
   searchReturn = null;
@@ -2945,24 +2977,93 @@ function runGlobalSearch(raw) {
     return;
   }
 
-  const gamesHit = LIBRARY.filter((g) => {
+  const fieldHit = (g, t) => {
     const consoleLabel = CONSOLE_META[g.console]?.label || "";
     const franchiseLabel = FRANCHISE_META[g.franchise]?.label || "";
+    const f = gsPrefs.filter;
+    if (f === "game")
+      return norm(g.title).includes(q) || norm(g.short).includes(q);
+    if (f === "franchise") return norm(franchiseLabel).includes(q) || norm(g.franchise).includes(q);
+    if (f === "console") return norm(consoleLabel).includes(q) || norm(g.console).includes(q);
+    if (f === "composer") return norm(g.composer).includes(q);
+    // all
     return (
       norm(g.title).includes(q) ||
       norm(g.short).includes(q) ||
       norm(g.composer).includes(q) ||
       norm(consoleLabel).includes(q) ||
-      norm(franchiseLabel).includes(q)
+      norm(franchiseLabel).includes(q) ||
+      (t && norm(t.title).includes(q))
     );
-  });
+  };
 
-  const tracksHit = [];
+  let gamesHit = LIBRARY.filter((g) => fieldHit(g, null));
+  let tracksHit = [];
   for (const g of LIBRARY) {
     for (const t of g.tracks || []) {
-      if (norm(t.title).includes(q)) tracksHit.push({ game: g, track: t });
+      if (gsPrefs.filter === "all") {
+        if (norm(t.title).includes(q) || fieldHit(g, t)) tracksHit.push({ game: g, track: t, score: norm(t.title).includes(q) ? 2 : 1 });
+      } else if (gsPrefs.filter === "game") {
+        if (fieldHit(g, null) && norm(t.title).length >= 0) {
+          // show tracks of matching games only when filter is game + query matches game
+          if (fieldHit(g, null)) tracksHit.push({ game: g, track: t, score: 1 });
+        }
+      } else {
+        if (fieldHit(g, t)) tracksHit.push({ game: g, track: t, score: 1 });
+      }
     }
   }
+  // de-dupe tracks when filter=game floods
+  if (gsPrefs.filter === "game") {
+    tracksHit = tracksHit.filter(({ game }) => fieldHit(game, null));
+  }
+
+  const dirMul = gsPrefs.dir === "asc" ? 1 : -1;
+  const yearOf = (g) => Number(g.year ?? g.releaseYear) || 0;
+  const lenOf = (g) => albumTotalSec(g) || 0;
+  const tLen = (t) => (Number.isFinite(t.duration) ? t.duration : 0);
+
+  const sortGames = (arr) => {
+    const a = [...arr];
+    if (gsPrefs.sort === "az") {
+      a.sort((x, y) => dirMul * norm(x.title).localeCompare(norm(y.title)));
+    } else if (gsPrefs.sort === "length") {
+      a.sort((x, y) => dirMul * (lenOf(x) - lenOf(y)));
+    } else if (gsPrefs.sort === "year") {
+      a.sort((x, y) => dirMul * (yearOf(x) - yearOf(y)));
+    } else {
+      // relevance: earlier includes of title first
+      a.sort((x, y) => {
+        const sx = norm(x.title).indexOf(q);
+        const sy = norm(y.title).indexOf(q);
+        const rx = sx < 0 ? 999 : sx;
+        const ry = sy < 0 ? 999 : sy;
+        return rx - ry || norm(x.title).localeCompare(norm(y.title));
+      });
+      if (gsPrefs.dir === "asc") a.reverse();
+    }
+    return a;
+  };
+
+  const sortTracks = (arr) => {
+    const a = [...arr];
+    if (gsPrefs.sort === "az") {
+      a.sort((x, y) => dirMul * norm(x.track.title).localeCompare(norm(y.track.title)));
+    } else if (gsPrefs.sort === "length") {
+      a.sort((x, y) => dirMul * (tLen(x.track) - tLen(y.track)));
+    } else if (gsPrefs.sort === "year") {
+      a.sort((x, y) => dirMul * (yearOf(x.game) - yearOf(y.game)));
+    } else {
+      a.sort((x, y) => (y.score || 0) - (x.score || 0) || norm(x.track.title).localeCompare(norm(y.track.title)));
+      if (gsPrefs.dir === "asc") a.reverse();
+    }
+    return a;
+  };
+
+  gamesHit = sortGames(gamesHit);
+  tracksHit = sortTracks(tracksHit);
+
+  const showGames = !gsPrefs.hideGames && gamesHit.length;
 
   const gameRows = gamesHit
     .map((g) => {
@@ -3015,7 +3116,7 @@ function runGlobalSearch(raw) {
 
   box.innerHTML = `
     ${
-      gamesHit.length
+      showGames
         ? `<div class="gs-section"><h3 class="gs-section-title">Spiele</h3><div class="gs-game-list">${gameRows}</div></div>`
         : ""
     }
@@ -3025,7 +3126,7 @@ function runGlobalSearch(raw) {
         : ""
     }
     ${
-      !gamesHit.length && !tracksHit.length
+      !showGames && !tracksHit.length
         ? `<p class="muted gs-empty">Keine Treffer.</p>`
         : ""
     }
@@ -3140,9 +3241,8 @@ function openSearchContextMenu(row, x, y) {
 function bindGlobalSearchUI() {
   const input = $("#global-search-input");
 
-  // typing / focus opens search mode
   input?.addEventListener("focus", () => {
-    if (!globalSearchOpen) openGlobalSearch(false); // false = don't clear value
+    if (!globalSearchOpen) openGlobalSearch(false);
   });
   input?.addEventListener("input", (e) => {
     if (!globalSearchOpen) openGlobalSearch(false);
@@ -3157,6 +3257,110 @@ function bindGlobalSearchUI() {
     }
   });
   $("#global-search-back")?.addEventListener("click", closeGlobalSearch);
+
+  function syncGsToolbar() {
+    const hide = $("#gs-hide-games");
+    if (hide) hide.checked = !!gsPrefs.hideGames;
+    document.querySelectorAll("[data-gs-filter]").forEach((b) => {
+      b.classList.toggle("active", b.dataset.gsFilter === gsPrefs.filter);
+    });
+    document.querySelectorAll("[data-gs-sort]").forEach((b) => {
+      b.classList.toggle("active", b.dataset.gsSort === gsPrefs.sort);
+    });
+    document.querySelectorAll("[data-gs-dir]").forEach((b) => {
+      b.classList.toggle("active", b.dataset.gsDir === gsPrefs.dir);
+    });
+  }
+  window.syncGsToolbar = syncGsToolbar;
+
+  function closeGsPanel(panel) {
+    if (!panel || panel.classList.contains("hidden") || panel.classList.contains("is-closing"))
+      return;
+    panel.classList.add("is-closing");
+    panel.setAttribute("aria-hidden", "true");
+    const done = () => {
+      panel.classList.add("hidden");
+      panel.classList.remove("is-closing");
+      panel.removeEventListener("animationend", done);
+    };
+    panel.addEventListener("animationend", done);
+    setTimeout(done, 220);
+  }
+
+  function openGsPanel(panel) {
+    if (!panel) return;
+    panel.classList.remove("is-closing", "hidden");
+    panel.setAttribute("aria-hidden", "false");
+    // restart open animation
+    panel.style.animation = "none";
+    void panel.offsetWidth;
+    panel.style.animation = "";
+  }
+
+  function toggleGsPanel(which) {
+    const filterP = $("#gs-filter-panel");
+    const sortP = $("#gs-sort-panel");
+    // Close other popovers
+    if (typeof hideContextMenu === "function") hideContextMenu();
+    if (typeof closeSleepPanel === "function") closeSleepPanel();
+
+    if (which === "filter") {
+      if (sortP && !sortP.classList.contains("hidden")) closeGsPanel(sortP);
+      if (filterP?.classList.contains("hidden")) openGsPanel(filterP);
+      else closeGsPanel(filterP);
+    } else {
+      if (filterP && !filterP.classList.contains("hidden")) closeGsPanel(filterP);
+      if (sortP?.classList.contains("hidden")) openGsPanel(sortP);
+      else closeGsPanel(sortP);
+    }
+    syncGsToolbar();
+  }
+
+  $("#gs-filter-btn")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    toggleGsPanel("filter");
+  });
+  $("#gs-sort-btn")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    toggleGsPanel("sort");
+  });
+
+  $("#gs-hide-games")?.addEventListener("change", (e) => {
+    gsPrefs.hideGames = !!e.target.checked;
+    runGlobalSearch($("#global-search-input")?.value || "");
+  });
+  document.querySelectorAll("[data-gs-filter]").forEach((b) => {
+    b.addEventListener("click", () => {
+      gsPrefs.filter = b.dataset.gsFilter;
+      syncGsToolbar();
+      runGlobalSearch($("#global-search-input")?.value || "");
+    });
+  });
+  document.querySelectorAll("[data-gs-sort]").forEach((b) => {
+    b.addEventListener("click", () => {
+      gsPrefs.sort = b.dataset.gsSort;
+      syncGsToolbar();
+      runGlobalSearch($("#global-search-input")?.value || "");
+    });
+  });
+  document.querySelectorAll("[data-gs-dir]").forEach((b) => {
+    b.addEventListener("click", () => {
+      gsPrefs.dir = b.dataset.gsDir;
+      syncGsToolbar();
+      runGlobalSearch($("#global-search-input")?.value || "");
+    });
+  });
+
+  document.addEventListener("click", (e) => {
+    if (e.target.closest("#gs-toolbar, #gs-filter-panel, #gs-sort-panel")) return;
+    closeGsPanel($("#gs-filter-panel"));
+    closeGsPanel($("#gs-sort-panel"));
+  });
+
+  // press animation on filter/sort buttons
+  bindPressMinHold(document.getElementById("gs-toolbar") || document);
+  bindPressMinHold(document.getElementById("gs-filter-panel") || document);
+  bindPressMinHold(document.getElementById("gs-sort-panel") || document);
 }
 
 function bindGamesLocalSearch() {
@@ -5002,16 +5206,15 @@ function bindQueuePointerDrag(list) {
     scrollRaf = requestAnimationFrame(tick);
   }
 
-  function clearDrag() {
+    function clearDrag() {
     stopAutoScroll();
     clearGapVisual();
     list.querySelectorAll(".queue-item").forEach((el) => {
       el.classList.remove("dragging");
     });
-    if (ghost) {
-      ghost.remove();
-      ghost = null;
-    }
+    // remove ALL ghosts (stale ones from lost pointer events)
+    document.querySelectorAll(".queue-drag-ghost").forEach((g) => g.remove());
+    ghost = null;
     dragFrom = -1;
     queueDragFrom = -1;
     queueDragging = false;
@@ -5041,6 +5244,8 @@ function bindQueuePointerDrag(list) {
       lastDropIndex = -2;
       row.classList.add("dragging");
 
+      document.querySelectorAll(".queue-drag-ghost").forEach((g) => g.remove());
+      ghost = null;
       ghost = makeGhost(row);
       moveGhost(e.clientX, e.clientY);
       startAutoScroll();
@@ -5091,6 +5296,12 @@ function bindQueuePointerDrag(list) {
     });
 
     handle.addEventListener("pointercancel", () => {
+      clearDrag();
+      renderQueue();
+    });
+
+    handle.addEventListener("lostpointercapture", () => {
+      if (dragFrom < 0) return;
       clearDrag();
       renderQueue();
     });
@@ -5644,7 +5855,7 @@ function bindTrackListFade() {
   const EXPAND_AT = 2;
   let lastY = 0;
   let ignoreUntil = 0;
-  let ignoreDir = 0; // +1 ignore further collapse, -1 ignore further expand
+  let ignoreDir = 0;
   let ticking = false;
 
   const tryExpandIfAtTop = () => {
@@ -5659,7 +5870,7 @@ function bindTrackListFade() {
 
     toggleGameHeaderCollapse();
     scroller.scrollTop = 0;
-    ignoreUntil = performance.now() + 500;
+    ignoreUntil = performance.now() + 480;
     ignoreDir = -1;
     lastY = 0;
   };
@@ -5697,21 +5908,21 @@ function bindTrackListFade() {
 
       if (!animating && !locked) {
         if (!collapsed && y >= COLLAPSE_AT && goingDown) {
-          const h0 = sticky.offsetHeight;
+          // Keep CSS collapse animation; only briefly stop momentum (not full freeze)
+          const y0 = y;
           toggleGameHeaderCollapse();
-          const delta = Math.max(0, h0 - sticky.offsetHeight);
-          scroller.scrollTop = Math.max(COLLAPSE_AT, y - delta);
-          ignoreUntil = performance.now() + 500;
+          // Approximate height drop of compact header (~cover 200→48 + meta)
+          scroller.scrollTop = Math.max(COLLAPSE_AT, y0 - 140);
+          ignoreUntil = performance.now() + 480;
           ignoreDir = 1;
           lastY = scroller.scrollTop;
           return;
         }
 
-        // expand as soon as you're at the top (no goingUp required)
         if (collapsed && y <= EXPAND_AT) {
           toggleGameHeaderCollapse();
           scroller.scrollTop = 0;
-          ignoreUntil = performance.now() + 500;
+          ignoreUntil = performance.now() + 480;
           ignoreDir = -1;
           lastY = 0;
           return;
@@ -5778,6 +5989,12 @@ function showContextMenu(x, y, payload, anchorEl = null) {
   }
 
   contextTrack = payload;
+    // Close other dropdowns so only one menu is open
+  $("#gs-filter-panel")?.classList.add("hidden");
+  $("#gs-filter-panel")?.classList.remove("is-closing");
+  $("#gs-sort-panel")?.classList.add("hidden");
+  $("#gs-sort-panel")?.classList.remove("is-closing");
+  if (typeof closeSleepPanel === "function") closeSleepPanel();
   contextMenuAnchor = anchorEl || null;
 
   // Header: cover + title + subtitle
@@ -5925,22 +6142,28 @@ function bindContextMenu() {
       openNowPlayingContext(e.clientX, e.clientY);
     });
 
-    // FS cover / title / game → play / pause (not player-left)
     const isFsArt =
       el.id === "fs-cover" || el.id === "fs-title" || el.id === "fs-game";
-    if (isFsArt) {
+    const isPlayerLeft =
+      el.id === "player-left" || el.classList?.contains("player-left");
+
+    if (isFsArt || isPlayerLeft) {
       el.style.cursor = "pointer";
       el.addEventListener("click", (e) => {
         if (el.dataset.suppressClick === "1") {
           delete el.dataset.suppressClick;
           return;
         }
-        // ignore if a context menu was just opened
-        if (performance.now() < (typeof suppressDocClickUntil !== "undefined" ? suppressDocClickUntil : 0)) {
-          return;
+        if (performance.now() < suppressDocClickUntil) return;
+        if (isFsArt) {
+          e.preventDefault();
+          togglePlay();
+        } else if (isPlayerLeft) {
+          e.preventDefault();
+          if ($("#fullscreen-player")?.classList.contains("hidden")) {
+            toggleFullscreen();
+          }
         }
-        e.preventDefault();
-        togglePlay();
       });
     }
 
@@ -5958,7 +6181,7 @@ function bindContextMenu() {
           if (lpMoved) return;
           openNowPlayingContext(x, y);
           el.dataset.suppressClick = "1";
-          if (typeof armClickSuppress === "function") armClickSuppress(600);
+          suppressDocClickUntil = performance.now() + 600;
         }, 480);
       },
       { passive: true }
@@ -6005,8 +6228,8 @@ function pressMinMs(e) {
 }
 
 function bindPressMinHold(root = document) {
-  const selector =
-    ".ctrl-btn, .play-btn, #btn-play, .primary-btn, .tab, .back-btn, .settings-btn, .circle-btn, .header-toggle-btn, .fs-back-btn, .confirm-btn, .game-card, .games-view-btn, .games-row-title, #play-all-btn, #shuffle-all-btn, #album-menu-btn, #settings-reset-btn";
+    const selector =
+    ".ctrl-btn, .play-btn, #btn-play, .primary-btn, .tab, .back-btn, .settings-btn, .circle-btn, .header-toggle-btn, .fs-back-btn, .confirm-btn, .game-card, .games-view-btn, .games-row-title, #play-all-btn, #shuffle-all-btn, #album-menu-btn, #settings-reset-btn, .gs-tool-btn, .gs-chip";
 
   root.querySelectorAll(selector).forEach((btn) => {
     if (btn.dataset.pressBound === "1") return;
@@ -6721,6 +6944,11 @@ function bindSleepTimer() {
     const opening =
       panel?.classList.contains("hidden") || panel?.classList.contains("is-closing");
     if (opening) {
+      if (typeof hideContextMenu === "function") hideContextMenu();
+      $("#gs-filter-panel")?.classList.add("hidden");
+      $("#gs-filter-panel")?.classList.remove("is-closing");
+      $("#gs-sort-panel")?.classList.add("hidden");
+      $("#gs-sort-panel")?.classList.remove("is-closing");
       clearTimeout(sleepPanelCloseTimer);
       panel.classList.remove("is-closing");
       updateSleepEndLabel();

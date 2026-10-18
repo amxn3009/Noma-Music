@@ -112,7 +112,7 @@
 
     <main class="content">
 <section id="tab-games" class="tab-panel active">
-  <div class="games-page-top">
+    <div class="games-page-top">
     <div class="search-back-row" id="search-back-row">
       <button type="button" id="global-search-back" class="back-btn">
         <img src="Assets/Common/Back1.png" alt="" class="back-icon">
@@ -120,9 +120,51 @@
       </button>
     </div>
 
-    <!-- sticky: Spiele + Konsole/Franchise + local search -->
-        <div class="games-page-sticky" id="games-page-sticky">
-      <h1 class="page-title" id="games-page-title">Spiele</h1>
+        <div class="games-page-sticky">
+      <div class="games-title-row" id="games-title-row">
+        <h1 class="page-title" id="games-page-title">Spiele</h1>
+
+        <div class="gs-toolbar hidden" id="gs-toolbar">
+          <div class="gs-tool-wrap">
+            <button type="button" id="gs-filter-btn" class="gs-tool-btn" title="Filter" aria-label="Filter">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
+                <path d="M4.25 5.61C6.27 8.2 10 13 10 13v6c0 .55.45 1 1 1h2c.55 0 1-.45 1-1v-6s3.72-4.8 5.74-7.39C20.5 4.95 20.03 4 19.2 4H4.79c-.83 0-1.3.95-.54 1.61z"/>
+              </svg>
+            </button>
+            <div id="gs-filter-panel" class="gs-pop-panel hidden" role="dialog" aria-hidden="true">
+              <p class="gs-pop-label">Anzeige</p>
+              <label class="gs-check gs-check-row" for="gs-hide-games">
+                <span>Spiele ausblenden</span>
+                <input id="gs-hide-games" class="settings-toggle" type="checkbox">
+              </label>
+              <p class="gs-pop-label">Filtern nach</p>
+              <button type="button" class="gs-chip" data-gs-filter="all">Alles</button>
+              <button type="button" class="gs-chip" data-gs-filter="game">Spiel</button>
+              <button type="button" class="gs-chip" data-gs-filter="franchise">Franchise</button>
+              <button type="button" class="gs-chip" data-gs-filter="console">Konsole</button>
+              <button type="button" class="gs-chip" data-gs-filter="composer">Komponist</button>
+            </div>
+          </div>
+
+          <div class="gs-tool-wrap">
+            <button type="button" id="gs-sort-btn" class="gs-tool-btn" title="Sortierung" aria-label="Sortierung">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
+                <path d="M3 18h6v-2H3v2zM3 6v2h18V6H3zm0 7h12v-2H3v2z"/>
+              </svg>
+            </button>
+            <div id="gs-sort-panel" class="gs-pop-panel hidden" role="dialog" aria-hidden="true">
+              <p class="gs-pop-label">Sortieren</p>
+              <button type="button" class="gs-chip" data-gs-sort="relevance">Relevanz</button>
+              <button type="button" class="gs-chip" data-gs-sort="az">A–Z</button>
+              <button type="button" class="gs-chip" data-gs-sort="length">Länge</button>
+              <button type="button" class="gs-chip" data-gs-sort="year">Erscheinungsjahr</button>
+              <p class="gs-pop-label">Richtung</p>
+              <button type="button" class="gs-chip" data-gs-dir="desc">Absteigend</button>
+              <button type="button" class="gs-chip" data-gs-dir="asc">Aufsteigend</button>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <div class="games-page-sticky-right">
         <div class="games-view-toggle">
@@ -283,17 +325,19 @@
 
       <div class="player-right">
         <div class="volume-wrap" id="volume-wrap" title="Lautstärke">
-          <svg class="volume-icon" viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+          <svg class="volume-icon volume-icon-on" viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
             <path d="M3 10v4h4l5 5V5L7 10H3zm13.5 2c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
-        </svg>
+          </svg>
+          <svg class="volume-icon volume-icon-mute" viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
+            <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v4h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>
+          </svg>
           <input id="volume-slider" class="volume-slider" type="range" min="0" max="1" step="0.01" value="1">
-      </div>
+        </div>
         <button id="btn-queue" class="ctrl-btn" title="Warteschlange">☰</button>
         <button id="btn-fullscreen" class="ctrl-btn" title="Vollbild">⛶</button>
         <button id="btn-minimize" class="ctrl-btn hidden" title="Verkleinern">
           <img src="Assets/MusicPlayer/Minimize.png" alt="" class="ctrl-img">
         </button>
-      </div>
     </footer>
   </div>
 
@@ -363,16 +407,17 @@
           <input id="setting-normalize-volume" class="settings-toggle" type="checkbox">
         </label>
 
-      <label class="settings-row" for="setting-auto-collapse">
-            <div class="settings-row-text">
-              <span class="settings-label">Album-Header automatisch einklappen</span>
-              <span class="settings-hint">Beim Runterscrollen automatisch einklappen</span>
-            </div>
-            <input id="setting-auto-collapse" class="settings-toggle" type="checkbox" checked>
-          </label>
+      </div>
 
-
-
+      <div class="settings-section">
+        <h2 class="settings-section-title">Albums</h2>
+        <label class="settings-row" for="setting-auto-collapse">
+          <div class="settings-row-text">
+            <span class="settings-label">Album-Header automatisch einklappen</span>
+            <span class="settings-hint">Beim Runterscrollen automatisch einklappen</span>
+          </div>
+          <input id="setting-auto-collapse" class="settings-toggle" type="checkbox" checked>
+        </label>
       </div>
 
       <button id="settings-reset" class="settings-reset-btn" type="button">Zurücksetzen auf Standard</button>
