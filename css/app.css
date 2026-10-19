@@ -4820,7 +4820,9 @@ body.fs-queue-open #queue-panel {
 
 .fs-queue-clear,
 .fs-queue-collapse,
-.fs-queue-close {
+.fs-queue-close,
+.fs-queue-loop,
+#fs-queue-loop-btn {
   width: 36px;
   height: 36px;
   min-width: 36px;
