@@ -2,7 +2,7 @@ import { Bfstm } from './bfstm.js';
 import { Kawarp } from 'https://cdn.jsdelivr.net/npm/@kawarp/core@1.3.1/+esm';
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = "19.10.26, fixed loop menu, Added ctxt menu Toasts, enhanced queue UX, and polished nav.";
+const APP_VERSION = "19.10.26, fixed loop menu, Added ctxt menu Toasts, enhanced queue UX, and polished nav. #2";
 
 let LIBRARY = [];
 

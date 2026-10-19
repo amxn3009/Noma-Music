@@ -1663,17 +1663,6 @@ body.is-transitioning .time {
   color: var(--muted);
 }
 
-.queue-header-actions .ctrl-btn.active,
-#queue-loop-btn.active,
-#fs-queue-loop-btn.active {
-  color: var(--accent) !important;
-}
-.queue-header-actions .ctrl-btn.active:hover,
-#queue-loop-btn.active:hover,
-#fs-queue-loop-btn.active:hover {
-  color: var(--accent) !important;
-  background: var(--accent-soft);
-}
 
 #queue-close {
   font-size: 1.1rem;
@@ -5292,4 +5281,16 @@ html.ios-standalone .settings-top {
 }
 body.fs-open .noma-toast {
   bottom: calc(var(--player-h) + env(safe-area-inset-bottom, 0px) + 20px);
+}
+
+/* Queue loop: beat .queue-header-actions .ctrl-btn { color: muted } */
+.queue-header-actions .ctrl-btn.active,
+#queue-loop-btn.active,
+#fs-queue-loop-btn.active {
+  color: var(--accent);
+}
+.queue-header-actions .ctrl-btn.active:hover,
+#queue-loop-btn.active:hover,
+#fs-queue-loop-btn.active:hover {
+  color: var(--accent);
 }
