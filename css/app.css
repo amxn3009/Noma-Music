@@ -1646,6 +1646,7 @@ body.is-transitioning .time {
 
 /* Same circular size as expanded FS bar buttons */
 .queue-header-actions .ctrl-btn,
+#queue-loop-btn,
 #queue-clear,
 #queue-close,
 #queue-fs-expand {
@@ -1660,6 +1661,18 @@ body.is-transitioning .time {
   line-height: 1;
   font-size: 1.05rem;
   color: var(--muted);
+}
+
+.queue-header-actions .ctrl-btn.active,
+#queue-loop-btn.active,
+#fs-queue-loop-btn.active {
+  color: var(--accent) !important;
+}
+.queue-header-actions .ctrl-btn.active:hover,
+#queue-loop-btn.active:hover,
+#fs-queue-loop-btn.active:hover {
+  color: var(--accent) !important;
+  background: var(--accent-soft);
 }
 
 #queue-close {
@@ -4803,12 +4816,19 @@ body.fs-queue-open #queue-panel {
 
 .fs-queue-bar {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
   align-items: center;
-  gap: 4px;
+  gap: 8px;
   padding: 4px 6px 6px;
   flex-shrink: 0;
 }
+.fs-queue-bar-left,
+.fs-queue-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .fs-queue-clear,
 .fs-queue-collapse,
 .fs-queue-close {
@@ -5202,4 +5222,74 @@ html.ios-standalone .settings-top {
 @keyframes loopMenuOut {
   from { opacity: 1; transform: none; }
   to   { opacity: 0; transform: translateY(10px) scale(0.96); }
+}
+
+/* Non-blocking toast (queue actions etc.) — optional cover like player-left */
+.noma-toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--player-h) + env(safe-area-inset-bottom, 0px) + 16px);
+  transform: translateX(-50%) translateY(12px);
+  z-index: 9999;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: rgba(20, 20, 20, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 500;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.4);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.22s var(--ease), transform 0.22s var(--ease);
+  max-width: min(360px, calc(100vw - 32px));
+}
+.noma-toast.is-visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+.noma-toast.has-cover {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px 10px 10px;
+  border-radius: 16px;
+  text-align: left;
+}
+.noma-toast-cover {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: #222;
+  flex-shrink: 0;
+}
+.noma-toast-text {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.noma-toast-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.25;
+}
+.noma-toast-sub {
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.25;
+}
+body.fs-open .noma-toast {
+  bottom: calc(var(--player-h) + env(safe-area-inset-bottom, 0px) + 20px);
 }

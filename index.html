@@ -425,14 +425,6 @@
           </div>
         </div>
 
-        <label class="settings-row" for="setting-queue-loop">
-          <div class="settings-row-text">
-            <span class="settings-label">Warteschlange wiederholen</span>
-            <span class="settings-hint">Nach dem letzten Song wieder von vorne (auch beim Überspringen)</span>
-          </div>
-          <input id="setting-queue-loop" class="settings-toggle" type="checkbox" checked>
-        </label>
-
          <label class="settings-row" for="setting-normalize-volume">
           <div class="settings-row-text">
             <span class="settings-label">Lautstärke normalisieren</span>
@@ -464,17 +456,26 @@
   <div class="queue-header">
     <h2>Warteschlange</h2>
 <div class="queue-header-actions">
+
+  <button id="queue-loop-btn" class="ctrl-btn" type="button"
+          title="Warteschlange wiederholen" aria-label="Warteschlange wiederholen" aria-pressed="false">
+    <svg class="icon" viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
+      <path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/>
+    </svg>
+  </button>
+  
+  <button id="queue-clear" class="ctrl-btn" type="button" title="Warteschlange leeren">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+    </svg>
+  </button>
+
   <!-- only visible in fullscreen -->
   <button id="queue-fs-expand" class="ctrl-btn queue-fs-expand" type="button"
           title="Große Warteschlange" aria-label="Große Warteschlange">
     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
          stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
       <polyline points="15 18 9 12 15 6"/>
-    </svg>
-  </button>
-  <button id="queue-clear" class="ctrl-btn" type="button" title="Warteschlange leeren">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
     </svg>
   </button>
   <button id="queue-close" class="ctrl-btn" type="button" title="Schließen">✕</button>
@@ -557,26 +558,37 @@
     </div>
 
 <div id="fs-queue" class="fs-queue" aria-hidden="true">
-  <div class="fs-queue-bar">
+    <div class="fs-queue-bar">
+    <div class="fs-queue-bar-left">
+      <button id="fs-queue-clear" class="ctrl-btn fs-queue-clear" type="button"
+              title="Warteschlange leeren" aria-label="Warteschlange leeren">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+        </svg>
+      </button>
 
-    <!-- Arrow: collapse expanded → small floating -->
-    <button id="fs-queue-collapse" class="ctrl-btn fs-queue-collapse" type="button"
-            title="Kleine Warteschlange" aria-label="Kleine Warteschlange">
-      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
-           stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-        <polyline points="9 18 15 12 9 6"/>
-      </svg>
-    </button>
+      <button id="fs-queue-loop-btn" class="ctrl-btn" type="button"
+              title="Warteschlange wiederholen" aria-label="Warteschlange wiederholen" aria-pressed="false">
+        <svg class="icon" viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
+          <path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/>
+        </svg>
+      </button>
 
-    <button id="fs-queue-clear" class="ctrl-btn fs-queue-clear" type="button"
-            title="Warteschlange leeren" aria-label="Warteschlange leeren">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-        <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
-      </svg>
-    </button>
-    <!-- X: fully close queue -->
-    <button id="fs-queue-close" class="ctrl-btn fs-queue-close" type="button"
-            title="Schließen" aria-label="Warteschlange schließen">✕</button>
+    </div>
+    <div class="fs-queue-bar-right">
+      <!-- Arrow: collapse expanded → small floating -->
+      <button id="fs-queue-collapse" class="ctrl-btn fs-queue-collapse" type="button"
+              title="Kleine Warteschlange" aria-label="Kleine Warteschlange">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+             stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="9 18 15 12 9 6"/>
+        </svg>
+      </button>
+
+      <!-- X: fully close queue -->
+      <button id="fs-queue-close" class="ctrl-btn fs-queue-close" type="button"
+              title="Schließen" aria-label="Warteschlange schließen">✕</button>
+    </div>
   </div>
   <ul id="fs-queue-list" class="fs-queue-list"></ul>
 </div>

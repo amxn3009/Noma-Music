@@ -2,7 +2,7 @@ import { Bfstm } from './bfstm.js';
 import { Kawarp } from 'https://cdn.jsdelivr.net/npm/@kawarp/core@1.3.1/+esm';
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = "18.10.26, added loop menu";
+const APP_VERSION = "19.10.26, fixed loop menu, Added ctxt menu Toasts, enhanced queue UX, and polished nav.";
 
 let LIBRARY = [];
 
@@ -2256,11 +2256,11 @@ async function init() {
   bindContextMenu();
   bindLoopMenu();
   bindGameHeaderToggle();
-  updatePlayerUI();
   bindVolume();
   bindHotkeys();
   bindPressMinHold();
   loadSettings();
+  updatePlayerUI();
   masterVolume = settings.volume ?? 1;
   const volSlider = $("#volume-slider");
   if (volSlider) volSlider.value = String(masterVolume);
@@ -3498,6 +3498,14 @@ function openGame(id) {
       type: "search",
       query: savedSearch,
     };
+  } else if (document.body.classList.contains("games-cat-open")) {
+    // Opened from a console/franchise category → back returns there
+    const browse = $("#games-browse");
+    searchReturn = {
+      type: "category",
+      catKey: browse?.dataset.catOpen || null,
+      catMode: browse?.dataset.catMode || gamesViewMode,
+    };
   }
     // Remember previous album (scroll + its own search), not a global one
   if (state.currentGame && state.currentGame.id !== id) {
@@ -3781,6 +3789,16 @@ function bindTabs() {
       }
       return;
     }
+
+    // Restore category (console / franchise) you opened the game from
+    if (searchReturn?.type === "category" && searchReturn.catKey) {
+      const key = searchReturn.catKey;
+      const mode = searchReturn.catMode || gamesViewMode;
+      searchReturn = null;
+      openCategoryFullscreen(key, mode, { instant: true });
+      return;
+    }
+
     renderGames({ animate: true });
   });
 }
@@ -4524,6 +4542,13 @@ function toggleLoop() {
   }
 }
 
+function toggleQueueLoop() {
+  settings.queueLoop = !settings.queueLoop;
+  saveSettings();
+  updatePlayerUI();
+  showToast(settings.queueLoop ? "Queue-Wiederholung an" : "Queue-Wiederholung aus");
+}
+
 // ── Loop count quick menu (right-click / long-press on #btn-loop in count mode) ──
 let loopMenuCloseTimer = null;
 
@@ -4553,6 +4578,72 @@ function adjustLoopsRemaining(delta) {
   const next = Math.min(99, Math.max(0, (state.loopsRemaining || 0) + delta));
   state.loopsRemaining = next;
   updatePlayerUI();
+
+  // Soft-end was scheduled with the old count — rebuild from current position
+  // (works while playing; while paused the next playBuffer will use the new count)
+  if (transitioning) return;
+  if (!decodedBuffer || !currentSource || useMediaEl) return;
+
+  const duration = decodedBuffer.duration;
+  const loopStart = getLoopStartSec();
+  const wantSoftEnd =
+    (loopStart > 0 || forceFullLoop) &&
+    state.playing &&
+    audioCtx &&
+    currentGain &&
+    !bufferCtxSuspended;
+
+  if (softEndTimer) {
+    clearTimeout(softEndTimer);
+    softEndTimer = null;
+  }
+  if (softEndStartTimer) {
+    clearTimeout(softEndStartTimer);
+    softEndStartTimer = null;
+  }
+  softEndFadeAt = 0;
+  softEndFadeSec = 0;
+  // Invalidate any leftover pause remain times so resume doesn't restore the old schedule
+  softEndRemainMs = 0;
+  softEndStartRemainMs = 0;
+
+  if (!wantSoftEnd) return;
+
+  const offset = getPlaybackPosition();
+  const fadeSec = getTransitionSec();
+  const loopsAfterFirst = Math.max(0, state.loopsRemaining);
+  const loopLen = forceFullLoop
+    ? Math.max(0.001, duration)
+    : Math.max(0.001, duration - loopStart);
+  const timeToFadeStart =
+    Math.max(0.01, duration - offset) + loopsAfterFirst * loopLen;
+
+  softEndFadeAt = audioCtx.currentTime + timeToFadeStart;
+  softEndFadeSec = fadeSec;
+
+  const vol = effectiveVolume();
+  if (fadeSec <= 0) {
+    currentGain.gain.setValueAtTime(0, softEndFadeAt);
+  } else {
+    currentGain.gain.setValueAtTime(vol, softEndFadeAt);
+    currentGain.gain.linearRampToValueAtTime(0, softEndFadeAt + fadeSec);
+  }
+
+  softEndStartTimer = setTimeout(() => {
+    softEndStartTimer = null;
+    if (!state.playing || !currentGain) return;
+    transitioning = true;
+    transitionStartedAt = softEndFadeAt;
+    document.body.classList.add("is-transitioning");
+    lastLoopCycle = Math.max(0, lastLoopCycle);
+    updateProgressUI();
+  }, timeToFadeStart * 1000);
+
+  softEndTimer = setTimeout(() => {
+    softEndTimer = null;
+    if (!state.playing) return;
+    finishTransition();
+  }, (timeToFadeStart + Math.max(0, fadeSec)) * 1000 + 40);
 }
 
 function showLoopMenu(x, y) {
@@ -4719,6 +4810,17 @@ function updatePlayerUI() {
       badge.classList.add("hidden");
     }
   }
+
+  const qLoopOn = !!settings.queueLoop;
+  const qLoopBtns = [
+    document.getElementById("queue-loop-btn"),
+    document.getElementById("fs-queue-loop-btn"),
+  ];
+  qLoopBtns.forEach((b) => {
+    if (!b) return;
+    b.classList.toggle("active", qLoopOn);
+    b.setAttribute("aria-pressed", qLoopOn ? "true" : "false");
+  });
 
   // sync lock screen / Control Center — NOT bindMediaSession()
   updateMediaSession();
@@ -5781,6 +5883,15 @@ function bindQueuePanel() {
     openClearQueueConfirm();
   });
 
+  $("#queue-loop-btn")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    toggleQueueLoop();
+  });
+  $("#fs-queue-loop-btn")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    toggleQueueLoop();
+  });
+
   // Expanded: X = close expanded only (prefer stays big → next ☰ opens expanded)
   $("#fs-queue-close")?.addEventListener("click", (e) => {
     e.preventDefault();
@@ -6222,6 +6333,56 @@ function armClickSuppress(ms = 600) {
   suppressDocClickUntil = Math.max(suppressDocClickUntil, suppressNextClickUntil);
 }
 
+let toastTimer = null;
+/**
+ * @param {string|object} message
+ *   string → simple text toast
+ *   { title, sub?, cover?, action? } → player-style toast with cover
+ */
+function showToast(message) {
+  let el = document.getElementById("noma-toast");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "noma-toast";
+    el.className = "noma-toast";
+    el.setAttribute("role", "status");
+    el.setAttribute("aria-live", "polite");
+    document.body.appendChild(el);
+  }
+
+  // Reset content while hidden so the next open can animate from the start state
+  el.classList.remove("is-visible");
+
+  if (message && typeof message === "object") {
+    const cover = message.cover || PLACEHOLDER;
+    const title = message.title || "";
+    const sub = message.sub || message.action || "";
+    el.innerHTML = `
+      <img class="noma-toast-cover" src="${escapeHtml(cover)}" alt="" draggable="false">
+      <div class="noma-toast-text">
+        <div class="noma-toast-title">${escapeHtml(title)}</div>
+        ${sub ? `<div class="noma-toast-sub">${escapeHtml(sub)}</div>` : ""}
+      </div>
+    `;
+    el.classList.add("has-cover");
+  } else {
+    el.textContent = String(message ?? "");
+    el.classList.remove("has-cover");
+  }
+
+  // Force a paint of the hidden state, then show → transition always runs
+  // (needed on first create and when reopening quickly)
+  void el.offsetWidth;
+  requestAnimationFrame(() => {
+    el.classList.add("is-visible");
+  });
+
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    el.classList.remove("is-visible");
+  }, 2400);
+}
+
 let contextMenuCloseTimer = null;
 
 function hideContextMenu() {
@@ -6284,13 +6445,25 @@ function showContextMenu(x, y, payload, anchorEl = null) {
     }
   }
 
-  // Album-only action visibility
+  // Album-only / track-only action visibility
   contextMenu?.querySelectorAll(".ctx-album-only").forEach((btn) => {
     btn.classList.toggle("hidden", !isAlbum);
   });
+  const alreadyInThisAlbum =
+    !isAlbum &&
+    !!game &&
+    state.currentGame?.id === game.id &&
+    gameDetail?.classList.contains("active") &&
+    !gameDetail.classList.contains("hidden");
+
   contextMenu?.querySelectorAll(".ctx-track-only").forEach((btn) => {
-    btn.classList.toggle("hidden", isAlbum); // hide on album menus
-});
+    // hide all track-only on album menus; hide open-album when already in this album
+    if (btn.dataset.action === "open-album") {
+      btn.classList.toggle("hidden", isAlbum || alreadyInThisAlbum);
+    } else {
+      btn.classList.toggle("hidden", isAlbum);
+    }
+  });
   // For album menu, relabel the two shared actions
   const playNextBtn = contextMenu?.querySelector('[data-action="play-next"]');
   const addEndBtn = contextMenu?.querySelector('[data-action="add-end"]');
@@ -6322,25 +6495,73 @@ function showContextMenu(x, y, payload, anchorEl = null) {
 }
 
 function bindContextMenu() {
-  contextMenu?.querySelectorAll("button[data-action]").forEach((btn) => {
+      contextMenu?.querySelectorAll("button[data-action]").forEach((btn) => {
     btn.addEventListener("click", () => {
       if (!contextTrack) return;
       const { game, track, album } = contextTrack;
       const action = btn.dataset.action;
 
+      const cover = game?.cover || PLACEHOLDER;
+      const albumName = game?.fullscreenName || game?.short || game?.title || "Album";
+      const trackName = track?.title || "";
+
       if (album && game) {
-        if (action === "play-next") addAlbumPlayNext(game);
-        if (action === "add-end") addAlbumToEnd(game);
-        if (action === "shuffle-into") shuffleAlbumIntoQueue(game);
+        if (action === "play-next") {
+          addAlbumPlayNext(game);
+          hideContextMenu();
+          showToast({
+            cover,
+            title: albumName,
+            sub: "Album wird als Nächstes abgespielt.",
+          });
+          return;
+        }
+        if (action === "add-end") {
+          addAlbumToEnd(game);
+          hideContextMenu();
+          showToast({
+            cover,
+            title: albumName,
+            sub: "Album ans Ende der Queue sortiert.",
+          });
+          return;
+        }
+        if (action === "shuffle-into") {
+          shuffleAlbumIntoQueue(game);
+          hideContextMenu();
+          showToast({
+            cover,
+            title: albumName,
+            sub: "Album In die Queue gemischt.",
+          });
+          return;
+        }
       } else if (game && track) {
-        if (action === "play-next") addPlayNext(game, track);
-        if (action === "add-end") addToEnd(game, track);
+        if (action === "play-next") {
+          addPlayNext(game, track);
+          hideContextMenu();
+          showToast({
+            cover,
+            title: trackName,
+            sub: `Song wird als Nächstes abgespielt.`,
+          });
+          return;
+        }
+        if (action === "add-end") {
+          addToEnd(game, track);
+          hideContextMenu();
+          showToast({
+            cover,
+            title: trackName,
+            sub: `Song ans Ende der Queue sortiert.`,
+          });
+          return;
+        }
         if (action === "open-album") {
           hideContextMenu();
           if (!$("#fullscreen-player")?.classList.contains("hidden")) {
             toggleFullscreen();
           }
-          // same as clicking a game in search: keep query for “Zurück”
           if (globalSearchOpen) {
             const q = $("#global-search-input")?.value?.trim() || "";
             if (q) searchReturn = { type: "search", query: q };
@@ -6799,11 +7020,6 @@ function bindSettings() {
     transBtn?.setAttribute("aria-expanded", "false");
   });
 
-$("#setting-queue-loop")?.addEventListener("change", (e) => {
-    settings.queueLoop = !!e.target.checked;
-    saveSettings();
-  });
-
     $("#setting-normalize-volume")?.addEventListener("change", (e) => {
     settings.normalizeVolume = !!e.target.checked;
     saveSettings();
@@ -6851,9 +7067,6 @@ function syncSettingsForm() {
 
   const label = $("#setting-transition-label");
   if (label) label.textContent = `${settings.transitionSec} s`;
-
-  const qLoop = $("#setting-queue-loop");
-  if (qLoop) qLoop.checked = !!settings.queueLoop;
 
 
   const norm = $("#setting-normalize-volume");
