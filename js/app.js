@@ -2,7 +2,7 @@ import { Bfstm } from './bfstm.js';
 import { Kawarp } from 'https://cdn.jsdelivr.net/npm/@kawarp/core@1.3.1/+esm';
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = "19.10.26, fixed loop menu, Added ctxt menu Toasts, enhanced queue UX, and polished nav. #2";
+const APP_VERSION = "22.10.26, added more logos, added playlistst step 1 (big progess)";
 
 let LIBRARY = [];
 
@@ -31,7 +31,269 @@ const DEFAULT_SETTINGS = {
   queueLoop: true,      // after last track: restart queue vs stop
   bgMode: "kawarp", // "kawarp" | "css" — switch later in settings
   autoCollapseAlbum: true, // collapse album header when scrolling down
+    quickAddEnabled: false,
+    quickAddPlaylistId: "favorites",
 };
+
+const LIBRARY_KEY = "noma-library-v1";
+const FAVORITES_ID = "favorites";
+
+const DEFAULT_LIBRARY = {
+  version: 1,
+  playlists: [
+    {
+      id: FAVORITES_ID,
+      name: "Lieblingssongs",
+      type: "favorites",
+      pinned: true,
+      pinLocked: true,
+      coverMode: "auto",
+      coverSrc: null,
+      tracks: [],
+      createdAt: 0,
+      updatedAt: 0,
+      lastPlayedAt: 0,
+    },
+  ],
+  libraryAlbums: [],
+};
+
+let userLib = structuredClone
+  ? structuredClone(DEFAULT_LIBRARY)
+  : JSON.parse(JSON.stringify(DEFAULT_LIBRARY));
+
+const libPrefs = {
+  filter: "playlists", // playlists | games | all
+  sort: "recent", // recent | added | az
+  dir: "desc",
+  view: "grid", // grid | list
+  query: "",
+};
+
+function loadUserLibrary() {
+  try {
+    const raw = localStorage.getItem(LIBRARY_KEY);
+    if (!raw) {
+      saveUserLibrary();
+      return;
+    }
+    const parsed = JSON.parse(raw);
+    if (!parsed || !Array.isArray(parsed.playlists)) {
+      saveUserLibrary();
+      return;
+    }
+    userLib.version = 1;
+    userLib.playlists = parsed.playlists;
+    userLib.libraryAlbums = Array.isArray(parsed.libraryAlbums)
+      ? parsed.libraryAlbums
+      : [];
+    // Ensure favorites exists
+    if (!userLib.playlists.some((p) => p.id === FAVORITES_ID)) {
+      userLib.playlists.unshift({ ...DEFAULT_LIBRARY.playlists[0] });
+    }
+  } catch (_) {
+    saveUserLibrary();
+  }
+}
+
+function saveUserLibrary() {
+  try {
+    localStorage.setItem(LIBRARY_KEY, JSON.stringify(userLib));
+  } catch (_) {}
+  // Future: if (account) syncLibrary(userLib)
+}
+
+function uid() {
+  return `pl_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function getPlaylist(id) {
+  return userLib.playlists.find((p) => p.id === id) || null;
+}
+
+function playlistCoverSrc(pl) {
+  // Lieblingssongs always uses fixed cover
+  if (pl.id === FAVORITES_ID) {
+    return "Assets/PlaylistCovers/FavSongsCover.png";
+  }
+  if (pl.coverMode === "preset" || pl.coverMode === "game") {
+    if (pl.coverSrc) return pl.coverSrc;
+  }
+  const covers = [];
+  const seen = new Set();
+  for (const ref of pl.tracks || []) {
+    if (seen.has(ref.gameId)) continue;
+    const g = LIBRARY.find((x) => x.id === ref.gameId);
+    if (g?.cover) {
+      covers.push(g.cover);
+      seen.add(ref.gameId);
+    }
+    if (covers.length >= 4) break;
+  }
+  if (!covers.length) return PLACEHOLDER;
+  return covers;
+}
+
+function createPlaylist(name = "Neue Playlist") {
+  const now = Date.now();
+  const pl = {
+    id: uid(),
+    name,
+    type: "user",
+    pinned: false,
+    pinLocked: false,
+    coverMode: "auto",
+    coverSrc: null,
+    tracks: [],
+    createdAt: now,
+    updatedAt: now,
+    lastPlayedAt: 0,
+  };
+  userLib.playlists.push(pl);
+  saveUserLibrary();
+  return pl;
+}
+
+function togglePinPlaylist(id) {
+  const pl = getPlaylist(id);
+  if (!pl || pl.pinLocked) return;
+  pl.pinned = !pl.pinned;
+  pl.updatedAt = Date.now();
+  saveUserLibrary();
+}
+
+function isAlbumInLibrary(gameId) {
+  return userLib.libraryAlbums.includes(gameId);
+}
+
+function toggleAlbumInLibrary(gameId) {
+  const i = userLib.libraryAlbums.indexOf(gameId);
+  if (i >= 0) userLib.libraryAlbums.splice(i, 1);
+  else userLib.libraryAlbums.push(gameId);
+  saveUserLibrary();
+  return isAlbumInLibrary(gameId);
+}
+
+function isTrackInPlaylist(plId, gameId, trackId) {
+  const pl = getPlaylist(plId);
+  if (!pl) return false;
+  return (pl.tracks || []).some((t) => t.gameId === gameId && t.trackId === trackId);
+}
+
+function isInFavorites(gameId, trackId) {
+  return isTrackInPlaylist(FAVORITES_ID, gameId, trackId);
+}
+
+function setTrackInPlaylist(plId, gameId, trackId, on) {
+  const pl = getPlaylist(plId);
+  if (!pl) return;
+  const idx = (pl.tracks || []).findIndex(
+    (t) => t.gameId === gameId && t.trackId === trackId
+  );
+  if (on && idx < 0) pl.tracks.push({ gameId, trackId });
+  if (!on && idx >= 0) pl.tracks.splice(idx, 1);
+  pl.updatedAt = Date.now();
+  saveUserLibrary();
+}
+
+function toggleFavorite(gameId, trackId) {
+  const on = !isInFavorites(gameId, trackId);
+  setTrackInPlaylist(FAVORITES_ID, gameId, trackId, on);
+  return on;
+}
+
+/** True if track is in at least one playlist */
+function isTrackInAnyPlaylist(gameId, trackId) {
+  return userLib.playlists.some((p) => isTrackInPlaylist(p.id, gameId, trackId));
+}
+
+const FAV_PLUS_SVG = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>`;
+const FAV_CHECK_SVG = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>`;
+
+function paintFavButton(btn, on) {
+  if (!btn) return;
+  btn.classList.toggle("is-fav", !!on);
+  btn.innerHTML = on ? FAV_CHECK_SVG : FAV_PLUS_SVG;
+  btn.setAttribute("aria-label", on ? "In Playlist" : "Zur Playlist");
+}
+
+/** Refresh + buttons on open album + search after playlist changes */
+function syncTrackPlusButtons(gameId, trackId) {
+  const on = isTrackInAnyPlaylist(gameId, trackId);
+  document
+    .querySelectorAll(
+      `.track-fav-btn[data-fav-track="${CSS.escape(trackId)}"], .gs-fav-btn[data-game-id="${CSS.escape(gameId)}"][data-track-id="${CSS.escape(trackId)}"]`
+    )
+    .forEach((btn) => paintFavButton(btn, on));
+}
+
+/** Runtime-only target when quickAdd is OFF. Settings.quickAddPlaylistId is never auto-changed. */
+let sessionQuickAddId = FAVORITES_ID;
+
+function getEffectiveQuickTarget() {
+  if (settings.quickAddEnabled && settings.quickAddPlaylistId) {
+    return settings.quickAddPlaylistId;
+  }
+  return sessionQuickAddId || FAVORITES_ID;
+}
+
+/**
+ * + click:
+ * - quickAdd ON  → add to settings.quickAddPlaylistId; if already in it → open menu
+ * - quickAdd OFF → add to sessionQuickAddId (default Lieblingssongs);
+ *   if already in it → open menu. Menu with exactly one selection updates session only.
+ */
+function handleTrackPlusClick(gameId, trackId) {
+  if (!gameId || !trackId) return;
+
+  const game = LIBRARY.find((g) => g.id === gameId);
+  const track = game?.tracks?.find((t) => t.id === trackId);
+  const inAny = isTrackInAnyPlaylist(gameId, trackId);
+  const targetId = getEffectiveQuickTarget();
+
+  // Already in any playlist → open menu (never auto-remove on +)
+  // Only exception: quickAdd ON and not yet in the goal playlist → add to goal
+  if (inAny) {
+    if (
+      settings.quickAddEnabled &&
+      !isTrackInPlaylist(targetId, gameId, trackId)
+    ) {
+      setTrackInPlaylist(targetId, gameId, trackId, true);
+      const pl = getPlaylist(targetId);
+      showToast?.({
+        title: track?.title || "Song",
+        sub: `Zu „${pl?.name || "Lieblingssongs"}“ hinzugefügt`,
+        cover: game?.cover || PLACEHOLDER,
+      });
+      syncTrackPlusButtons(gameId, trackId);
+      if (typeof renderLibrary === "function") renderLibrary({ animate: false });
+      return;
+    }
+    openAddToPlaylistMenu(gameId, trackId);
+    return;
+  }
+
+  // No checkmark → quick-add to effective target
+  setTrackInPlaylist(targetId, gameId, trackId, true);
+  const pl = getPlaylist(targetId);
+  showToast?.({
+    title: track?.title || "Song",
+    sub: `Zu „${pl?.name || "Lieblingssongs"}“ hinzugefügt`,
+    cover: game?.cover || PLACEHOLDER,
+  });
+  syncTrackPlusButtons(gameId, trackId);
+  if (typeof renderLibrary === "function") renderLibrary({ animate: false });
+}
+
+function toastAlbumLib(game, added) {
+  const title = game?.title || game?.name || "Album";
+  const cover = game?.cover || game?.image || "";
+  showToast?.({
+    title,
+    sub: added ? "Zur Bibliothek hinzugefügt" : "Aus Bibliothek entfernt",
+    cover,
+  });
+}
 
 const CONSOLE_META = {
   switch2: {
@@ -72,20 +334,46 @@ const CONSOLE_META = {
 };
 
 const FRANCHISE_META = {
-    mario: {
+  mario: {
     id: "mario",
     label: "Super Mario",
     logo: "Assets/Filter/Franchise/SuperMario_Logo.png",
+  },
+  mariokart: {
+    id: "mariokart",
+    label: "Mario Kart",
+    logo: "Assets/Filter/Franchise/MarioKart_Logo.png",
+  },
+  marioparty: {
+    id: "marioparty",
+    label: "Mario Party",
+    logo: "Assets/Filter/Franchise/MarioParty_Logo.png",
+  },
+  donkeykong: {
+    id: "donkeykong",
+    label: "Donkey Kong",
+    logo: "Assets/Filter/Franchise/DonkeyKong_Logo.png",
   },
   zelda: {
     id: "zelda",
     label: "The Legend of Zelda",
     logo: "Assets/Filter/Franchise/Zelda_Logo.webp",
   },
+  kirby: {
+    id: "kirby",
+    label: "Kirby",
+    logo: "Assets/Filter/Franchise/Kirby_Logo.png",
+  },
+  astrobot: {
+    id: "astrobot",
+    label: "Astro Bot",
+    logo: "Assets/Filter/Franchise/AstroBot_Logo.png",
+  },
 };
 
 let gamesViewMode = "console"; // "console" | "franchise"
 let gamesNavLocked = false;
+let libNavLocked = false;
 const albumViewMemory = new Map(); // gameId -> { scrollTop, query }
 let searchReturn = null; // { type: "games"|"game"|"playlists"|"category", ... }
 let globalSearchOpen = false;
@@ -129,6 +417,14 @@ function loadSettings() {
       typeof parsed.autoCollapseAlbum === "boolean"
         ? parsed.autoCollapseAlbum
         : DEFAULT_SETTINGS.autoCollapseAlbum;
+    settings.quickAddEnabled =
+      typeof parsed.quickAddEnabled === "boolean"
+        ? parsed.quickAddEnabled
+        : DEFAULT_SETTINGS.quickAddEnabled;
+    settings.quickAddPlaylistId =
+      typeof parsed.quickAddPlaylistId === "string" && parsed.quickAddPlaylistId
+        ? parsed.quickAddPlaylistId
+        : DEFAULT_SETTINGS.quickAddPlaylistId;
   } catch (_) {}
 }
 
@@ -2260,6 +2556,10 @@ async function init() {
   bindHotkeys();
   bindPressMinHold();
   loadSettings();
+  loadUserLibrary(); // BEFORE renderLibrary
+  bindLibraryUI();
+  bindAddToPlaylistUI()
+  renderLibrary({ animate: false });
   updatePlayerUI();
   masterVolume = settings.volume ?? 1;
   const volSlider = $("#volume-slider");
@@ -2357,6 +2657,12 @@ function gameCardHtml(g) {
       <div class="game-card-art">
         <img src="${escapeHtml(g.cover)}" alt="${escapeHtml(g.title)}" loading="lazy" draggable="false">
         <span class="game-card-eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
+        <div class="card-hover-actions">
+          <button type="button" class="card-hover-menu" data-menu-game="${escapeHtml(g.id)}" title="Mehr" aria-label="Mehr">⋮</button>
+          <button type="button" class="card-hover-play" data-play-game="${escapeHtml(g.id)}" title="Alles abspielen" aria-label="Alles abspielen">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          </button>
+        </div>
       </div>
       <div class="card-body">
         <h3>${escapeHtml(g.short || g.title)}</h3>
@@ -2433,6 +2739,11 @@ function bindGameCardInteractions(root) {
     card.dataset.ctxBound = "1";
 
     card.addEventListener("click", (e) => {
+      if (e.target.closest(
+        ".card-hover-actions, .card-hover-play, .card-hover-menu, [data-play-game], [data-menu-game]"
+      )) {
+        return;
+      }
       if (card.dataset.suppressClick === "1") {
         delete card.dataset.suppressClick;
         e.preventDefault();
@@ -2464,6 +2775,7 @@ function bindGameCardInteractions(root) {
       "pointerdown",
       (e) => {
         if (e.pointerType === "mouse") return;
+        if (e.target.closest(".card-hover-play, .card-hover-menu, .card-hover-actions")) return;
         lpMoved = false;
         const x = e.clientX;
         const y = e.clientY;
@@ -2491,6 +2803,48 @@ function bindGameCardInteractions(root) {
       },
       { passive: true }
     );
+
+    const playBtn = card.querySelector("[data-play-game]");
+    const menuBtn = card.querySelector("[data-menu-game]");
+    playBtn?.addEventListener(
+      "click",
+      (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        card.dataset.suppressClick = "1";
+        if (typeof armClickSuppress === "function") armClickSuppress(400);
+        const game = LIBRARY.find((x) => x.id === card.dataset.id);
+        if (!game) return;
+        unlockMediaElement().catch(() => {});
+        state.queue = (game.tracks || []).map((t) => ({
+          gameId: game.id,
+          track: t,
+          insert: null,
+        }));
+        state.queueIndex = 0;
+        playCurrent();
+        renderQueue();
+        updatePlayerUI();
+      },
+      true
+    );
+    menuBtn?.addEventListener(
+      "click",
+      (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        card.dataset.suppressClick = "1";
+        if (typeof armClickSuppress === "function") armClickSuppress(400);
+        const game = LIBRARY.find((x) => x.id === card.dataset.id);
+        if (!game) return;
+        const r = menuBtn.getBoundingClientRect();
+        showContextMenu(r.left, r.bottom + 4, { game, album: true }, menuBtn);
+      },
+      true
+    );
+
     const cancelLp = () => {
       clearTimeout(lpTimer);
       lpTimer = null;
@@ -2625,6 +2979,564 @@ function markPlayingGameCards() {
         });
       });
       card.classList.remove("audio-on");
+    }
+  });
+}
+
+function renderPlaylistCoverHTML(pl) {
+  const src = playlistCoverSrc(pl);
+  if (Array.isArray(src)) {
+    if (src.length === 1) {
+      return `<img class="pl-card-cover" src="${escapeHtml(src[0])}" alt="">`;
+    }
+    const cells = [0, 1, 2, 3]
+      .map((i) => {
+        const u = src[i] || src[src.length - 1] || PLACEHOLDER;
+        return `<img src="${escapeHtml(u)}" alt="">`;
+      })
+      .join("");
+    return `<div class="pl-cover-mosaic">${cells}</div>`;
+  }
+  return `<img class="pl-card-cover" src="${escapeHtml(src)}" alt="">`;
+}
+
+function sortedLibraryItems() {
+  const q = (libPrefs.query || "").trim().toLowerCase();
+  let items = [];
+
+  if (libPrefs.filter === "playlists" || libPrefs.filter === "all") {
+    for (const pl of userLib.playlists) {
+      if (q && !pl.name.toLowerCase().includes(q)) continue;
+      items.push({ kind: "playlist", pl });
+    }
+  }
+  if (libPrefs.filter === "games" || libPrefs.filter === "all") {
+    for (const gid of userLib.libraryAlbums) {
+      const g = LIBRARY.find((x) => x.id === gid);
+      if (!g) continue;
+      if (q && !(g.title || "").toLowerCase().includes(q) && !(g.short || "").toLowerCase().includes(q))
+        continue;
+      items.push({ kind: "game", game: g });
+    }
+  }
+
+  const dir = libPrefs.dir === "asc" ? 1 : -1;
+  items.sort((a, b) => {
+    // Lieblingssongs always first
+    const aFav = a.kind === "playlist" && a.pl.id === FAVORITES_ID ? 1 : 0;
+    const bFav = b.kind === "playlist" && b.pl.id === FAVORITES_ID ? 1 : 0;
+    if (aFav !== bFav) return bFav - aFav;
+
+    // other pinned playlists next
+    const ap = a.kind === "playlist" && a.pl.pinned ? 1 : 0;
+    const bp = b.kind === "playlist" && b.pl.pinned ? 1 : 0;
+    if (ap !== bp) return bp - ap;
+
+    const ta =
+      a.kind === "playlist"
+        ? libPrefs.sort === "az"
+          ? a.pl.name
+          : libPrefs.sort === "added"
+            ? a.pl.createdAt
+            : a.pl.lastPlayedAt || a.pl.updatedAt
+        : libPrefs.sort === "az"
+          ? a.game.title
+          : 0;
+    const tb =
+      b.kind === "playlist"
+        ? libPrefs.sort === "az"
+          ? b.pl.name
+          : libPrefs.sort === "added"
+            ? b.pl.createdAt
+            : b.pl.lastPlayedAt || b.pl.updatedAt
+        : libPrefs.sort === "az"
+          ? b.game.title
+          : 0;
+
+    if (typeof ta === "string") {
+      return ta.localeCompare(tb, "de") * (libPrefs.dir === "asc" ? 1 : -1);
+    }
+    return (ta - tb) * dir;
+  });
+  return items;
+}
+
+function syncLibToolbar() {
+  document.querySelectorAll("[data-lib-filter]").forEach((b) => {
+    b.classList.toggle("active", b.dataset.libFilter === libPrefs.filter);
+  });
+  document.querySelectorAll("[data-lib-sort]").forEach((b) => {
+    b.classList.toggle("active", b.dataset.libSort === libPrefs.sort);
+  });
+  document.querySelectorAll("[data-lib-dir]").forEach((b) => {
+    b.classList.toggle("active", b.dataset.libDir === libPrefs.dir);
+  });
+  $("#lib-view-icon-grid")?.classList.toggle("hidden", libPrefs.view !== "grid");
+  $("#lib-view-icon-list")?.classList.toggle("hidden", libPrefs.view !== "list");
+}
+
+function renderLibrary({ animate = true } = {}) {
+  const browse = $("#lib-browse");
+  if (!browse) return;
+
+  const paint = () => {
+    browse.classList.toggle("lib-view-grid", libPrefs.view === "grid");
+    browse.classList.toggle("lib-view-list", libPrefs.view === "list");
+    syncLibToolbar();
+
+    const items = sortedLibraryItems();
+    if (!items.length) {
+      browse.innerHTML = `<p class="muted games-filter-empty">Keine Einträge.</p>`;
+      return;
+    }
+
+    if (libPrefs.view === "list") {
+      browse.innerHTML = items
+        .map((it) => {
+          if (it.kind === "playlist") {
+            const pl = it.pl;
+            const cover = playlistCoverSrc(pl);
+            const coverUrl = Array.isArray(cover) ? cover[0] || PLACEHOLDER : cover;
+            const n = (pl.tracks || []).length;
+            return `<div class="pl-list-row" data-pl-id="${escapeHtml(pl.id)}" data-kind="playlist">
+              <img class="pl-list-cover" src="${escapeHtml(coverUrl)}" alt="">
+              <div class="pl-list-meta">
+                <div class="pl-card-title">${escapeHtml(pl.name)}${pl.pinned ? " 📌" : ""}</div>
+                <div class="pl-card-sub">${n} Songs</div>
+              </div>
+              <span class="pl-list-len">${n ? `${n}` : "—"}</span>
+              <button type="button" class="pl-list-menu" data-pl-menu="${escapeHtml(pl.id)}" aria-label="Menü">⋮</button>
+            </div>`;
+          }
+          const g = it.game;
+          const n = g.tracks?.length || 0;
+          return `<div class="pl-list-row" data-game-id="${escapeHtml(g.id)}" data-kind="game">
+            <img class="pl-list-cover" src="${escapeHtml(g.cover || PLACEHOLDER)}" alt="">
+            <div class="pl-list-meta">
+              <div class="pl-card-title">${escapeHtml(g.title)}</div>
+              <div class="pl-card-sub">Album · ${n} Titel</div>
+            </div>
+            <span class="pl-list-len">${n || "—"}</span>
+            <button type="button" class="pl-list-menu" data-menu-game="${escapeHtml(g.id)}" aria-label="Menü">⋮</button>
+          </div>`;
+        })
+        .join("");
+    } else {
+      browse.innerHTML = items
+        .map((it) => {
+          if (it.kind === "playlist") {
+            const pl = it.pl;
+            const n = (pl.tracks || []).length;
+            return `<div class="pl-card" data-pl-id="${escapeHtml(pl.id)}" data-kind="playlist" role="button" tabindex="0">
+              <div class="pl-card-cover-wrap">
+                ${renderPlaylistCoverHTML(pl)}
+                ${pl.pinned ? `<span class="pl-pin" title="Angepinnt"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg></span>` : ""}
+                <div class="card-hover-actions">
+                  <button type="button" class="card-hover-menu" data-pl-menu="${escapeHtml(pl.id)}" title="Mehr" aria-label="Mehr">⋮</button>
+                  <button type="button" class="card-hover-play" data-play-pl="${escapeHtml(pl.id)}" title="Abspielen" aria-label="Abspielen">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                  </button>
+                </div>
+              </div>
+              <div class="pl-card-title">${escapeHtml(pl.name)}</div>
+              <div class="pl-card-sub">${n} Songs</div>
+            </div>`;
+          }
+          const g = it.game;
+          const n = g.tracks?.length || 0;
+          return `<div class="pl-card" data-game-id="${escapeHtml(g.id)}" data-kind="game" role="button" tabindex="0">
+            <div class="pl-card-cover-wrap">
+              <img class="pl-card-cover" src="${escapeHtml(g.cover || PLACEHOLDER)}" alt="">
+              <div class="card-hover-actions">
+                <button type="button" class="card-hover-menu" data-menu-game="${escapeHtml(g.id)}" title="Mehr" aria-label="Mehr">⋮</button>
+                <button type="button" class="card-hover-play" data-play-game="${escapeHtml(g.id)}" title="Alles abspielen" aria-label="Alles abspielen">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                </button>
+              </div>
+            </div>
+            <div class="pl-card-title">${escapeHtml(g.title)}</div>
+            <div class="pl-card-sub">Album · ${n} Titel</div>
+          </div>`;
+        })
+        .join("");
+    }
+
+    browse.querySelectorAll("[data-kind='playlist']").forEach((el) => {
+      el.addEventListener("click", (e) => {
+        if (e.target.closest(".card-hover-actions, [data-pl-menu], .pl-list-menu, .card-hover-play, .card-hover-menu")) return;
+        openPlaylistDetail(el.dataset.plId);
+      });
+      el.addEventListener("contextmenu", (e) => {
+        e.preventDefault();
+        showPlaylistContextMenu(e.clientX, e.clientY, el.dataset.plId);
+      });
+    });
+    browse.querySelectorAll("[data-kind='game']").forEach((el) => {
+      el.addEventListener("click", (e) => {
+        if (e.target.closest(".card-hover-actions, .pl-list-menu, [data-menu-game], .card-hover-play, .card-hover-menu")) return;
+        openGame(el.dataset.gameId);
+      });
+    });
+    browse.querySelectorAll("[data-play-pl]").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        openPlaylistDetail(btn.getAttribute("data-play-pl"));
+      });
+    });
+    browse.querySelectorAll("[data-play-game]").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const game = LIBRARY.find((x) => x.id === btn.getAttribute("data-play-game"));
+        if (!game) return;
+        unlockMediaElement().catch(() => {});
+        state.queue = (game.tracks || []).map((t) => ({ gameId: game.id, track: t, insert: null }));
+        state.queueIndex = 0;
+        playCurrent();
+        renderQueue();
+        updatePlayerUI();
+      });
+    });
+    browse.querySelectorAll("[data-pl-menu]").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const r = btn.getBoundingClientRect();
+        showPlaylistContextMenu(r.left, r.bottom + 4, btn.getAttribute("data-pl-menu"));
+      });
+    });
+    browse.querySelectorAll("[data-menu-game]").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const game = LIBRARY.find((x) => x.id === btn.getAttribute("data-menu-game"));
+        if (!game) return;
+        const r = btn.getBoundingClientRect();
+        showContextMenu(r.left, r.bottom + 4, { game, album: true }, btn);
+      });
+    });
+
+    if (typeof bindPressMinHold === "function") {
+      bindPressMinHold(browse);
+    }
+  };
+
+  if (animate) {
+    if (libNavLocked) {
+      paint();
+      return;
+    }
+    libNavLocked = true;
+    browse.classList.remove("is-entering");
+    browse.classList.add("is-leaving");
+    const go = () => {
+      browse.classList.remove("is-leaving");
+      paint();
+      browse.classList.add("is-entering");
+      setTimeout(() => {
+        browse.classList.remove("is-entering");
+        libNavLocked = false;
+      }, 400);
+    };
+    setTimeout(go, 180);
+  } else {
+    paint();
+  }
+}
+
+function openPlaylistDetail(id) {
+  // Phase 2: full album-like UI — stub opens favorites play-all for now
+  const pl = getPlaylist(id);
+  if (!pl) return;
+  if (!(pl.tracks || []).length) {
+    if (typeof showToast === "function") showToast("Playlist ist leer");
+    else console.log("[Noma] empty playlist", pl.name);
+    return;
+  }
+  // Build queue from refs
+  const items = [];
+  for (const ref of pl.tracks) {
+    const g = LIBRARY.find((x) => x.id === ref.gameId);
+    const t = g?.tracks?.find((x) => x.id === ref.trackId);
+    if (g && t) items.push({ gameId: g.id, track: t });
+  }
+  if (!items.length) return;
+  state.queue = items;
+  state.queueIndex = 0;
+  pl.lastPlayedAt = Date.now();
+  saveUserLibrary();
+  playQueueIndex(0);
+  renderQueue();
+}
+
+function showPlaylistContextMenu(x, y, plId) {
+  const pl = getPlaylist(plId);
+  if (!pl) return;
+  // Reuse context menu shell: hide track actions, show pin/delete
+  hideContextMenu();
+  // Simple dedicated actions via existing menu buttons if present, else temporary
+  const menu = contextMenu;
+  if (!menu) return;
+  // Minimal: pin toggle via custom one-off using confirm style
+  // Prefer extending showContextMenu payload later
+  const pinLabel = pl.pinLocked
+    ? null
+    : pl.pinned
+      ? "Loslösen"
+      : "Anpinnen";
+  if (pinLabel) {
+    togglePinPlaylist(plId);
+    renderLibrary({ animate: false });
+    if (typeof showToast === "function") {
+      showToast(pl.pinned ? "Angepinnt" : "Losgelöst");
+    }
+  }
+}
+
+/** Close every floating menu except optional keep (e.g. "add-to-pl"). */
+function closeAllPopovers(except) {
+  if (except !== "context" && typeof hideContextMenu === "function") hideContextMenu();
+  if (except !== "sleep" && typeof closeSleepPanel === "function") closeSleepPanel();
+  if (except !== "loop" && typeof closeLoopMenu === "function") closeLoopMenu();
+
+  if (except !== "gs") {
+    const fp = $("#gs-filter-panel");
+    const sp = $("#gs-sort-panel");
+    if (fp) {
+      fp.classList.add("hidden");
+      fp.classList.remove("is-closing");
+    }
+    if (sp) {
+      sp.classList.add("hidden");
+      sp.classList.remove("is-closing");
+    }
+  }
+
+  if (except !== "lib-sort") {
+    const lp = $("#lib-sort-panel");
+    if (lp) {
+      lp.classList.add("hidden");
+      lp.classList.remove("is-closing");
+    }
+  }
+}
+
+function bindLibraryUI() {
+  $("#lib-create-btn")?.addEventListener("click", () => {
+    const pl = createPlaylist();
+    renderLibrary({ animate: true });
+    if (typeof showToast === "function") showToast(`„${pl.name}“ erstellt`);
+  });
+
+  const search = $("#lib-local-search");
+  const clear = $("#lib-local-search-clear");
+  search?.addEventListener("input", () => {
+    libPrefs.query = search.value || "";
+    clear?.classList.toggle("hidden", !libPrefs.query);
+    renderLibrary({ animate: false });
+  });
+  clear?.addEventListener("click", () => {
+    if (search) search.value = "";
+    libPrefs.query = "";
+    clear.classList.add("hidden");
+    renderLibrary({ animate: false });
+  });
+
+const sortBtn = $("#lib-sort-btn");
+  const sortPanel = $("#lib-sort-panel");
+
+  function closeLibSortPanel() {
+    if (!sortPanel || sortPanel.classList.contains("hidden")) return;
+    sortPanel.classList.add("is-closing");
+    setTimeout(() => {
+      sortPanel.classList.add("hidden");
+      sortPanel.classList.remove("is-closing");
+    }, 180);
+  }
+
+  sortBtn?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const open = sortPanel && !sortPanel.classList.contains("hidden");
+    if (open) {
+      closeLibSortPanel();
+    } else {
+      closeAllPopovers("lib-sort");
+      sortPanel?.classList.remove("hidden", "is-closing");
+    }
+    syncLibToolbar();
+  });
+
+  sortPanel?.querySelectorAll("[data-lib-sort]").forEach((b) => {
+    b.addEventListener("click", (e) => {
+      e.stopPropagation();
+      libPrefs.sort = b.dataset.libSort;
+      syncLibToolbar();
+      renderLibrary({ animate: true });
+      // keep panel open
+    });
+  });
+  sortPanel?.querySelectorAll("[data-lib-dir]").forEach((b) => {
+    b.addEventListener("click", (e) => {
+      e.stopPropagation();
+      libPrefs.dir = b.dataset.libDir;
+      syncLibToolbar();
+      renderLibrary({ animate: true });
+      // keep panel open
+    });
+  });
+
+  $("#lib-view-btn")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    libPrefs.view = libPrefs.view === "grid" ? "list" : "grid";
+    syncLibToolbar();
+    renderLibrary({ animate: true });
+  });
+
+  document.querySelectorAll("[data-lib-filter]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      if (libPrefs.filter === btn.dataset.libFilter) return;
+      if (libNavLocked) return;
+      libPrefs.filter = btn.dataset.libFilter;
+      syncLibToolbar();
+      renderLibrary({ animate: true });
+    });
+  });
+
+  document.addEventListener("click", (e) => {
+    if (e.target.closest("#lib-sort-btn") || e.target.closest("#lib-sort-panel")) return;
+    closeLibSortPanel();
+  });
+
+  $("#btn-profile")?.addEventListener("click", () => {
+    if (typeof showToast === "function") {
+      showToast("Profil / Login kommt später");
+    }
+  });
+
+  document.querySelectorAll('.tab[data-tab="playlists"]').forEach((tab) => {
+    tab.addEventListener("click", () => {
+      setTimeout(() => renderLibrary({ animate: false }), 0);
+    });
+  });
+
+  syncLibToolbar();
+}
+
+let addToPlTarget = null; // { gameId, trackId }
+let addToPlSelected = new Set();
+
+function openAddToPlaylistMenu(gameId, trackId) {
+  if (!gameId || !trackId) {
+    console.warn("[Noma] openAddToPlaylistMenu: missing ids", gameId, trackId);
+    return;
+  }
+  addToPlTarget = { gameId, trackId };
+  addToPlSelected = new Set(
+    userLib.playlists
+      .filter((p) => isTrackInPlaylist(p.id, gameId, trackId))
+      .map((p) => p.id)
+  );
+  const search = $("#add-to-pl-search");
+  if (search) search.value = "";
+  renderAddToPlList();
+
+  const ov = document.getElementById("add-to-pl-overlay");
+  if (!ov) {
+    console.warn("[Noma] #add-to-pl-overlay missing — put it as a direct child of <body>");
+    return;
+  }
+  // Defensive: if still nested under #fullscreen-player, move to body
+  if (ov.parentElement !== document.body) {
+    document.body.appendChild(ov);
+  }
+
+  closeAllPopovers();
+  ov.classList.remove("hidden");
+  ov.style.display = "";
+  ov.setAttribute("aria-hidden", "false");
+}
+
+function closeAddToPlMenu() {
+  $("#add-to-pl-overlay")?.classList.add("hidden");
+  $("#add-to-pl-overlay")?.setAttribute("aria-hidden", "true");
+  addToPlTarget = null;
+  addToPlSelected.clear();
+}
+
+function renderAddToPlList() {
+  const list = $("#add-to-pl-list");
+  if (!list) return;
+  const q = ($("#add-to-pl-search")?.value || "").trim().toLowerCase();
+  const pinned = userLib.playlists.filter((p) => p.pinned);
+  const rest = userLib.playlists.filter((p) => !p.pinned);
+  const ordered = [...pinned, ...rest].filter(
+    (p) => !q || p.name.toLowerCase().includes(q)
+  );
+    list.innerHTML = ordered
+    .map((pl) => {
+      const cover = playlistCoverSrc(pl);
+      const url = Array.isArray(cover) ? cover[0] || PLACEHOLDER : cover;
+      const sel = addToPlSelected.has(pl.id) ? "is-selected" : "";
+      const pin = pl.pinned
+        ? `<span class="add-to-pl-pin" title="Angepinnt"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg></span>`
+        : "";
+      return `<li>
+        <button type="button" class="add-to-pl-item ${sel}" data-pl-id="${escapeHtml(pl.id)}">
+          <img src="${escapeHtml(url)}" alt="">
+          <span class="add-to-pl-name">${escapeHtml(pl.name)}${pin}</span>
+          <span class="pl-check"></span>
+        </button>
+      </li>`;
+    })
+    .join("");
+  list.querySelectorAll(".add-to-pl-item").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const id = btn.dataset.plId;
+      if (addToPlSelected.has(id)) addToPlSelected.delete(id);
+      else addToPlSelected.add(id);
+      btn.classList.toggle("is-selected");
+    });
+  });
+}
+
+function bindAddToPlaylistUI() {
+  $("#add-to-pl-cancel")?.addEventListener("click", closeAddToPlMenu);
+  $("#add-to-pl-overlay")?.addEventListener("click", (e) => {
+    if (e.target.id === "add-to-pl-overlay") closeAddToPlMenu();
+  });
+  $("#add-to-pl-search")?.addEventListener("input", renderAddToPlList);
+  $("#add-to-pl-create")?.addEventListener("click", () => {
+    const pl = createPlaylist();
+    addToPlSelected.add(pl.id);
+    renderAddToPlList();
+    renderLibrary();
+  });
+    $("#add-to-pl-done")?.addEventListener("click", () => {
+    if (!addToPlTarget) return closeAddToPlMenu();
+    const { gameId, trackId } = addToPlTarget;
+    for (const pl of userLib.playlists) {
+      const want = addToPlSelected.has(pl.id);
+      setTrackInPlaylist(pl.id, gameId, trackId, want);
+    }
+
+    // When Schnell-Hinzufügen is OFF and user picked exactly one playlist → that becomes
+    // the session default for + (does NOT touch settings.quickAddPlaylistId)
+    if (!settings.quickAddEnabled && addToPlSelected.size === 1) {
+      sessionQuickAddId = [...addToPlSelected][0];
+    }
+
+    const game = LIBRARY.find((g) => g.id === gameId);
+    const track = game?.tracks?.find((t) => t.id === trackId);
+    closeAddToPlMenu();
+    renderLibrary({ animate: false });
+    syncTrackPlusButtons(gameId, trackId);
+    if (typeof showToast === "function") {
+      showToast({
+        cover: game?.cover || PLACEHOLDER,
+        title: track?.title || "Song",
+        sub: "Playlists aktualisiert",
+      });
     }
   });
 }
@@ -2888,31 +3800,31 @@ function openGlobalSearch(clearInput = true) {
   globalSearchOpen = true;
   document.body.classList.add("search-open", "search-mode");
 
+  // Always switch top tabs + panels to Games while searching
+  document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
+  document.querySelector('.tab[data-tab="games"]')?.classList.add("active");
+  document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
+  $("#tab-games")?.classList.add("active");
+  $("#tab-playlists")?.classList.remove("active");
+
   gameDetail?.classList.add("hidden");
   gameDetail?.classList.remove("active");
   if (document.body.classList.contains("games-cat-open")) {
     document.body.classList.remove("games-cat-open");
   }
 
-  // Show search UI on games panel without forcing the tab highlight
-  gameDetail?.classList.add("hidden");
-  gameDetail?.classList.remove("active");
-  $("#tab-playlists")?.classList.remove("active");
-  $("#tab-games")?.classList.add("active");
-  // do NOT touch .tab active classes
-
   const title = $("#games-page-title");
   if (title) title.textContent = "Suche";
 
   $("#gs-toolbar")?.classList.remove("hidden");
-  syncGsToolbar();
+  if (typeof syncGsToolbar === "function") syncGsToolbar();
+  else if (typeof window.syncGsToolbar === "function") window.syncGsToolbar();
 
   const input = $("#global-search-input");
   if (clearInput && input) {
     input.value = "";
     $("#global-search-clear")?.classList.add("hidden");
   }
-  // Only focus when the user intentionally opens/types search — not when restoring after leaving a game
   if (clearInput && input && document.activeElement !== input) {
     requestAnimationFrame(() => input.focus());
   }
@@ -3090,6 +4002,13 @@ function runGlobalSearch(raw) {
           <div class="gs-sub">${escapeHtml(g.composer || "")}</div>
         </div>
         <span class="gs-duration">${total ? formatAlbumDuration(total) : ""}</span>
+        <button type="button"
+          class="gs-lib-btn ${isAlbumInLibrary(g.id) ? "is-in-lib" : ""}"
+          data-game-id="${escapeHtml(g.id)}"
+          aria-label="${isAlbumInLibrary(g.id) ? "Aus Bibliothek" : "Zur Bibliothek"}"
+          title="${isAlbumInLibrary(g.id) ? "Aus Bibliothek" : "Zur Bibliothek"}">
+          ${isAlbumInLibrary(g.id) ? FAV_CHECK_SVG : FAV_PLUS_SVG}
+        </button>
         <button type="button" class="ctrl-btn gs-menu" data-action="menu" title="Mehr">⋮</button>
       </div>`;
     })
@@ -3116,6 +4035,9 @@ function runGlobalSearch(raw) {
           <div class="gs-sub">${escapeHtml(game.title)}</div>
         </div>
         <span class="gs-duration">${dur}</span>
+        <button type="button" class="gs-fav-btn ${isTrackInAnyPlaylist(game.id, track.id) ? "is-fav" : ""}" data-game-id="${escapeHtml(game.id)}" data-track-id="${escapeHtml(track.id)}" aria-label="Zur Playlist" title="Zur Playlist">
+          ${isTrackInAnyPlaylist(game.id, track.id) ? FAV_CHECK_SVG : FAV_PLUS_SVG}
+        </button>
         <button type="button" class="ctrl-btn gs-menu" data-action="menu" title="Mehr">⋮</button>
       </div>`;
     })
@@ -3190,12 +4112,42 @@ function bindGlobalSearchResults(box) {
     });
   });
 
+  box.querySelectorAll(".gs-lib-btn").forEach((btn) => {
+  btn.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const gid = btn.dataset.gameId;
+    const nowIn = toggleAlbumInLibrary(gid);
+    btn.classList.toggle("is-in-lib", nowIn);
+    btn.innerHTML = nowIn ? FAV_CHECK_SVG : FAV_PLUS_SVG;
+    btn.setAttribute("aria-label", nowIn ? "Aus Bibliothek" : "Zur Bibliothek");
+    if (typeof showToast === "function") {
+      const g = LIBRARY.find((x) => x.id === gid);
+      showToast(
+        nowIn
+          ? { cover: g?.cover || PLACEHOLDER, title: g?.title || "Album", sub: "Zur Bibliothek hinzugefügt" }
+          : { cover: g?.cover || PLACEHOLDER, title: g?.title || "Album", sub: "Aus Bibliothek entfernt" }
+      );
+    }
+    renderLibrary({ animate: false });
+  });
+});
+
+    box.querySelectorAll(".gs-fav-btn").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      handleTrackPlusClick(btn.dataset.gameId, btn.dataset.trackId);
+    });
+  });
+
   // long-press mobile
   box.querySelectorAll(".gs-row").forEach((row) => {
     let lpTimer = null;
     let lpMoved = false;
     row.addEventListener("pointerdown", (e) => {
       if (e.pointerType === "mouse") return;
+      if (e.target.closest(".gs-menu, .gs-fav-btn, .gs-lib-btn")) return;
       lpMoved = false;
       const x = e.clientX;
       const y = e.clientY;
@@ -3308,9 +4260,7 @@ function bindGlobalSearchUI() {
     const filterP = $("#gs-filter-panel");
     const sortP = $("#gs-sort-panel");
     // Close other popovers
-    if (typeof hideContextMenu === "function") hideContextMenu();
-    if (typeof closeSleepPanel === "function") closeSleepPanel();
-    if (typeof closeLoopMenu === "function") closeLoopMenu();
+    closeAllPopovers("gs");
 
     if (which === "filter") {
       if (sortP && !sortP.classList.contains("hidden")) closeGsPanel(sortP);
@@ -3529,6 +4479,24 @@ function openGame(id) {
     titleEl.textContent = compact ? titleEl.dataset.short : titleEl.dataset.full;
   }
 
+  const libBtn = $("#album-lib-btn");
+  if (libBtn) {
+    const inLib = isAlbumInLibrary(game.id);
+    libBtn.classList.toggle("is-in-lib", inLib);
+    libBtn.querySelector(".album-lib-plus")?.classList.toggle("hidden", inLib);
+    libBtn.querySelector(".album-lib-check")?.classList.toggle("hidden", !inLib);
+    libBtn.onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const nowIn = toggleAlbumInLibrary(game.id);
+      libBtn.classList.toggle("is-in-lib", nowIn);
+      libBtn.querySelector(".album-lib-plus")?.classList.toggle("hidden", nowIn);
+      libBtn.querySelector(".album-lib-check")?.classList.toggle("hidden", !nowIn);
+      toastAlbumLib(game, nowIn);
+      renderLibrary({ animate: false });
+    };
+  }
+
   const totalSec = (game.tracks || []).reduce(
     (sum, t) => sum + (Number.isFinite(t.duration) ? t.duration : 0),
     0
@@ -3563,6 +4531,9 @@ function openGame(id) {
           ? formatTime(Number(t.duration))
           : "–:––"
       }</span>
+      <button type="button" class="track-fav-btn" data-fav-track="${t.id}" aria-label="Favorit">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+      </button>
       <span class="track-actions" data-action="menu">⋮</span>
     </div>
   `
@@ -3579,6 +4550,17 @@ function openGame(id) {
       `.track-duration[data-track-id="${CSS.escape(t.id)}"]`
     );
     if (el) el.textContent = formatTime(sec);
+  });
+
+  trackListEl.querySelectorAll(".track-fav-btn").forEach((btn) => {
+    const trackId = btn.dataset.favTrack;
+    paintFavButton(btn, isTrackInAnyPlaylist(game.id, trackId));
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      handleTrackPlusClick(game.id, trackId);
+    });
+    if (typeof bindPressMinHold === "function") bindPressMinHold(btn);
   });
 
   bindTrackListFade();
@@ -3628,7 +4610,7 @@ function openGame(id) {
       "pointerdown",
       (e) => {
       if (e.pointerType === "mouse") return;
-        if (e.target.closest(".track-actions")) return;
+        if (e.target.closest(".track-actions, .track-fav-btn")) return;  // ← add .track-fav-btn
         lpMoved = false;
         const x = e.clientX;
         const y = e.clientY;
@@ -3743,8 +4725,28 @@ function openGame(id) {
 
 
 function bindTabs() {
-  document.querySelectorAll(".tab").forEach((tab) => {
+document.querySelectorAll(".tab").forEach((tab) => {
     tab.addEventListener("click", () => {
+      // Leaving search → fully close so Playlists keeps its own search/toggles
+      if (globalSearchOpen) {
+        globalSearchOpen = false;
+        document.body.classList.remove("search-open", "search-mode");
+        $("#global-search-results")?.classList.add("hidden");
+        if ($("#global-search-results")) $("#global-search-results").innerHTML = "";
+        const input = $("#global-search-input");
+        if (input) {
+          input.value = "";
+          input.blur();
+        }
+        $("#global-search-clear")?.classList.add("hidden");
+        const title = $("#games-page-title");
+        if (title) title.textContent = "Spiele";
+        $("#gs-toolbar")?.classList.add("hidden");
+        $("#gs-filter-panel")?.classList.add("hidden");
+        $("#gs-sort-panel")?.classList.add("hidden");
+        searchReturn = null;
+      }
+
       document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
       tab.classList.add("active");
       document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
@@ -3752,7 +4754,6 @@ function bindTabs() {
       const name = tab.dataset.tab;
 
       if (name === "games" && state.currentGame) {
-        // return to the game you were in
         gameDetail.classList.remove("hidden");
         gameDetail.classList.add("active");
         openGame(state.currentGame.id);
@@ -3763,6 +4764,13 @@ function bindTabs() {
       gameDetail.classList.remove("active");
       const panel = $(`#tab-${name}`);
       if (panel) panel.classList.add("active");
+
+      if (name === "playlists") {
+        setTimeout(() => renderLibrary({ animate: false }), 0);
+      }
+      if (name === "games") {
+        renderGames({ animate: false });
+      }
     });
   });
 
@@ -4653,12 +5661,7 @@ function showLoopMenu(x, y) {
   if (!menu) return;
 
   // Only one menu on screen
-  if (typeof hideContextMenu === "function") hideContextMenu();
-  if (typeof closeSleepPanel === "function") closeSleepPanel();
-  $("#gs-filter-panel")?.classList.add("hidden");
-  $("#gs-filter-panel")?.classList.remove("is-closing");
-  $("#gs-sort-panel")?.classList.add("hidden");
-  $("#gs-sort-panel")?.classList.remove("is-closing");
+  closeAllPopovers("loop");
 
   updateLoopMenuLabels();
 
@@ -6416,13 +7419,7 @@ function showContextMenu(x, y, payload, anchorEl = null) {
   }
 
   contextTrack = payload;
-    // Close other dropdowns so only one menu is open
-  $("#gs-filter-panel")?.classList.add("hidden");
-  $("#gs-filter-panel")?.classList.remove("is-closing");
-  $("#gs-sort-panel")?.classList.add("hidden");
-  $("#gs-sort-panel")?.classList.remove("is-closing");
-  if (typeof closeSleepPanel === "function") closeSleepPanel();
-  if (typeof closeLoopMenu === "function") closeLoopMenu();
+  closeAllPopovers("context");
   contextMenuAnchor = anchorEl || null;
 
   // Header: cover + title + subtitle
@@ -6555,6 +7552,11 @@ function bindContextMenu() {
             title: trackName,
             sub: `Song ans Ende der Queue sortiert.`,
           });
+          return;
+        }
+        if (action === "add-to-playlist") {
+          hideContextMenu();
+          openAddToPlaylistMenu(game.id, track.id);
           return;
         }
         if (action === "open-album") {
@@ -6717,7 +7719,7 @@ function pressMinMs(e) {
 
 function bindPressMinHold(root = document) {
     const selector =
-    ".ctrl-btn, .play-btn, #btn-play, .primary-btn, .tab, .back-btn, .settings-btn, .circle-btn, .header-toggle-btn, .fs-back-btn, .confirm-btn, .game-card, .games-view-btn, .games-row-title, #play-all-btn, #shuffle-all-btn, #album-menu-btn, #settings-reset-btn, .gs-tool-btn, .gs-chip, .context-menu button, #loop-menu button, [data-loop-delta]";
+    ".ctrl-btn, .play-btn, #btn-play, .primary-btn, .tab, .back-btn, .settings-btn, .circle-btn, .header-toggle-btn, .fs-back-btn, .confirm-btn, .game-card, .games-view-btn, .games-row-title, #play-all-btn, #shuffle-all-btn, #album-menu-btn, #settings-reset-btn, .gs-tool-btn, .gs-chip, .context-menu button, #loop-menu button, [data-loop-delta], .card-hover-play, .card-hover-menu, .pl-list-menu, .lib-create-chip, .lib-filter-btn";
 
   root.querySelectorAll(selector).forEach((btn) => {
     if (btn.dataset.pressBound === "1") return;
@@ -6742,6 +7744,15 @@ function bindPressMinHold(root = document) {
       "pointerdown",
       (e) => {
         if (e.button != null && e.button !== 0) return;
+        // Don't capture on game/playlist cards when the real target is a nested control
+        if (
+          btn.matches(".game-card, .pl-card") &&
+          e.target.closest(
+            "button, .card-hover-actions, .card-hover-play, .card-hover-menu, .pl-list-menu"
+          )
+        ) {
+          return;
+        }
         clearTimeout(clearTimer);
         downAt = performance.now();
         minHold = pressMinMs(e);
@@ -6953,6 +7964,72 @@ function closeSettings() {
   settingsReturn = null;
 }
 
+function playlistThumbUrl(pl) {
+  if (!pl) return PLACEHOLDER;
+  if (pl.id === FAVORITES_ID) return "Assets/PlaylistCovers/FavSongsCover.png";
+  const src = playlistCoverSrc(pl);
+  if (Array.isArray(src)) return src[0] || PLACEHOLDER;
+  return src || PLACEHOLDER;
+}
+
+function rebuildQuickPlMenu(filter = "") {
+  const list = document.getElementById("setting-quick-pl-list");
+  if (!list) return;
+  const q = String(filter || "").trim().toLowerCase();
+  const playlists = [...(userLib.playlists || [])].sort((a, b) => {
+    if (a.id === FAVORITES_ID) return -1;
+    if (b.id === FAVORITES_ID) return 1;
+    return String(a.name || "").localeCompare(String(b.name || ""), "de");
+  });
+
+  list.innerHTML = "";
+  playlists.forEach((pl) => {
+    if (q && !String(pl.name || "").toLowerCase().includes(q)) return;
+    const li = document.createElement("li");
+    li.setAttribute("role", "option");
+    li.dataset.value = pl.id;
+    if (settings.quickAddPlaylistId === pl.id) {
+      li.setAttribute("aria-selected", "true");
+    }
+    const coverSrc = playlistThumbUrl(pl);
+    li.innerHTML = `
+      <img src="${escapeHtml(coverSrc)}" alt="" onerror="this.src='${PLACEHOLDER}'">
+      <span>${escapeHtml(pl.name || "Playlist")}</span>
+    `;
+    li.addEventListener("click", (e) => {
+      e.stopPropagation();
+      settings.quickAddPlaylistId = pl.id;
+      saveSettings();
+      updateQuickPlButtonLabel();
+      closeAllCustomSelects();
+    });
+    list.appendChild(li);
+  });
+}
+
+function updateQuickPlButtonLabel() {
+  const label = document.getElementById("setting-quick-pl-label");
+  const cover = document.getElementById("setting-quick-pl-cover");
+  const pl = getPlaylist(settings.quickAddPlaylistId || FAVORITES_ID);
+  if (label) label.textContent = pl?.name || "Lieblingssongs";
+  if (cover) {
+    cover.src = playlistThumbUrl(pl);
+    cover.hidden = false;
+    cover.onerror = () => {
+      cover.src = PLACEHOLDER;
+    };
+  }
+}
+
+function closeAllCustomSelects(except) {
+  document.querySelectorAll(".custom-select.open").forEach((wrap) => {
+    if (except && wrap === except) return;
+    wrap.classList.remove("open");
+    wrap.querySelector(".custom-select-btn")?.setAttribute("aria-expanded", "false");
+    wrap.querySelector(".custom-select-menu")?.classList.add("hidden");
+  });
+}
+
 function bindSettings() {
   $("#btn-settings")?.addEventListener("click", openSettings);
   $("#settings-back")?.addEventListener("click", closeSettings);
@@ -6971,7 +8048,7 @@ function bindSettings() {
     e.target.value = e.target.value.replace(/[^\d]/g, "").slice(0, 2);
   });
 
-    const bindLoopStep = (id, key) => {
+  const bindLoopStep = (id, key) => {
     const el = $(id);
     if (!el) return;
     el.addEventListener("change", (e) => {
@@ -6987,43 +8064,9 @@ function bindSettings() {
   bindLoopStep("#setting-loop-step-plus", "loopStepPlus");
   bindLoopStep("#setting-loop-step-minus", "loopStepMinus");
 
-  const transWrap = $("#setting-transition-wrap");
-  const transBtn = $("#setting-transition-btn");
-  const transMenu = $("#setting-transition-menu");
-
-  transBtn?.addEventListener("click", (e) => {
-    e.stopPropagation();
-    if (!transWrap || !transMenu) return;
-    const open = transWrap.classList.toggle("open");
-    transMenu.classList.toggle("hidden", !open);
-    transBtn.setAttribute("aria-expanded", open ? "true" : "false");
-  });
-
-  transMenu?.querySelectorAll("li").forEach((li) => {
-    li.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const v = Number(li.dataset.value);
-      settings.transitionSec = [0, 5, 10].includes(v) ? v : DEFAULT_SETTINGS.transitionSec;
-      saveSettings();
-      syncSettingsForm();
-      transWrap?.classList.remove("open");
-      transMenu?.classList.add("hidden");
-      transBtn?.setAttribute("aria-expanded", "false");
-    });
-  });
-
-  document.addEventListener("click", (e) => {
-    if (!transWrap) return;
-    if (e.target.closest("#setting-transition-wrap")) return;
-    transWrap.classList.remove("open");
-    transMenu?.classList.add("hidden");
-    transBtn?.setAttribute("aria-expanded", "false");
-  });
-
-    $("#setting-normalize-volume")?.addEventListener("change", (e) => {
+  $("#setting-normalize-volume")?.addEventListener("change", (e) => {
     settings.normalizeVolume = !!e.target.checked;
     saveSettings();
-    // apply immediately if something is playing
     if (decodedBuffer && state.playing) {
       setTrackGainForPlay(state.queue[state.queueIndex]?.track, decodedBuffer);
       setVolume(masterVolume);
@@ -7054,6 +8097,78 @@ function bindSettings() {
 
   const verEl = $("#settings-version");
   if (verEl) verEl.textContent = `Version ${APP_VERSION}`;
+
+  // ── Transition dropdown (one binding) ──
+  $("#setting-transition-btn")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const wrap = $("#setting-transition-wrap");
+    const menu = $("#setting-transition-menu");
+    const btn = $("#setting-transition-btn");
+    const wasOpen = wrap?.classList.contains("open");
+    closeAllCustomSelects();
+    if (!wasOpen && wrap && menu && btn) {
+      wrap.classList.add("open");
+      menu.classList.remove("hidden");
+      btn.setAttribute("aria-expanded", "true");
+    }
+  });
+
+  $("#setting-transition-menu")?.querySelectorAll("li").forEach((li) => {
+    li.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const v = Number(li.dataset.value);
+      settings.transitionSec = [0, 5, 10].includes(v)
+        ? v
+        : DEFAULT_SETTINGS.transitionSec;
+      saveSettings();
+      syncSettingsForm();
+      closeAllCustomSelects();
+    });
+  });
+
+  // ── Quick-add toggle ──
+  $("#setting-quick-add")?.addEventListener("change", (e) => {
+    settings.quickAddEnabled = !!e.target.checked;
+    saveSettings();
+    $("#setting-quick-add-target-row")?.classList.toggle(
+      "is-disabled",
+      !settings.quickAddEnabled
+    );
+  });
+
+  // ── Goal playlist dropdown (one binding) ──
+  $("#setting-quick-pl-btn")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (!settings.quickAddEnabled) return;
+    const wrap = $("#setting-quick-pl-wrap");
+    const menu = $("#setting-quick-pl-menu");
+    const btn = $("#setting-quick-pl-btn");
+    const search = $("#setting-quick-pl-search");
+    const wasOpen = wrap?.classList.contains("open");
+    closeAllCustomSelects();
+    if (!wasOpen && wrap && menu && btn) {
+      if (search) search.value = "";
+      rebuildQuickPlMenu("");
+      wrap.classList.add("open");
+      menu.classList.remove("hidden");
+      btn.setAttribute("aria-expanded", "true");
+      requestAnimationFrame(() => search?.focus());
+    }
+  });
+
+  $("#setting-quick-pl-search")?.addEventListener("input", (e) => {
+    e.stopPropagation();
+    rebuildQuickPlMenu(e.target.value);
+  });
+  $("#setting-quick-pl-search")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+  });
+
+  // Close any open custom select on outside click (one document listener)
+  document.addEventListener("click", (e) => {
+    if (e.target.closest(".custom-select")) return;
+    closeAllCustomSelects();
+  });
 }
 
 function syncSettingsForm() {
@@ -7068,9 +8183,18 @@ function syncSettingsForm() {
   const label = $("#setting-transition-label");
   if (label) label.textContent = `${settings.transitionSec} s`;
 
-
   const norm = $("#setting-normalize-volume");
   if (norm) norm.checked = !!settings.normalizeVolume;
+
+  const autoCol = $("#setting-auto-collapse");
+  if (autoCol) autoCol.checked = !!settings.autoCollapseAlbum;
+
+  const qa = $("#setting-quick-add");
+  if (qa) qa.checked = !!settings.quickAddEnabled;
+  $("#setting-quick-add-target-row")?.classList.toggle(
+    "is-disabled",
+    !settings.quickAddEnabled
+  );
 
   $("#setting-transition-menu")?.querySelectorAll("li").forEach((li) => {
     li.setAttribute(
@@ -7078,6 +8202,8 @@ function syncSettingsForm() {
       li.dataset.value === String(settings.transitionSec) ? "true" : "false"
     );
   });
+
+  updateQuickPlButtonLabel();
 }
 
 function formatDurationForJson(sec) {
@@ -7446,12 +8572,7 @@ function bindSleepTimer() {
     const opening =
       panel?.classList.contains("hidden") || panel?.classList.contains("is-closing");
     if (opening) {
-      if (typeof hideContextMenu === "function") hideContextMenu();
-      if (typeof closeLoopMenu === "function") closeLoopMenu();
-      $("#gs-filter-panel")?.classList.add("hidden");
-      $("#gs-filter-panel")?.classList.remove("is-closing");
-      $("#gs-sort-panel")?.classList.add("hidden");
-      $("#gs-sort-panel")?.classList.remove("is-closing");
+      closeAllPopovers("sleep");
       clearTimeout(sleepPanelCloseTimer);
       panel.classList.remove("is-closing");
       updateSleepEndLabel();
