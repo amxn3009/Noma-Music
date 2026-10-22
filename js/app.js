@@ -2,7 +2,7 @@ import { Bfstm } from './bfstm.js';
 import { Kawarp } from 'https://cdn.jsdelivr.net/npm/@kawarp/core@1.3.1/+esm';
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = "22.10.26, added more logos, added playlistst step 1 (big progess)";
+const APP_VERSION = "22.10.26, added scroll fade, adjusted and fixed stuff";
 
 let LIBRARY = [];
 
@@ -2910,10 +2910,17 @@ function renderGames(opts = {}) {
 
   bindGameCardInteractions(browse);
 
-  browse.querySelectorAll(".games-row-scroll").forEach((el) => {
-    const needsX = el.scrollWidth > el.clientWidth + 2;
-    el.classList.toggle("needs-x-scroll", needsX);
-  });
+browse.querySelectorAll(".games-row-scroll").forEach((el) => {
+  const needsX = el.scrollWidth > el.clientWidth + 2;
+  el.classList.toggle("needs-x-scroll", needsX);
+  if (needsX) bindScrollFadeX(el);
+  else {
+    el.style.removeProperty("--fade-left");
+    el.style.removeProperty("--fade-right");
+    el.style.removeProperty("-webkit-mask-image");
+    el.style.removeProperty("mask-image");
+  }
+});
 
   // was: only .games-row-expand
   browse.querySelectorAll(".games-row-title").forEach((title) => {
@@ -3243,6 +3250,8 @@ function renderLibrary({ animate = true } = {}) {
   } else {
     paint();
   }
+
+  bindAllScrollFades();
 }
 
 function openPlaylistDetail(id) {
@@ -3440,6 +3449,7 @@ function openAddToPlaylistMenu(gameId, trackId) {
   const search = $("#add-to-pl-search");
   if (search) search.value = "";
   renderAddToPlList();
+  bindScrollFadeY(document.querySelector(".add-to-pl-list"));
 
   const ov = document.getElementById("add-to-pl-overlay");
   if (!ov) {
@@ -3634,6 +3644,7 @@ function openCategoryFullscreen(catKey, mode, opts = {}) {
     markPlayingGameCards();
     bindPressMinHold(browse);
     applyGamesLocalFilter();
+    bindAllScrollFades(); // add this at end of inject()
   };
 
   if (opts.instant) {
@@ -3663,6 +3674,7 @@ function openCategoryFullscreen(catKey, mode, opts = {}) {
   }
 
   fadeOutGamesBrowse(browse, go);
+  bindAllScrollFades();
   setTimeout(go, 260);
 }
 
@@ -4062,6 +4074,7 @@ function runGlobalSearch(raw) {
   `;
   box.classList.remove("hidden");
   bindGlobalSearchResults(box);
+  bindScrollFadeY(box);
 }
 
 function bindGlobalSearchResults(box) {
@@ -4468,15 +4481,19 @@ function openGame(id) {
   gameDetail.classList.remove("hidden");
   gameDetail.classList.add("active");
 
-  $("#game-cover").src = game.cover;
-  $("#game-title").textContent = game.title;
+  const coverEl = $("#game-cover");
+  if (coverEl) coverEl.src = game.cover || PLACEHOLDER;
 
   const titleEl = $("#game-title");
   if (titleEl) {
     titleEl.dataset.full = game.title || "";
     titleEl.dataset.short = game.short || game.title || "";
-    const compact = document.querySelector(".game-sticky-top")?.classList.contains("is-collapsed");
-    titleEl.textContent = compact ? titleEl.dataset.short : titleEl.dataset.full;
+    const compact = document
+      .querySelector(".game-sticky-top")
+      ?.classList.contains("is-collapsed");
+    titleEl.textContent = compact
+      ? titleEl.dataset.short
+      : titleEl.dataset.full;
   }
 
   const libBtn = $("#album-lib-btn");
@@ -4564,6 +4581,7 @@ function openGame(id) {
   });
 
   bindTrackListFade();
+  bindAllScrollFades();
   bindGameHeaderToggle();
   requestAnimationFrame(updateTrackFade);
 
@@ -4650,57 +4668,66 @@ function openGame(id) {
   const currentId = getCurrentTrackId();
   if (currentId) markPlayingTrack(currentId);
 
-  $("#play-all-btn").onclick = () => {
-    unlockMediaElement().catch(() => {});
-    unshuffledQueue = null;
-    state.queue = game.tracks.map((t) => ({
-      gameId: game.id,
-      track: t,
-      insert: null,
-    }));
-    state.queueIndex = 0;
-    state.shuffle = false;
-    if (state.loopMode === "count") {
-      state.loopsRemaining = settings.loopTimes;
-    } else {
-      state.loopsRemaining = 0;
-    }
-    playCurrent();
-    renderQueue();
-    updatePlayerUI();
-  };
+  const playAllBtn = $("#play-all-btn");
+  if (playAllBtn) {
+    playAllBtn.onclick = () => {
+      unlockMediaElement().catch(() => {});
+      unshuffledQueue = null;
+      state.queue = game.tracks.map((t) => ({
+        gameId: game.id,
+        track: t,
+        insert: null,
+      }));
+      state.queueIndex = 0;
+      state.shuffle = false;
+      if (state.loopMode === "count") {
+        state.loopsRemaining = settings.loopTimes;
+      } else {
+        state.loopsRemaining = 0;
+      }
+      playCurrent();
+      renderQueue();
+      updatePlayerUI();
+    };
+  }
 
-  $("#shuffle-all-btn").onclick = () => {
-    unlockMediaElement().catch(() => {});
-    unshuffledQueue = game.tracks.map((t) => ({
-      gameId: game.id,
-      track: t,
-      insert: null,
-    }));
+  const shuffleAllBtn = $("#shuffle-all-btn");
+  if (shuffleAllBtn) {
+    shuffleAllBtn.onclick = () => {
+      unlockMediaElement().catch(() => {});
+      unshuffledQueue = game.tracks.map((t) => ({
+        gameId: game.id,
+        track: t,
+        insert: null,
+      }));
 
-    bindPressMinHold(document.querySelector(".game-sticky-top") || document);
+      const items = game.tracks.map((t) => ({
+        gameId: game.id,
+        track: t,
+        insert: null,
+      }));
+      for (let i = items.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [items[i], items[j]] = [items[j], items[i]];
+      }
+      state.queue = items;
+      state.queueIndex = 0;
+      state.shuffle = true;
+      if (state.loopMode === "count") {
+        state.loopsRemaining = settings.loopTimes;
+      } else {
+        state.loopsRemaining = 0;
+      }
 
-    const items = game.tracks.map((t) => ({
-      gameId: game.id,
-      track: t,
-      insert: null,
-    }));
-    for (let i = items.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [items[i], items[j]] = [items[j], items[i]];
-    }
-    state.queue = items;
-    state.queueIndex = 0;
-    state.shuffle = true;
-    if (state.loopMode === "count") {
-      state.loopsRemaining = settings.loopTimes;
-    } else {
-      state.loopsRemaining = 0;
-    }
-    playCurrent();
-    renderQueue();
-    updatePlayerUI();
-  };
+      bindPressMinHold(
+        document.querySelector(".game-sticky-top") || document
+      );
+
+      playCurrent();
+      renderQueue();
+      updatePlayerUI();
+    };
+  }
 
   // Album ⋯ — OUTSIDE shuffle, every time openGame runs
   const albumBtn = $("#album-menu-btn");
@@ -6194,6 +6221,7 @@ function renderQueue() {
 
   lists.forEach((list) => bindQueueItemEvents(list));
   // NO scrollIntoView here — only when opening the panel / fs queue
+  bindAllScrollFades();
 }
 
 function bindQueueItemEvents(list) {
@@ -7040,38 +7068,41 @@ function setupGameTrackSearch() {
   applyFilter();
 }
 
-function toggleGameHeaderCollapse() {
-  if (!state.currentGame || !gameDetail?.classList.contains("active")) return;
-  if (gameDetail.classList.contains("hidden")) return;
-
+function toggleGameHeaderCollapse(force) {
   const sticky = document.querySelector(".game-sticky-top");
-  const detail = $("#game-detail");
+  const scroller = document.querySelector(".track-list-scroll");
+  if (!sticky) return;
+
+  const willCollapse =
+    typeof force === "boolean" ? force : !sticky.classList.contains("is-collapsed");
+
+  // Measure before change
+  const beforeH = sticky.offsetHeight;
+  const scrollBefore = scroller ? scroller.scrollTop : 0;
+
+  sticky.classList.toggle("is-collapsed", willCollapse);
+  sticky.classList.add("is-animating-header");
+
   const titleEl = $("#game-title");
-  const btn = $("#game-header-toggle");
-  if (!sticky || !detail) return;
-
-  const collapsed = sticky.classList.toggle("is-collapsed");
-  detail.classList.toggle("header-collapsed", collapsed);
-  btn?.setAttribute("aria-expanded", collapsed ? "false" : "true");
-
   if (titleEl) {
-    titleEl.textContent = collapsed
-      ? titleEl.dataset.short || titleEl.dataset.full || titleEl.textContent
+    titleEl.textContent = willCollapse
+      ? titleEl.dataset.short || titleEl.dataset.full
       : titleEl.dataset.full || titleEl.textContent;
   }
 
-  sticky.classList.add("is-animating-header");
-  window.clearTimeout(sticky._headerAnimTimer);
-  sticky._headerAnimTimer = window.setTimeout(() => {
-    sticky.classList.remove("is-animating-header");
-  }, 450);
+  const btn = $("#game-header-toggle");
+  if (btn) btn.setAttribute("aria-expanded", willCollapse ? "false" : "true");
 
-  const start = performance.now();
-  const tick = () => {
-    updateTrackFade();
-    if (performance.now() - start < 480) requestAnimationFrame(tick);
-  };
-  requestAnimationFrame(tick);
+  // After layout, compensate scroll so content doesn't jump
+  requestAnimationFrame(() => {
+    const afterH = sticky.offsetHeight;
+    const delta = beforeH - afterH;
+    if (scroller && delta !== 0) {
+      scroller.scrollTop = Math.max(0, scrollBefore - (willCollapse ? delta : -delta));
+    }
+    // clear anim flag after transition
+    setTimeout(() => sticky.classList.remove("is-animating-header"), 450);
+  });
 }
 
 function bindGameHeaderToggle() {
@@ -7083,53 +7114,16 @@ function bindGameHeaderToggle() {
 
 
 function updateTrackFade() {
+  // Sticky header is outside #track-list-scroll — rows never pass under it.
+  // Clear any leftover per-row opacity from older builds.
   const scroller = document.querySelector(".track-list-scroll");
-  const stickyHeader = document.querySelector(".game-sticky-top");
-  if (!scroller || !stickyHeader) return;
-
-  const rows = scroller.querySelectorAll(
-    ".track-row:not(.track-row-hidden):not([hidden])"
-  );
-  if (!rows.length) return;
-
-  const bar = stickyHeader.querySelector(".game-sticky-bar");
-  const headerBlock =
-    stickyHeader.querySelector(".game-header") || stickyHeader;
-  const barBottom = bar?.getBoundingClientRect().bottom ?? 0;
-  const headerBottom = headerBlock.getBoundingClientRect().bottom;
-  const clipLine = Math.max(barBottom, headerBottom);
-
-  const GAP = 0;
-  const FADE = 12;
-  const HIDE = 1; // Safari subpixel: treat ≤1px under header as fully hidden
-
-  if (scroller.scrollTop < 3) {
-    for (const row of rows) {
-      row.style.transition = "none";
-      row.style.opacity = "1";
-      row.style.pointerEvents = "auto";
-    }
-    return;
-  }
-
-  for (const row of rows) {
-    const top = row.getBoundingClientRect().top;
-    const dist = top - (clipLine + GAP);
-
-    if (dist >= FADE) {
-      row.style.transition = "none";
-      row.style.opacity = "1";
-      row.style.pointerEvents = "auto";
-    } else if (dist <= HIDE) {
-      row.style.transition = "none";
-      row.style.opacity = "0";
-      row.style.pointerEvents = "none";
-    } else {
-      row.style.transition = "none"; // no soft fade lag on Safari
-      row.style.opacity = String(dist / FADE);
-      row.style.pointerEvents = "auto";
-    }
-  }
+  if (!scroller) return;
+  scroller.querySelectorAll(".track-row").forEach((row) => {
+    row.style.opacity = "";
+    row.style.pointerEvents = "";
+    row.style.transition = "";
+    row.classList.remove("is-faded-out");
+  });
 }
 
 function bindTrackListFade() {
@@ -7144,63 +7138,26 @@ function bindTrackListFade() {
 
   const COLLAPSE_AT = 72;
   const EXPAND_AT = 2;
-  /** Approximate expanded→collapsed height drop (cover + meta + labels). */
-  const HEADER_COLLAPSE_DELTA = 140;
   let lastY = 0;
   let ignoreUntil = 0;
   let ignoreDir = 0; // +1 ignore further collapse, -1 ignore further expand
   let ticking = false;
-  /** True while a finger/stylus is actively on the scroller (not during fling). */
-  let pointerDown = false;
-  /**
-   * When non-null, force scroller.scrollTop to this value on every scroll frame.
-   * Used after a fling-triggered collapse so residual inertia cannot shoot the list down
-   * while the header height is animating.
-   */
-  let pinScrollY = null;
-  let pinUntil = 0;
 
-  scroller.addEventListener(
-    "pointerdown",
-    (e) => {
-      if (e.pointerType === "mouse" && e.button !== 0) return;
-      pointerDown = true;
-      // User took control again — release any pin
-      pinScrollY = null;
-      pinUntil = 0;
-    },
-    { passive: true }
-  );
-  const clearPointer = () => {
-    pointerDown = false;
+  // True while the user is actively driving the scroll (content or scrollbar)
+  let userScrolling = false;
+  let userScrollClear = null;
+
+  const markUserScroll = () => {
+    userScrolling = true;
+    clearTimeout(userScrollClear);
+    userScrollClear = setTimeout(() => {
+      userScrolling = false;
+    }, 150);
   };
-  scroller.addEventListener("pointerup", clearPointer, { passive: true });
-  scroller.addEventListener("pointercancel", clearPointer, { passive: true });
-  scroller.addEventListener("pointerleave", clearPointer, { passive: true });
 
-  /** Hard-stop inertia and keep the list at targetY for ~durationMs. */
-  const pinScroll = (targetY, durationMs = 520) => {
-    const y = Math.max(0, targetY);
-    pinScrollY = y;
-    pinUntil = performance.now() + durationMs;
-
-    // Immediate stop (overflow toggle + webkit scrolling off)
-    const prevWebkit = scroller.style.webkitOverflowScrolling;
-    scroller.style.overflowY = "hidden";
-    scroller.style.webkitOverflowScrolling = "auto";
-    scroller.scrollTop = y;
-    void scroller.offsetHeight;
-    scroller.style.overflowY = "";
-    scroller.style.webkitOverflowScrolling = prevWebkit || "";
-
-    // Keep re-asserting for a few frames (WebKit often restarts inertia once)
-    const reassert = (n) => {
-      if (pinScrollY == null) return;
-      scroller.scrollTop = pinScrollY;
-      if (n > 0) requestAnimationFrame(() => reassert(n - 1));
-    };
-    requestAnimationFrame(() => reassert(4));
-  };
+  scroller.addEventListener("pointerdown", markUserScroll, { passive: true });
+  scroller.addEventListener("wheel", markUserScroll, { passive: true });
+  scroller.addEventListener("touchstart", markUserScroll, { passive: true });
 
   const tryExpandIfAtTop = () => {
     if (!settings.autoCollapseAlbum) return;
@@ -7213,40 +7170,16 @@ function bindTrackListFade() {
     if (scroller.scrollTop > EXPAND_AT) return;
 
     toggleGameHeaderCollapse();
-    pinScroll(0, 480);
-    ignoreUntil = performance.now() + 500;
+    ignoreUntil = performance.now() + 400;
     ignoreDir = -1;
-    lastY = 0;
+    lastY = scroller.scrollTop;
   };
 
   const onScroll = () => {
-    // While pinned, force position every scroll event (catches late inertia ticks)
-    if (pinScrollY != null) {
-      if (performance.now() < pinUntil) {
-        if (Math.abs(scroller.scrollTop - pinScrollY) > 0.5) {
-          scroller.scrollTop = pinScrollY;
-        }
-        lastY = pinScrollY;
-        updateTrackFade();
-        return;
-      }
-      pinScrollY = null;
-      pinUntil = 0;
-    }
-
     if (ticking) return;
     ticking = true;
     requestAnimationFrame(() => {
       ticking = false;
-
-      // Pin may have been set between scroll and rAF
-      if (pinScrollY != null && performance.now() < pinUntil) {
-        scroller.scrollTop = pinScrollY;
-        lastY = pinScrollY;
-        updateTrackFade();
-        return;
-      }
-
       updateTrackFade();
 
       if (!settings.autoCollapseAlbum) {
@@ -7274,32 +7207,27 @@ function bindTrackListFade() {
         ((ignoreDir > 0 && goingDown) || (ignoreDir < 0 && goingUp));
 
       if (!animating && !locked) {
+        // Collapse: only toggle — toggleGameHeaderCollapse already fixes scrollTop
+        // by the real header height delta. Do NOT pin / force scrollTop here
+        // (that fights the scrollbar and causes the jump).
         if (!collapsed && y >= COLLAPSE_AT && goingDown) {
-          const y0 = y;
-          const targetY = Math.max(COLLAPSE_AT, y0 - HEADER_COLLAPSE_DELTA);
           toggleGameHeaderCollapse();
-
-          if (pointerDown) {
-            // Finger still down — user is driving the scroll
-            scroller.scrollTop = targetY;
-          } else {
-            // Fling / released: pin for the whole header animation so residual
-            // momentum cannot shoot the list down while height changes.
-            pinScroll(targetY, 520);
-          }
-
-          ignoreUntil = performance.now() + 500;
+          ignoreUntil = performance.now() + 400;
           ignoreDir = 1;
-          lastY = targetY;
+          // lastY after header height change (read after layout)
+          requestAnimationFrame(() => {
+            lastY = scroller.scrollTop;
+          });
           return;
         }
 
         if (collapsed && y <= EXPAND_AT) {
           toggleGameHeaderCollapse();
-          pinScroll(0, 480);
-          ignoreUntil = performance.now() + 500;
+          ignoreUntil = performance.now() + 400;
           ignoreDir = -1;
-          lastY = 0;
+          requestAnimationFrame(() => {
+            lastY = scroller.scrollTop;
+          });
           return;
         }
       }
@@ -7313,17 +7241,86 @@ function bindTrackListFade() {
     "scrollend",
     () => {
       updateTrackFade();
-      // Clear pin once native scroll has fully settled
-      if (pinScrollY != null && performance.now() >= pinUntil) {
-        pinScrollY = null;
-        pinUntil = 0;
-      }
       tryExpandIfAtTop();
     },
     { passive: true }
   );
   window.addEventListener("resize", updateTrackFade, { passive: true });
   updateTrackFade();
+  bindScrollFadeY(scroller);
+}
+
+/** Edge fade for any vertical scroller: no fade at top when scrollTop≈0, none at bottom when fully scrolled. */
+function updateScrollFadeY(el) {
+  if (!el) return;
+  const size = parseFloat(getComputedStyle(el).getPropertyValue("--fade-size")) || 28;
+  const max = Math.max(0, el.scrollHeight - el.clientHeight);
+  const y = el.scrollTop;
+  const top = max <= 0 ? 0 : Math.min(size, y);
+  const bottom = max <= 0 ? 0 : Math.min(size, max - y);
+  el.style.setProperty("--fade-top", `${top}px`);
+  el.style.setProperty("--fade-bottom", `${bottom}px`);
+}
+
+/** Edge fade for horizontal scroller (games rows). */
+function updateScrollFadeX(el) {
+  if (!el) return;
+  const size = parseFloat(getComputedStyle(el).getPropertyValue("--fade-size")) || 28;
+  const max = Math.max(0, el.scrollWidth - el.clientWidth);
+  const x = el.scrollLeft;
+  const left = max <= 0 ? 0 : Math.min(size, x);
+  const right = max <= 0 ? 0 : Math.min(size, max - x);
+  el.style.setProperty("--fade-left", `${left}px`);
+  el.style.setProperty("--fade-right", `${right}px`);
+}
+
+function bindScrollFadeY(el) {
+  if (!el || el.dataset.scrollFadeY === "1") return;
+  el.dataset.scrollFadeY = "1";
+  const tick = () => updateScrollFadeY(el);
+  el.addEventListener("scroll", tick, { passive: true });
+  window.addEventListener("resize", tick, { passive: true });
+  // content size changes
+  if (typeof ResizeObserver !== "undefined") {
+    new ResizeObserver(tick).observe(el);
+  }
+  tick();
+}
+
+function bindScrollFadeX(el) {
+  if (!el || el.dataset.scrollFadeX === "1") return;
+  el.dataset.scrollFadeX = "1";
+  const tick = () => updateScrollFadeX(el);
+  el.addEventListener("scroll", tick, { passive: true });
+  window.addEventListener("resize", tick, { passive: true });
+  if (typeof ResizeObserver !== "undefined") {
+    new ResizeObserver(tick).observe(el);
+  }
+  tick();
+}
+
+/** Call once after DOM is ready / after games list is rebuilt. */
+function bindAllScrollFades() {
+  document
+    .querySelectorAll(
+      [
+        ".track-list-scroll",
+        ".games-cat-scroll",
+        "#games-browse",
+        "#global-search-results",
+        "#lib-browse",
+        ".queue-list",
+        ".fs-queue-list",
+        ".add-to-pl-list",
+        ".custom-select-list",
+        "#settings-scroll",
+      ].join(", ")
+    )
+    .forEach(bindScrollFadeY);
+
+  document
+    .querySelectorAll(".games-row-scroll.needs-x-scroll")
+    .forEach(bindScrollFadeX);
 }
 
 let contextMenuAnchor = null;
@@ -7930,6 +7927,7 @@ function openSettings() {
   $("#settings-view")?.classList.remove("hidden");
   document.body.classList.add("settings-open");
 
+  bindScrollFadeY(document.getElementById("settings-scroll"));
   syncSettingsForm();
 }
 
