@@ -2,7 +2,7 @@ import { Bfstm } from './bfstm.js';
 import { Kawarp } from 'https://cdn.jsdelivr.net/npm/@kawarp/core@1.3.1/+esm';
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = "22.10.26, fix scroll jump try #1";
+const APP_VERSION = "22.10.26, fix scroll jump try #2";
 
 let LIBRARY = [];
 
@@ -7070,13 +7070,15 @@ function setupGameTrackSearch() {
 
 function toggleGameHeaderCollapse(force) {
   const sticky = document.querySelector(".game-sticky-top");
+  const scroller = document.querySelector(".track-list-scroll");
   if (!sticky) return;
 
   const willCollapse =
     typeof force === "boolean" ? force : !sticky.classList.contains("is-collapsed");
 
-  // Header is OUTSIDE the scroller — do NOT touch scrollTop.
-  // Changing height only resizes the flex area; list content stays put.
+  // Already in that state
+  if (willCollapse === sticky.classList.contains("is-collapsed")) return;
+
   sticky.classList.toggle("is-collapsed", willCollapse);
   sticky.classList.add("is-animating-header");
 
@@ -7090,7 +7092,49 @@ function toggleGameHeaderCollapse(force) {
   const btn = $("#game-header-toggle");
   if (btn) btn.setAttribute("aria-expanded", willCollapse ? "false" : "true");
 
-  setTimeout(() => sticky.classList.remove("is-animating-header"), 450);
+  // ── Lock scroll on mobile for the whole animation ──
+  const mobile =
+    typeof isMobileLike === "function"
+      ? isMobileLike()
+      : window.matchMedia("(hover: none) and (pointer: coarse)").matches;
+
+  if (mobile && scroller) {
+    const lockedY = scroller.scrollTop;
+    scroller.dataset.scrollLocked = "1";
+    scroller.style.overflowY = "hidden";
+    scroller.style.touchAction = "none";
+    // Kill residual inertia (WebKit)
+    scroller.scrollTop = lockedY;
+    void scroller.offsetHeight;
+    scroller.scrollTop = lockedY;
+
+    const unlock = () => {
+      if (scroller.dataset.scrollLocked !== "1") return;
+      delete scroller.dataset.scrollLocked;
+      scroller.style.overflowY = "";
+      scroller.style.touchAction = "";
+      scroller.scrollTop = lockedY;
+      sticky.classList.remove("is-animating-header");
+    };
+
+    // Prefer transitionend on the sticky; fallback timeout
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      sticky.removeEventListener("transitionend", onEnd);
+      unlock();
+    };
+    const onEnd = (e) => {
+      if (e.target !== sticky && !sticky.contains(e.target)) return;
+      // one property is enough
+      finish();
+    };
+    sticky.addEventListener("transitionend", onEnd);
+    setTimeout(finish, 480); // safety = anim length + a bit
+  } else {
+    setTimeout(() => sticky.classList.remove("is-animating-header"), 450);
+  }
 }
 
 function bindGameHeaderToggle() {
@@ -7128,14 +7172,21 @@ function bindTrackListFade() {
   const EXPAND_AT = 8;
   let lastY = 0;
   let ignoreUntil = 0;
-  let ignoreDir = 0; // +1 = ignore collapse, -1 = ignore expand
+  let ignoreDir = 0;
   let ticking = false;
 
   const onScroll = () => {
+    // While locked, force position and ignore collapse logic
+    if (scroller.dataset.scrollLocked === "1") {
+      return;
+    }
+
     if (ticking) return;
     ticking = true;
     requestAnimationFrame(() => {
       ticking = false;
+      if (scroller.dataset.scrollLocked === "1") return;
+
       updateTrackFade();
 
       if (!settings.autoCollapseAlbum) {
@@ -7164,21 +7215,18 @@ function bindTrackListFade() {
         ((ignoreDir > 0 && goingDown) || (ignoreDir < 0 && goingUp));
 
       if (!animating && !locked) {
-        // Collapse only while scrolling down past threshold
         if (!collapsed && y >= COLLAPSE_AT && goingDown) {
+          lastY = y;
           toggleGameHeaderCollapse(true);
-          ignoreUntil = now + 350;
+          ignoreUntil = now + 500;
           ignoreDir = 1;
-          lastY = scroller.scrollTop;
           return;
         }
-
-        // Expand only when actually near the top (and moving up or already there)
         if (collapsed && y <= EXPAND_AT && (goingUp || y <= 1)) {
+          lastY = y;
           toggleGameHeaderCollapse(false);
-          ignoreUntil = now + 350;
+          ignoreUntil = now + 500;
           ignoreDir = -1;
-          lastY = scroller.scrollTop;
           return;
         }
       }
@@ -7191,8 +7239,8 @@ function bindTrackListFade() {
   scroller.addEventListener(
     "scrollend",
     () => {
+      if (scroller.dataset.scrollLocked === "1") return;
       updateTrackFade();
-      // Settle: if we're at the top and still collapsed, expand
       if (!settings.autoCollapseAlbum) return;
       if (!state.currentGame || !gameDetail?.classList.contains("active")) return;
       const sticky = document.querySelector(".game-sticky-top");
@@ -7201,7 +7249,7 @@ function bindTrackListFade() {
       if (scroller.scrollTop > EXPAND_AT) return;
       if (performance.now() < ignoreUntil && ignoreDir < 0) return;
       toggleGameHeaderCollapse(false);
-      ignoreUntil = performance.now() + 350;
+      ignoreUntil = performance.now() + 500;
       ignoreDir = -1;
       lastY = scroller.scrollTop;
     },
