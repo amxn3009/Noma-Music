@@ -1,7 +1,7 @@
 [
   
 
-      {
+  {
     "id": "marioodyssey",
     "title": "Super Mario Odyssey",
     "short": "Mario Odyssey",
@@ -9,9 +9,495 @@
     "composer": "Naoto Kubo, Shiho Fujii, Koji Kondo",
     "console": "switch",
     "franchise": "mario",
-    "cover": "Assets/Games/SuperMarioGalaxy/AlbumCover/AlbumCover_MarioOdyssey.png",
+    "cover": "Assets/Games/SuperMarioOdyssey/AlbumCover/AlbumCover_MarioOdyssey.png",
     "tracks": [
-      
+      {
+        "id": "smo-title-screen",
+        "title": "Title Screen",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Title Screen.bfstm",
+        "duration": 38.055
+      },
+      {
+        "id": "smo-skies-above-peachs-castle",
+        "title": "The Skies above Peach's Castle",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/The Skies above Peach's Castle.bfstm",
+        "duration": 80.964
+      },
+      {
+        "id": "smo-meeting-cappy",
+        "title": "Meeting Cappy",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Meeting Cappy.bfstm",
+        "duration": 54.466
+      },
+      {
+        "id": "smo-bonneton",
+        "title": "Bonneton",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Bonneton.bfstm",
+        "duration": 78.077
+      },
+      {
+        "id": "smo-top-hat-tower",
+        "title": "Top-Hat Tower",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Top-Hat Tower.bfstm",
+        "duration": 57.532
+      },
+      {
+        "id": "smo-here-come-the-broodals",
+        "title": "Here Come the Broodals",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Here Come the Broodals.bfstm",
+        "duration": 26.415
+      },
+      {
+        "id": "smo-battling-the-broodals",
+        "title": "Battling the Broodals",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Battling the Broodals.bfstm",
+        "duration": 55.219
+      },
+      {
+        "id": "smo-fossil-falls",
+        "title": "Fossil Falls",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Fossil Falls.bfstm",
+        "duration": 123.954
+      },
+      {
+        "id": "smo-capturing-a-t-rex",
+        "title": "Capturing a T-Rex",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Capturing a T-Rex.bfstm",
+        "duration": 46.337
+      },
+      {
+        "id": "smo-battling-madame-broode",
+        "title": "Battling Madame Broode",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Battling Madame Broode.bfstm",
+        "duration": 57.55
+      },
+      {
+        "id": "smo-mario-meets-the-world",
+        "title": "Mario Meets the World: The Odyssey's Maiden Voyage",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Mario Meets the World The Odyssey's Maiden Voyage.bfstm",
+        "duration": 43.887
+      },
+      {
+        "id": "smo-tostarena-ruins",
+        "title": "Tostarena Ruins",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Tostarena Ruins.bfstm",
+        "duration": 110.181
+      },
+      {
+        "id": "smo-inside-the-inverted-pyramid",
+        "title": "Inside the Inverted Pyramid",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Inside the Inverted Pyramid.bfstm",
+        "duration": 67.96
+      },
+      {
+        "id": "smo-tostarena-nights",
+        "title": "Tostarena Nights",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Tostarena Nights.bfstm",
+        "duration": 107.485
+      },
+      {
+        "id": "smo-jaxi-joyride",
+        "title": "Jaxi Joyride",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Jaxi Joyride.bfstm",
+        "duration": 55.089
+      },
+      {
+        "id": "smo-knocking-out-knucklotec",
+        "title": "Knocking Out Knucklotec",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Knocking Out Knucklotec.bfstm",
+        "duration": 76.391
+      },
+      {
+        "id": "smo-tostarena-town",
+        "title": "Tostarena Town",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Tostarena Town.bfstm",
+        "duration": 53.939
+      },
+      {
+        "id": "smo-steam-gardens",
+        "title": "Steam Gardens",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Steam Gardens.bfstm",
+        "duration": 114.688
+      },
+      {
+        "id": "smo-steam-gardens-sherm-sector",
+        "title": "Steam Gardens: Sherm Sector",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Steam Gardens Sherm Sector.bfstm",
+        "duration": 114.688
+      },
+      {
+        "id": "smo-tusseling-with-torkdrift",
+        "title": "Tusseling with Torkdrift",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Tusseling with Torkdrift.bfstm",
+        "duration": 89.643
+      },
+      {
+        "id": "smo-lake-lamode-underwater-passage",
+        "title": "Lake Lamode: Underwater Passage",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Lake Lamode Underwater Passage.bfstm",
+        "duration": 85.719
+      },
+      {
+        "id": "smo-lake-lamode",
+        "title": "Lake Lamode",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Lake Lamode.bfstm",
+        "duration": 98.975
+      },
+      {
+        "id": "smo-lake-lamode-surface",
+        "title": "Lake Lamode: Surface",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Lake Lamode Surface.bfstm",
+        "duration": 98.975
+      },
+      {
+        "id": "smo-bumping-into-bowsers-flying-battleship",
+        "title": "Bumping into Bowser's Flying Battleship",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Bumping into Bowser's Flying Battleship.bfstm",
+        "duration": 33.111
+      },
+      {
+        "id": "smo-bowsers-entrance",
+        "title": "Bowser's Entrance",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Bowser's Entrance.bfstm",
+        "duration": 24.021
+      },
+      {
+        "id": "smo-battling-bowser-1",
+        "title": "Battling Bowser 1: Showdown in Nimbus Arena",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Battling Bowser 1 Showdown in Nimbus Arena.bfstm",
+        "duration": 85.024
+      },
+      {
+        "id": "smo-bowsers-bombardment",
+        "title": "Bowser's Bombardment: The Odyssey Goes Down",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Bowser's Bombardment The Odyssey Goes Down.bfstm",
+        "duration": 32.94
+      },
+      {
+        "id": "smo-cappy-gets-capnapped",
+        "title": "Cappy Gets Capnapped",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Cappy Gets Capnapped.bfstm",
+        "duration": 44.681
+      },
+      {
+        "id": "smo-the-forgotten-isle",
+        "title": "The Forgotten Isle",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/The Forgotten Isle.bfstm",
+        "duration": 92.572
+      },
+      {
+        "id": "smo-new-donk-nights",
+        "title": "New Donk Nights",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/New Donk Nights.bfstm",
+        "duration": 53.747
+      },
+      {
+        "id": "smo-new-donk-nights-city-hall",
+        "title": "New Donk Nights: City Hall",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/New Donk Nights City Hall.bfstm",
+        "duration": 64.844
+      },
+      {
+        "id": "smo-menacing-mechawiggler",
+        "title": "Menacing Mechawiggler",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Menacing Mechawiggler.bfstm",
+        "duration": 87.934
+      },
+      {
+        "id": "smo-new-donk-city",
+        "title": "New Donk City",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/New Donk City.bfstm",
+        "duration": 99.821
+      },
+      {
+        "id": "smo-the-bands-all-here",
+        "title": "The Band's All Here: Super Mario Bros. Ground BGM",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/The Band's All Here Super Mario Bros. Ground BGM.bfstm",
+        "duration": 63.811
+      },
+      {
+        "id": "smo-pausing-by-the-poolside",
+        "title": "Pausing by the Poolside",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Pausing by the Poolside.bfstm",
+        "duration": 149.239
+      },
+      {
+        "id": "smo-underground-power-plant",
+        "title": "Underground Power Plant",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Underground Power Plant.bfstm",
+        "duration": 59.462
+      },
+      {
+        "id": "smo-jump-up-super-star-festival",
+        "title": "Jump Up, Super Star! - New Donk City Festival",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Jump Up, Super Star! - New Donk City Festival.bfstm",
+        "duration": 240.211
+      },
+      {
+        "id": "smo-festival-finale",
+        "title": "Festival Finale",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Festival Finale.bfstm",
+        "duration": 14.491
+      },
+      {
+        "id": "smo-shiveria-town",
+        "title": "Shiveria Town",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Shiveria Town.bfstm",
+        "duration": 79.285
+      },
+      {
+        "id": "smo-ice-caves",
+        "title": "Ice Caves",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Ice Caves.bfstm",
+        "duration": 55.463
+      },
+      {
+        "id": "smo-snowline-circuit",
+        "title": "Snowline Circuit",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Snowline Circuit.bfstm",
+        "duration": 68.428
+      },
+      {
+        "id": "smo-the-bound-bowl-grand-prix",
+        "title": "The Bound Bowl Grand Prix",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/The Bound Bowl Grand Prix.bfstm",
+        "duration": 39.382
+      },
+      {
+        "id": "smo-race-results",
+        "title": "Race Results",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Race Results.bfstm",
+        "duration": 9.841
+      },
+      {
+        "id": "smo-bubblaine",
+        "title": "Bubblaine",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Bubblaine.bfstm",
+        "duration": 121.175
+      },
+      {
+        "id": "smo-bubblaine-underwater",
+        "title": "Bubblaine: Underwater",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Bubblaine Underwater.bfstm",
+        "duration": 121.175
+      },
+      {
+        "id": "smo-battling-brigadier-mollusque-lanceur-iii",
+        "title": "Battling Brigadier Mollusque-Lanceur III, Dauphin of Bubblaine",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Battling Brigadier Mollusque-Lanceur III.bfstm",
+        "duration": 92.496
+      },
+      {
+        "id": "smo-mount-volbono",
+        "title": "Mount Volbono",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Mount Volbono.bfstm",
+        "duration": 97.741
+      },
+      {
+        "id": "smo-peronza-plaza",
+        "title": "Peronza Plaza",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Peronza Plaza.bfstm",
+        "duration": 90.056
+      },
+      {
+        "id": "smo-cooking-cookatiel",
+        "title": "Cooking Cookatiel",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Cooking Cookatiel.bfstm",
+        "duration": 82.659
+      },
+      {
+        "id": "smo-eye-to-eye-with-the-ruined-dragon",
+        "title": "Eye to Eye with the Ruined Dragon",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Eye to Eye with the Ruined Dragon.bfstm",
+        "duration": 48.6
+      },
+      {
+        "id": "smo-rebuffing-the-ruined-dragon",
+        "title": "Rebuffing the Ruined Dragon",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Rebuffing the Ruined Dragon.bfstm",
+        "duration": 84.648
+      },
+      {
+        "id": "smo-bowsers-castle",
+        "title": "Bowser's Castle",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Bowser's Castle.bfstm",
+        "duration": 102.683
+      },
+      {
+        "id": "smo-bowsers-castle-main-courtyard",
+        "title": "Bowser's Castle: Main Courtyard",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Bowser's Castle Main Courtyard.bfstm",
+        "duration": 86.601
+      },
+      {
+        "id": "smo-bowser-bound-for-the-moon",
+        "title": "Bowser, Bound for the Moon",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Bowser, Bound for the Moon.bfstm",
+        "duration": 47.128
+      },
+      {
+        "id": "smo-wrecking-robobrood",
+        "title": "Wrecking RoboBrood",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Wrecking RoboBrood.bfstm",
+        "duration": 188.228
+      },
+      {
+        "id": "smo-to-the-next-kingdom",
+        "title": "To the Next Kingdom",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/To the Next Kingdom.bfstm",
+        "duration": 155.672
+      },
+      {
+        "id": "smo-odyssey-to-the-moon",
+        "title": "Odyssey to the Moon",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Odyssey to the Moon.bfstm",
+        "duration": 24.51
+      },
+      {
+        "id": "smo-honeylune-ridge",
+        "title": "Honeylune Ridge",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Honeylune Ridge.bfstm",
+        "duration": 103.799
+      },
+      {
+        "id": "smo-underground-moon-caverns",
+        "title": "Underground Moon Caverns",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Underground Moon Caverns.bfstm",
+        "duration": 83.702
+      },
+      {
+        "id": "smo-the-wedding-hall",
+        "title": "The Wedding Hall",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/The Wedding Hall.bfstm",
+        "duration": 62.086
+      },
+      {
+        "id": "smo-the-big-stare-down",
+        "title": "The Big Stare Down",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/The Big Stare Down.bfstm",
+        "duration": 21.723
+      },
+      {
+        "id": "smo-battling-bowser-2",
+        "title": "Battling Bowser 2: The Final Fight",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Battling Bowser 2 The Final Fight.bfstm",
+        "duration": 109.271
+      },
+      {
+        "id": "smo-is-it-really-over",
+        "title": "Is It Really Over?",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Is It Really Over.bfstm",
+        "duration": 11.646
+      },
+      {
+        "id": "smo-honeylune-ridge-collapse",
+        "title": "Honeylune Ridge: Collapse",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Honeylune Ridge Collapse.bfstm",
+        "duration": 56.76
+      },
+      {
+        "id": "smo-break-free-lead-the-way",
+        "title": "Break Free (Lead the Way)",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Break Free (Lead the Way).bfstm",
+        "duration": 139.051
+      },
+      {
+        "id": "smo-staff-roll",
+        "title": "Staff Roll",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Staff Roll.bfstm",
+        "duration": 171.421
+      },
+      {
+        "id": "smo-peachs-castle-outskirts",
+        "title": "Peach's Castle Outskirts",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Peach's Castle Outskirts.bfstm",
+        "duration": 28.735
+      },
+      {
+        "id": "smo-peachs-castle",
+        "title": "Peach's Castle",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Peach's Castle.bfstm",
+        "duration": 66.119
+      },
+      {
+        "id": "smo-crazy-cap",
+        "title": "Crazy Cap",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Crazy Cap.bfstm",
+        "duration": 187.66
+      },
+      {
+        "id": "smo-yay-slots-away",
+        "title": "Yay! Slots Away!",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Yay! Slots Away!.bfstm",
+        "duration": 20.205
+      },
+      {
+        "id": "smo-rc-car-challenge",
+        "title": "RC Car Challenge",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/RC Car Challenge.bfstm",
+        "duration": 35.823
+      },
+      {
+        "id": "smo-koopas-trace-walking",
+        "title": "Koopa's Trace-Walking",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Koopa's Trace-Walking.bfstm",
+        "duration": 30.299
+      },
+      {
+        "id": "smo-run-jump-throw-1",
+        "title": "Run, Jump, Throw! 1",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Run, Jump, Throw! 1.bfstm",
+        "duration": 68.815
+      },
+      {
+        "id": "smo-run-jump-throw-2",
+        "title": "Run, Jump, Throw! 2",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Run, Jump, Throw! 2.bfstm",
+        "duration": 55.424
+      },
+      {
+        "id": "smo-another-world",
+        "title": "Challenges in Another World",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Another World.bfstm",
+        "duration": 56.654
+      },
+      {
+        "id": "smo-above-the-clouds",
+        "title": "Above the Clouds",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Above the Clouds.bfstm",
+        "duration": 46.013
+      },
+      {
+        "id": "smo-jump-up-super-star-music-box",
+        "title": "Jump Up, Super Star! - Music Box Ver.",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Jump Up, Super Star! - Music Box Ver..bfstm",
+        "duration": 76.235
+      },
+      {
+        "id": "smo-the-farthest-lullaby",
+        "title": "The Farthest Lullaby - Fossil Falls - Music Box Ver.",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/The Farthest Lullaby - Fossil Falls - Music Box Ver..bfstm",
+        "duration": 40.706
+      },
+      {
+        "id": "smo-rolling-canyon",
+        "title": "Rolling Canyon",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Rolling Canyon.bfstm",
+        "duration": 113.171
+      },
+      {
+        "id": "smo-traversing-tostarena",
+        "title": "Traversing Tostarena",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Traversing Tostarena.bfstm",
+        "duration": 125
+      },
+      {
+        "id": "smo-bubblaine-gloom",
+        "title": "Bubblaine Gloom",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Bubblaine Gloom.bfstm",
+        "duration": 119.807
+      }
+    ]
   },
 
     {
