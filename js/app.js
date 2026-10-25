@@ -3371,31 +3371,49 @@ function openPlaylistDetail(id) {
   const labelEl = document.querySelector(".game-label");
   if (labelEl) labelEl.textContent = "Playlist";
 
-    // Ensure edit chrome exists once
-  let editChrome = document.getElementById("pl-edit-chrome");
+  let addSongsChip = document.getElementById("pl-add-songs-chip");
+  if (!addSongsChip) {
+    addSongsChip = document.createElement("button");
+    addSongsChip.type = "button";
+    addSongsChip.id = "pl-add-songs-chip";
+    addSongsChip.className = "lib-create-chip";
+    addSongsChip.textContent = "+ Songs";
+    $("#play-all-btn")?.parentElement?.insertBefore(addSongsChip, $("#play-all-btn"));
+  }
+  addSongsChip.classList.toggle("hidden", pl.id === FAVORITES_ID);
+  addSongsChip.onclick = () => {
+    searchReturn = { type: "playlist", playlistId: pl.id };
+    sessionQuickAddId = pl.id;
+    window.__forcePlaylistSelectId = pl.id;
+    openGlobalSearch(true);
+  };
+
+  // Ensure edit chrome exists once
+   let editChrome = document.getElementById("pl-edit-chrome");
   if (!editChrome) {
-    const barRight = document.querySelector(".game-sticky-bar-right");
     editChrome = document.createElement("div");
     editChrome.id = "pl-edit-chrome";
     editChrome.className = "pl-edit-chrome";
     editChrome.innerHTML = `
-      <button type="button" id="pl-edit-btn" class="ctrl-btn" title="Bearbeiten" aria-label="Bearbeiten">
+      <button type="button" id="pl-edit-btn" class="circle-btn" title="Bearbeiten" aria-label="Bearbeiten">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1.003 1.003 0 0 0 0-1.42l-2.34-2.34a1.003 1.003 0 0 0-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z"/></svg>
       </button>
       <span id="pl-edit-mode-icon" class="pl-edit-mode-icon hidden" aria-hidden="true">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1.003 1.003 0 0 0 0-1.42l-2.34-2.34a1.003 1.003 0 0 0-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z"/></svg>
       </span>
-      <button type="button" id="pl-edit-cancel" class="ctrl-btn pl-edit-cancel hidden" title="Abbrechen">✕</button>
-      <button type="button" id="pl-edit-save" class="ctrl-btn pl-edit-save hidden" title="Fertig">
+      <button type="button" id="pl-edit-cancel" class="circle-btn pl-edit-cancel hidden" title="Abbrechen">✕</button>
+      <button type="button" id="pl-edit-save" class="circle-btn pl-edit-save hidden" title="Fertig">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
       </button>
-      <button type="button" id="pl-multi-btn" class="ctrl-btn hidden" title="Mehrfachauswahl">☰</button>
     `;
-    // Insert left of album-menu / search — first child of bar-right is fine
-    barRight?.prepend(editChrome);
+    const albumMenu = $("#album-menu-btn");
+    if (albumMenu?.parentElement) {
+      albumMenu.parentElement.insertBefore(editChrome, albumMenu);
+    } else {
+      document.querySelector(".game-sticky-bar-right")?.appendChild(editChrome);
+    }
   }
-  editChrome.classList.remove("hidden");
-  // Hide for favorites if you want: editChrome.classList.toggle("hidden", pl.id === FAVORITES_ID);
+  editChrome.classList.toggle("hidden", pl.id === FAVORITES_ID);
 
   const totalSec = items.reduce(
     (s, it) => s + (Number.isFinite(Number(it.track.duration)) ? Number(it.track.duration) : 0),
@@ -3568,11 +3586,8 @@ function openPlaylistDetail(id) {
     albumBtn.onclick = (e) => {
       e.preventDefault();
       e.stopPropagation();
-      if (!pl.pinLocked) {
-        togglePinPlaylist(pl.id);
-        renderLibrary({ animate: false });
-        showToast?.(pl.pinned ? "Angepinnt" : "Losgelöst");
-      }
+      const r = albumBtn.getBoundingClientRect();
+      showContextMenu(r.left, r.bottom + 6, { playlist: pl, album: false }, albumBtn);
     };
   }
 
@@ -3721,33 +3736,50 @@ function openDeletePlaylistConfirm(plId) {
     showToast?.("Diese Playlist kann nicht gelöscht werden");
     return;
   }
-  // Reuse confirm overlay if present
   const overlay = $("#confirm-overlay");
-  const title = overlay?.querySelector("h3, .confirm-title");
-  const body = overlay?.querySelector("p, .confirm-body");
+  const title = $("#confirm-title");
+  const body = overlay?.querySelector(".confirm-text");
+  const ok = $("#confirm-ok");
+  const cancel = $("#confirm-cancel");
   if (title) title.textContent = "Playlist löschen?";
   if (body) body.textContent = `Willst du wirklich „${pl.name}“ löschen?`;
-  const ok = $("#confirm-ok");
-  const prev = ok?.onclick;
-  openClearQueueConfirm?.() || overlay?.classList.remove("hidden");
-  if (ok) {
-    ok.onclick = () => {
-      userLib.playlists = userLib.playlists.filter((p) => p.id !== plId);
-      saveUserLibrary();
-      closeClearQueueConfirm?.();
-      overlay?.classList.add("hidden");
-      if (state.currentPlaylist?.id === plId) {
-        state.currentPlaylist = null;
-        gameDetail.classList.add("hidden");
-        gameDetail.classList.remove("active");
-        document.querySelector('.tab[data-tab="playlists"]')?.classList.add("active");
-        $("#tab-playlists")?.classList.add("active");
-      }
-      renderLibrary({ animate: true });
-      showToast?.("Playlist gelöscht");
-      ok.onclick = prev || null;
-    };
-  }
+  if (ok) ok.textContent = "Löschen";
+  overlay?.classList.remove("hidden");
+  overlay?.setAttribute("aria-hidden", "false");
+
+  const cleanup = () => {
+    overlay?.classList.add("hidden");
+    overlay?.setAttribute("aria-hidden", "true");
+    if (ok) ok.textContent = "Leeren";
+    if (title) title.textContent = "Warteschlange leeren?";
+    if (body) body.textContent = "Alle Songs werden entfernt und die Wiedergabe gestoppt.";
+  };
+
+  const onOk = () => {
+    userLib.playlists = userLib.playlists.filter((p) => p.id !== plId);
+    saveUserLibrary();
+    cleanup();
+    if (state.currentPlaylist?.id === plId) {
+      state.currentPlaylist = null;
+      gameDetail.classList.add("hidden");
+      gameDetail.classList.remove("active", "is-playlist-detail");
+      document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
+      document.querySelector('.tab[data-tab="playlists"]')?.classList.add("active");
+      document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
+      $("#tab-playlists")?.classList.add("active");
+    }
+    renderLibrary({ animate: true });
+    showToast?.("Playlist gelöscht");
+    ok?.removeEventListener("click", onOk);
+    cancel?.removeEventListener("click", onCancel);
+  };
+  const onCancel = () => {
+    cleanup();
+    ok?.removeEventListener("click", onOk);
+    cancel?.removeEventListener("click", onCancel);
+  };
+  ok?.addEventListener("click", onOk);
+  cancel?.addEventListener("click", onCancel);
 }
 
 /** Add all tracks of an album or playlist into chosen playlists (reuse add-to-pl UI). */
@@ -3824,25 +3856,39 @@ function exitPlaylistEditMode(discard) {
 }
 
 function bindPlaylistEditChrome() {
-  $("#pl-edit-btn")?.addEventListener("click", (e) => {
-    e.stopPropagation();
-    enterPlaylistEditMode();
-  });
-  $("#pl-edit-cancel")?.addEventListener("click", (e) => {
-    e.stopPropagation();
-    exitPlaylistEditMode(true);
-  });
-  $("#pl-edit-save")?.addEventListener("click", (e) => {
-    e.stopPropagation();
-    const pl = state.currentPlaylist && getPlaylist(state.currentPlaylist.id);
-    if (pl) {
-      pl.updatedAt = Date.now();
-      saveUserLibrary();
+  // Delegation: button is created later inside openPlaylistDetail
+  if (document.body.dataset.plEditBound === "1") return;
+  document.body.dataset.plEditBound = "1";
+
+  document.addEventListener("click", (e) => {
+    const editBtn = e.target.closest("#pl-edit-btn");
+    if (editBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      enterPlaylistEditMode();
+      return;
     }
-    exitPlaylistEditMode(false);
+    const cancelBtn = e.target.closest("#pl-edit-cancel");
+    if (cancelBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      exitPlaylistEditMode(true);
+      return;
+    }
+    const saveBtn = e.target.closest("#pl-edit-save");
+    if (saveBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      const pl = state.currentPlaylist && getPlaylist(state.currentPlaylist.id);
+      if (pl) {
+        pl.updatedAt = Date.now();
+        saveUserLibrary();
+      }
+      exitPlaylistEditMode(false);
+    }
   });
 }
-// call bindPlaylistEditChrome() once from init
+
 
 function renderPlaylistEditUI() {
   const pl = state.currentPlaylist && getPlaylist(state.currentPlaylist.id);
@@ -4523,18 +4569,40 @@ function openGlobalSearch(clearInput = true) {
     return;
   }
 
-  searchReturn = {
-    type: document.body.classList.contains("games-cat-open")
-      ? "category"
-      : gameDetail?.classList.contains("active")
-        ? "game"
-        : document.querySelector('.tab[data-tab="playlists"]')?.classList.contains("active")
-          ? "playlists"
-          : "games",
-    gameId: state.currentGame?.id || null,
-    catKey: $("#games-browse")?.dataset.catOpen || null,
-    catMode: $("#games-browse")?.dataset.catMode || null,
-  };
+  // Prefer explicit context over tab heuristics
+  if (state.currentPlaylist) {
+    searchReturn = {
+      type: "playlist",
+      playlistId: state.currentPlaylist.id,
+    };
+  } else if (
+    gameDetail?.classList.contains("active") &&
+    state.currentGame &&
+    searchReturn?.type === "library"
+  ) {
+    // keep library return when opening search from a library album
+    searchReturn = { type: "library", gameId: state.currentGame.id };
+  } else if (gameDetail?.classList.contains("active") && state.currentGame) {
+    searchReturn = {
+      type: "game",
+      gameId: state.currentGame.id,
+      // preserve prior library/playlist origin if any
+      from: searchReturn?.type === "library" ? "library" : searchReturn?.type === "playlist" ? "playlist" : null,
+      playlistId: searchReturn?.playlistId || null,
+    };
+  } else if (document.body.classList.contains("games-cat-open")) {
+    searchReturn = {
+      type: "category",
+      catKey: $("#games-browse")?.dataset.catOpen || null,
+      catMode: $("#games-browse")?.dataset.catMode || null,
+    };
+  } else if (
+    document.querySelector('.tab[data-tab="playlists"]')?.classList.contains("active")
+  ) {
+    searchReturn = { type: "playlists" };
+  } else {
+    searchReturn = { type: "games" };
+  }
 
   globalSearchOpen = true;
   document.body.classList.add("search-open", "search-mode");
@@ -4595,32 +4663,74 @@ function closeGlobalSearch() {
   const ret = searchReturn;
   searchReturn = null;
 
-  if (ret?.type === "game" && ret.gameId) {
-    openGame(ret.gameId);
-    } else if (ret?.type === "category" && ret.catKey) {
+  // Leaving search always clears forced playlist targeting
+  window.__forcePlaylistSelectId = null;
+
+  if (ret?.type === "playlist" && ret.playlistId) {
     document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
-    document.querySelector('.tab[data-tab="games"]')?.classList.add("active");
-    $("#tab-games")?.classList.add("active");
+    document.querySelector('.tab[data-tab="playlists"]')?.classList.add("active");
+    document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
+    // stay on library list OR reopen playlist — user asked NOT to auto-reopen after Songs hinzufügen
+    // So: go back to library browse, not into the playlist
+    $("#tab-playlists")?.classList.add("active");
     gameDetail?.classList.add("hidden");
-    gameDetail?.classList.remove("active");
-    // Open category immediately — no fade through main browse (avoids flash)
-    openCategoryFullscreen(ret.catKey, ret.catMode || gamesViewMode, {
-      instant: true,
-    });
-  } else if (ret?.type === "playlists") {
+    gameDetail?.classList.remove("active", "is-playlist-detail");
+    state.currentPlaylist = null;
+    renderLibrary({ animate: false });
+    return;
+  }
+
+  if (ret?.type === "library") {
     document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
     document.querySelector('.tab[data-tab="playlists"]')?.classList.add("active");
     document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
     $("#tab-playlists")?.classList.add("active");
-  } else {
+    gameDetail?.classList.add("hidden");
+    gameDetail?.classList.remove("active");
+    state.currentGame = null;
+    renderLibrary({ animate: false });
+    return;
+  }
+
+  if (ret?.type === "game" && ret.gameId) {
+    // restore tab under the album so both tabs aren’t active
+    document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
+    if (ret.from === "library") {
+      document.querySelector('.tab[data-tab="playlists"]')?.classList.add("active");
+      searchReturn = { type: "library" }; // so album back still returns to library
+    } else {
+      document.querySelector('.tab[data-tab="games"]')?.classList.add("active");
+    }
+    openGame(ret.gameId);
+    return;
+  }
+
+  if (ret?.type === "category" && ret.catKey) {
     document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
     document.querySelector('.tab[data-tab="games"]')?.classList.add("active");
-    document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
     $("#tab-games")?.classList.add("active");
     gameDetail?.classList.add("hidden");
     gameDetail?.classList.remove("active");
-    renderGames({ animate: true });
+    openCategoryFullscreen(ret.catKey, ret.catMode || gamesViewMode, { instant: true });
+    return;
   }
+
+  if (ret?.type === "playlists") {
+    document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
+    document.querySelector('.tab[data-tab="playlists"]')?.classList.add("active");
+    document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
+    $("#tab-playlists")?.classList.add("active");
+    renderLibrary({ animate: false });
+    return;
+  }
+
+  document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
+  document.querySelector('.tab[data-tab="games"]')?.classList.add("active");
+  document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
+  $("#tab-games")?.classList.add("active");
+  gameDetail?.classList.add("hidden");
+  gameDetail?.classList.remove("active");
+  renderGames({ animate: true });
 }
 
 function runGlobalSearch(raw) {
@@ -5188,15 +5298,12 @@ function openGame(id) {
   const labelEl0 = document.querySelector(".game-label");
   if (labelEl0) labelEl0.textContent = "Spiel";
   // Keep global search query so “back” can restore results
+    // only override searchReturn for search / category; keep library/playlist
   const gsInput = $("#global-search-input");
   const savedSearch = gsInput?.value?.trim() || "";
   if (globalSearchOpen && savedSearch) {
-    searchReturn = {
-      type: "search",
-      query: savedSearch,
-    };
+    searchReturn = { type: "search", query: savedSearch };
   } else if (document.body.classList.contains("games-cat-open")) {
-    // Opened from a console/franchise category → back returns there
     const browse = $("#games-browse");
     searchReturn = {
       type: "category",
@@ -5204,6 +5311,8 @@ function openGame(id) {
       catMode: browse?.dataset.catMode || gamesViewMode,
     };
   }
+  // else: leave existing searchReturn (library / playlist) alone
+
     // Remember previous album (scroll + its own search), not a global one
   if (state.currentGame && state.currentGame.id !== id) {
     saveAlbumViewState();
@@ -5214,6 +5323,7 @@ function openGame(id) {
   tabPlaylists.classList.remove("active");
   gameDetail.classList.remove("hidden");
   gameDetail.classList.add("active");
+  $("#pl-add-songs-chip")?.classList.add("hidden");
   $("#pl-edit-chrome")?.classList.add("hidden");
   exitPlaylistEditMode?.(true);
 
@@ -8228,7 +8338,6 @@ function showContextMenu(x, y, payload, anchorEl = null) {
   }
 
   const isPlaylist = !!payload?.playlist;
-  // ...
   if (isPlaylist) {
     const pl = payload.playlist;
     const coverSrc = playlistCoverSrc(pl);
@@ -8237,6 +8346,7 @@ function showContextMenu(x, y, payload, anchorEl = null) {
     if (titleEl) titleEl.textContent = pl.name || "Playlist";
     if (subEl) subEl.textContent = `${(pl.tracks || []).length} Titel`;
   }
+
   const alreadyInThisAlbum =
     !isAlbum &&
     !!game &&
@@ -8244,14 +8354,32 @@ function showContextMenu(x, y, payload, anchorEl = null) {
     gameDetail?.classList.contains("active") &&
     !gameDetail.classList.contains("hidden");
 
-  // Album-only / track-only / playlist only action visibility
   contextMenu?.querySelectorAll(".ctx-playlist-only").forEach((btn) => {
-    btn.classList.toggle("hidden", !isPlaylist);
+    // hide delete for Lieblingssongs / pinLocked
+    if (btn.dataset.action === "delete-playlist") {
+      const pl = payload?.playlist;
+      const locked = !pl || pl.id === FAVORITES_ID || pl.pinLocked;
+      btn.classList.toggle("hidden", !isPlaylist || locked);
+    } else if (btn.dataset.action === "pin-playlist") {
+      const pl = payload?.playlist;
+      btn.classList.toggle("hidden", !isPlaylist || !pl || pl.pinLocked);
+      const lab = btn.querySelector(".ctx-pin-label");
+      if (lab && pl) lab.textContent = pl.pinned ? "Loslösen" : "Anpinnen";
+    } else {
+      btn.classList.toggle("hidden", !isPlaylist);
+    }
   });
+
+  // album-only: true album menus only (not playlist)
   contextMenu?.querySelectorAll(".ctx-album-only").forEach((btn) => {
     btn.classList.toggle("hidden", !isAlbum);
   });
-  // track-only already handled; hide on playlist menus
+
+  // shared album OR playlist actions
+  contextMenu?.querySelectorAll(".ctx-album-or-playlist").forEach((btn) => {
+    btn.classList.toggle("hidden", !(isAlbum || isPlaylist));
+  });
+
   contextMenu?.querySelectorAll(".ctx-track-only").forEach((btn) => {
     if (btn.dataset.action === "open-album") {
       btn.classList.toggle("hidden", isAlbum || isPlaylist || alreadyInThisAlbum);
@@ -8260,22 +8388,21 @@ function showContextMenu(x, y, payload, anchorEl = null) {
     }
   });
 
-  // For album menu, relabel the two shared actions
   const playNextBtn = contextMenu?.querySelector('[data-action="play-next"]');
   if (playNextBtn) {
     playNextBtn.lastChild.textContent = isPlaylist
-      ? " Playlist als Nächstes abspielen"
+      ? " Playlist als Nächstes"
       : isAlbum
-        ? " Album als Nächstes abspielen"
-        : " Song als Nächstes abspielen";
+        ? " Album als Nächstes"
+        : " Als Nächstes spielen";
   }
   const addEndBtn = contextMenu?.querySelector('[data-action="add-end"]');
   if (addEndBtn) {
     addEndBtn.lastChild.textContent = isPlaylist
-      ? " Playlist ans Ende der Queue sortieren"
+      ? " Playlist ans Ende"
       : isAlbum
-        ? " Album ans Ende der Queue sortieren"
-        : " Song ans Ende der Queue sortieren";
+        ? " Album ans Ende"
+        : " Ans Ende der Queue";
   }
   const shuffleBtn = contextMenu?.querySelector('[data-action="shuffle-into"]');
   if (shuffleBtn) {
@@ -8307,89 +8434,19 @@ function showContextMenu(x, y, payload, anchorEl = null) {
 }
 
 function bindContextMenu() {
-      contextMenu?.querySelectorAll("button[data-action]").forEach((btn) => {
+  contextMenu?.querySelectorAll("button[data-action]").forEach((btn) => {
     btn.addEventListener("click", () => {
       if (!contextTrack) return;
-      const { game, track, album } = contextTrack;
+      const payload = contextTrack;
+      const { game, track, album } = payload;
       const action = btn.dataset.action;
 
       const cover = game?.cover || PLACEHOLDER;
       const albumName = game?.fullscreenName || game?.short || game?.title || "Album";
       const trackName = track?.title || "";
 
-      if (album && game) {
-        if (action === "play-next") {
-          addAlbumPlayNext(game);
-          hideContextMenu();
-          showToast({
-            cover,
-            title: albumName,
-            sub: "Album wird als Nächstes abgespielt.",
-          });
-          return;
-        }
-        if (action === "add-end") {
-          addAlbumToEnd(game);
-          hideContextMenu();
-          showToast({
-            cover,
-            title: albumName,
-            sub: "Album ans Ende der Queue sortiert.",
-          });
-          return;
-        }
-        if (action === "shuffle-into") {
-          shuffleAlbumIntoQueue(game);
-          hideContextMenu();
-          showToast({
-            cover,
-            title: albumName,
-            sub: "Album In die Queue gemischt.",
-          });
-          return;
-        }
-      } else if (game && track) {
-        if (action === "play-next") {
-          addPlayNext(game, track);
-          hideContextMenu();
-          showToast({
-            cover,
-            title: trackName,
-            sub: `Song wird als Nächstes abgespielt.`,
-          });
-          return;
-        }
-        if (action === "add-end") {
-          addToEnd(game, track);
-          hideContextMenu();
-          showToast({
-            cover,
-            title: trackName,
-            sub: `Song ans Ende der Queue sortiert.`,
-          });
-          return;
-        }
-        if (action === "add-to-playlist") {
-          hideContextMenu();
-          openAddToPlaylistMenu(game.id, track.id);
-          return;
-        }
-        if (action === "open-album") {
-          hideContextMenu();
-          if (!$("#fullscreen-player")?.classList.contains("hidden")) {
-            toggleFullscreen();
-          }
-          if (globalSearchOpen) {
-            const q = $("#global-search-input")?.value?.trim() || "";
-            if (q) searchReturn = { type: "search", query: q };
-            globalSearchOpen = false;
-            document.body.classList.remove("search-open", "search-mode");
-            $("#global-search-results")?.classList.add("hidden");
-          }
-          openGame(game.id);
-          return;
-        }
-       if (payload.playlist) {
+      // ── Playlist menu ──
+      if (payload.playlist) {
         const pl = payload.playlist;
         if (action === "play-next") {
           addPlaylistPlayNext(pl);
@@ -8414,18 +8471,90 @@ function bindContextMenu() {
           openAddCollectionToPlaylistMenu({ type: "playlist", playlist: pl });
           return;
         }
+        if (action === "pin-playlist") {
+          if (!pl.pinLocked) {
+            togglePinPlaylist(pl.id);
+            renderLibrary({ animate: false });
+            showToast?.(pl.pinned ? "Angepinnt" : "Losgelöst");
+          }
+          hideContextMenu();
+          return;
+        }
         if (action === "delete-playlist") {
           hideContextMenu();
           openDeletePlaylistConfirm(pl.id);
           return;
         }
-      }
-
-      if (album && game && action === "add-collection-to-playlist") {
-        hideContextMenu();
-        openAddCollectionToPlaylistMenu({ type: "album", game });
         return;
       }
+
+      // ── Album menu ──
+      if (album && game) {
+        if (action === "play-next") {
+          addAlbumPlayNext(game);
+          hideContextMenu();
+          showToast({ cover, title: albumName, sub: "Album wird als Nächstes abgespielt." });
+          return;
+        }
+        if (action === "add-end") {
+          addAlbumToEnd(game);
+          hideContextMenu();
+          showToast({ cover, title: albumName, sub: "Album ans Ende der Queue sortiert." });
+          return;
+        }
+        if (action === "shuffle-into") {
+          shuffleAlbumIntoQueue(game);
+          hideContextMenu();
+          showToast({ cover, title: albumName, sub: "Album in die Queue gemischt." });
+          return;
+        }
+        if (action === "add-collection-to-playlist") {
+          hideContextMenu();
+          openAddCollectionToPlaylistMenu({ type: "album", game });
+          return;
+        }
+        return;
+      }
+
+      // ── Track menu ──
+      if (game && track) {
+        if (action === "play-next") {
+          addPlayNext(game, track);
+          hideContextMenu();
+          showToast({ cover, title: trackName, sub: "Song wird als Nächstes abgespielt." });
+          return;
+        }
+        if (action === "add-end") {
+          addToEnd(game, track);
+          hideContextMenu();
+          showToast({ cover, title: trackName, sub: "Song ans Ende der Queue sortiert." });
+          return;
+        }
+        if (action === "add-to-playlist") {
+          hideContextMenu();
+          openAddToPlaylistMenu(game.id, track.id);
+          return;
+        }
+        if (action === "open-album") {
+          hideContextMenu();
+          if (!$("#fullscreen-player")?.classList.contains("hidden")) toggleFullscreen();
+          // remember where we came from (search / library / playlist)
+          if (globalSearchOpen) {
+            const q = $("#global-search-input")?.value?.trim() || "";
+            if (q) searchReturn = { type: "search", query: q };
+            globalSearchOpen = false;
+            document.body.classList.remove("search-open", "search-mode");
+            $("#global-search-results")?.classList.add("hidden");
+          } else if (state.currentPlaylist) {
+            searchReturn = { type: "playlist", playlistId: state.currentPlaylist.id };
+          } else if (
+            document.querySelector('.tab[data-tab="playlists"]')?.classList.contains("active")
+          ) {
+            searchReturn = { type: "library" };
+          }
+          openGame(game.id);
+          return;
+        }
       }
     });
   });

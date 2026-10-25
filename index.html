@@ -624,13 +624,17 @@
     </svg>
       Spiel Album öffnen
   </button>
-    <button data-action="shuffle-into" type="button" class="ctx-album-only hidden">
+        <button data-action="shuffle-into" type="button" class="ctx-album-or-playlist hidden">
       <svg class="menu-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
       In Queue mischen
     </button>
-    <button data-action="add-collection-to-playlist" type="button" class="ctx-album-only ctx-playlist-only hidden">
+    <button data-action="add-collection-to-playlist" type="button" class="ctx-album-or-playlist hidden">
       <svg class="menu-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M14 10H2v2h12v-2zm0-4H2v2h12V6zM2 16h8v-2H2v2zm17-2v-3h-3v-2h3V6h2v3h3v2h-3v3h-2z"/></svg>
       <span class="ctx-collection-to-pl-label">Zu Playlist hinzufügen</span>
+    </button>
+    <button data-action="pin-playlist" type="button" class="ctx-playlist-only hidden">
+      <svg class="menu-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg>
+      <span class="ctx-pin-label">Anpinnen</span>
     </button>
     <button data-action="delete-playlist" type="button" class="ctx-playlist-only hidden" style="color:#ff6b6b">
       <svg class="menu-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>

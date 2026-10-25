@@ -2112,7 +2112,6 @@ li.queue-item::marker,
 .context-menu {
   position: fixed;
   z-index: 200;
-  width: 240px;
   padding: 6px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 20px;
@@ -2967,7 +2966,12 @@ body.fs-open .progress-row {
   text-overflow: ellipsis;
 }
 .context-menu {
-  width: 260px;
+  width: max(280px, min(340px, 92vw));
+  min-width: 280px;
+}
+.context-menu button {
+  white-space: normal;
+  line-height: 1.25;
 }
 .ctx-album-only.hidden {
   display: none !important;
@@ -6156,11 +6160,18 @@ body.fs-open.fs-queue-open .fs-title-wrap {
 
 /* ── Playlist detail track rows (≈2× album row height, cover + game) ── */
 .track-list.is-playlist .track-row {
-  grid-template-columns: 56px 40px minmax(0, 1fr) auto 32px 32px;
-  gap: 12px;
+  grid-template-columns: 56px 32px minmax(0, 1fr) auto 32px 32px;
+  gap: 6px;
   padding: 10px 12px;
   min-height: 72px;
   border-radius: 12px;
+}
+.track-list.is-playlist .track-row .pl-track-cover {
+  margin-right: 2px;
+}
+.track-list.is-playlist .track-num {
+  width: 32px;
+  height: 32px;
 }
 .track-list.is-playlist .track-row .pl-track-cover {
   width: 56px;
@@ -6272,3 +6283,23 @@ body.pl-editing .pl-cover-edit-btn { opacity: 1; }
   display: flex; flex-direction: column; align-items: center;
   gap: 14px; padding: 40px 16px;
 }
+
+#pl-edit-chrome {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+#pl-edit-chrome .circle-btn,
+#pl-edit-btn.circle-btn {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: rgba(255,255,255,0.08);
+  color: var(--text);
+  cursor: pointer;
+}
+#pl-edit-chrome.hidden { display: none !important; }
