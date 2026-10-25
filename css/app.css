@@ -6095,3 +6095,180 @@ body.fs-open .noma-toast {
     transparent 100%
   );
 }
+
+
+/* ── Marquee titles (player + FS) ── */
+.marquee-wrap {
+  position: relative;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  mask-image: linear-gradient(90deg, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%);
+}
+.marquee-wrap:not(.is-overflowing) {
+  mask-image: none;
+  -webkit-mask-image: none;
+}
+.marquee-text {
+  display: inline-block;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  will-change: transform;
+}
+.marquee-wrap.is-overflowing .marquee-text {
+  max-width: none;
+  overflow: visible;
+  text-overflow: clip;
+  padding-right: 2em;
+  animation: marquee-scroll var(--marquee-dur, 12s) linear infinite;
+  animation-delay: 2s;
+}
+@keyframes marquee-scroll {
+  0%, 12% { transform: translateX(0); }          /* ~2s pause at start */
+  88%, 100% { transform: translateX(calc(-1 * var(--marquee-dist, 0px))); }
+}
+
+.now-text {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+}
+.now-title-wrap {
+  max-width: 100%;
+}
+.fs-title-wrap {
+  max-width: min(420px, 70vw);
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+.fs-title-wrap .fs-title {
+  text-align: center;
+  max-width: none;
+  margin: 0;
+}
+body.fs-open.fs-queue-open .fs-title-wrap {
+  max-width: min(320px, 48vw);
+}
+
+/* ── Playlist detail track rows (≈2× album row height, cover + game) ── */
+.track-list.is-playlist .track-row {
+  grid-template-columns: 56px 40px minmax(0, 1fr) auto 32px 32px;
+  gap: 12px;
+  padding: 10px 12px;
+  min-height: 72px;
+  border-radius: 12px;
+}
+.track-list.is-playlist .track-row .pl-track-cover {
+  width: 56px;
+  height: 56px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: var(--surface-2);
+  flex-shrink: 0;
+}
+.track-list.is-playlist .track-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.track-list.is-playlist .track-meta .track-name {
+  font-size: 1rem;
+  font-weight: 600;
+}
+.track-list.is-playlist .track-meta .track-sub {
+  font-size: 0.8rem;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.track-list.is-playlist .track-num {
+  width: 40px;
+  height: 40px;
+}
+
+/* Playlist cards: clear press */
+.pl-card {
+  transition: transform 0.16s var(--ease);
+}
+.pl-card.is-pressed {
+  transform: scale(0.96) !important;
+}
+.pl-card:hover.is-pressed {
+  transform: scale(0.96) !important;
+}
+@media (hover: none), (pointer: coarse) {
+  .pl-card.is-pressed {
+    transform: scale(0.96) !important;
+  }
+}
+
+.track-row.pl-flash-add {
+  animation: plFlashAdd 0.7s var(--ease);
+}
+.track-row.pl-flash-remove {
+  animation: plFlashRemove 0.55s var(--ease) forwards;
+}
+@keyframes plFlashAdd {
+  0% { background: rgba(124, 156, 255, 0.45); }
+  100% { background: transparent; }
+}
+@keyframes plFlashRemove {
+  0% { background: rgba(255, 80, 80, 0.4); opacity: 1; max-height: 88px; }
+  70% { background: rgba(255, 80, 80, 0.15); opacity: 0.4; }
+  100% { opacity: 0; max-height: 0; padding-top: 0; padding-bottom: 0; margin: 0; }
+}
+
+/* Playlist Edit Mode */
+
+body.pl-editing #play-all-btn,
+body.pl-editing #shuffle-all-btn,
+body.pl-editing #album-lib-btn,
+body.pl-editing #album-menu-btn {
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.9);
+  transition: opacity 0.25s, transform 0.25s;
+}
+#play-all-btn, #shuffle-all-btn, #album-lib-btn, #album-menu-btn {
+  transition: opacity 0.25s, transform 0.25s;
+}
+.pl-edit-save { color: var(--accent) !important; }
+.pl-edit-cancel { color: #ff6b6b !important; }
+.pl-edit-mode-icon { opacity: 0.7; display: grid; place-items: center; }
+.pl-edit-mode-icon.hidden { display: none; }
+.pl-cover-edit-wrap { position: relative; }
+.pl-cover-edit-btn {
+  position: absolute; inset: 0;
+  border: 0; cursor: pointer;
+  background: rgba(0,0,0,0.45);
+  color: #fff;
+  opacity: 0;
+  transition: opacity 0.2s;
+  display: grid; place-items: center;
+}
+.pl-cover-edit-wrap:hover .pl-cover-edit-btn,
+body.pl-editing .pl-cover-edit-btn { opacity: 1; }
+#game-title.pl-title-editing {
+  outline: 1px solid var(--accent);
+  border-radius: 6px;
+  padding: 2px 6px;
+}
+.pl-row-trash {
+  border: 0; background: transparent;
+  color: #ff6b6b; cursor: pointer;
+  width: 32px; height: 32px;
+  display: grid; place-items: center;
+  border-radius: 8px;
+}
+.pl-row-trash:hover { background: rgba(255,80,80,0.15); }
+.track-list.is-editing .track-row.dragging { opacity: 0.5; }
+.pl-empty {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 14px; padding: 40px 16px;
+}
