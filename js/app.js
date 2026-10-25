@@ -2268,6 +2268,16 @@ function bindHotkeys() {
           handled = true;
           break;
         }
+        if (plEdit.active) {
+          exitPlaylistEditMode(true);
+          handled = true;
+          break;
+        }
+        if (state.currentPlaylist && gameDetail?.classList.contains("active")) {
+          $("#back-to-games")?.click();
+          handled = true;
+          break;
+        }
         if (globalSearchOpen) {
           closeGlobalSearch();
           handled = true;
@@ -3161,18 +3171,19 @@ function renderLibrary({ animate = true } = {}) {
       return;
     }
 
-    if (libPrefs.view === "list") {
+        if (libPrefs.view === "list") {
       browse.innerHTML = items
         .map((it) => {
           if (it.kind === "playlist") {
             const pl = it.pl;
-            const cover = playlistCoverSrc(pl);
-            const coverUrl = Array.isArray(cover) ? cover[0] || PLACEHOLDER : cover;
             const n = (pl.tracks || []).length;
+            const pin = pl.pinned
+              ? `<span class="pl-pin-inline" title="Angepinnt" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg></span>`
+              : "";
             return `<div class="pl-list-row" data-pl-id="${escapeHtml(pl.id)}" data-kind="playlist">
-              <img class="pl-list-cover" src="${playlistCoverHtml(pl, "pl-list-cover")}" alt="">
+              ${playlistCoverHtml(pl, "pl-list-cover")}
               <div class="pl-list-meta">
-                <div class="pl-card-title">${escapeHtml(pl.name)}${pl.pinned ? " 📌" : ""}</div>
+                <div class="pl-card-title">${escapeHtml(pl.name)}${pin}</div>
                 <div class="pl-card-sub">${n} Songs</div>
               </div>
               <span class="pl-list-len">${n ? `${n}` : "—"}</span>
@@ -3182,7 +3193,7 @@ function renderLibrary({ animate = true } = {}) {
           const g = it.game;
           const n = g.tracks?.length || 0;
           return `<div class="pl-list-row" data-game-id="${escapeHtml(g.id)}" data-kind="game">
-            <img class="pl-list-cover" src="${escapeHtml(g.cover || PLACEHOLDER)}" alt="">
+            <img class="pl-list-cover" src="${escapeHtml(g.cover || PLACEHOLDER)}" alt="" draggable="false">
             <div class="pl-list-meta">
               <div class="pl-card-title">${escapeHtml(g.title)}</div>
               <div class="pl-card-sub">Album · ${n} Titel</div>
@@ -3217,7 +3228,7 @@ function renderLibrary({ animate = true } = {}) {
           const n = g.tracks?.length || 0;
           return `<div class="pl-card" data-game-id="${escapeHtml(g.id)}" data-kind="game" role="button" tabindex="0">
             <div class="pl-card-cover-wrap">
-              <img class="pl-card-cover" src="${playlistCoverHtml(pl, "pl-card-cover")}" alt="">
+               <img class="pl-card-cover" src="${escapeHtml(g.cover || PLACEHOLDER)}" alt="" draggable="false">
               <div class="card-hover-actions">
                 <button type="button" class="card-hover-menu" data-menu-game="${escapeHtml(g.id)}" title="Mehr" aria-label="Mehr">⋮</button>
                 <button type="button" class="card-hover-play" data-play-game="${escapeHtml(g.id)}" title="Alles abspielen" aria-label="Alles abspielen">
@@ -3426,13 +3437,15 @@ function openPlaylistDetail(id) {
   if (labelEl) labelEl.textContent = "Playlist";
 
   // Header cover (mosaic-aware)
+  // Header cover (mosaic-aware)
   const coverHost = $("#game-cover");
   if (coverHost) applyCoverToEl(coverHost, pl);
 
   // Clean any leftover edit chrome state
   document.body.classList.remove("pl-editing");
   document.querySelectorAll(".pl-cover-edit-hit").forEach((n) => n.remove());
-  // + Songs = circle plus, sits left of edit / menu
+
+  // ── + Songs (create FIRST) ──
   let addSongsChip = document.getElementById("pl-add-songs-chip");
   if (!addSongsChip) {
     addSongsChip = document.createElement("button");
@@ -3443,15 +3456,16 @@ function openPlaylistDetail(id) {
     addSongsChip.setAttribute("aria-label", "Songs hinzufügen");
     addSongsChip.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>`;
   }
-  addSongsChip.classList.remove("hidden");
+  addSongsChip.classList.toggle("hidden", pl.id === FAVORITES_ID);
   addSongsChip.onclick = () => {
     if (plEdit.active) exitPlaylistEditMode(true);
-    searchReturn = { type: "playlist", playlistId: pl.id };
+    searchReturn = { type: "playlist", playlistId: pl.id, stayInSearch: true };
     sessionQuickAddId = pl.id;
     window.__forcePlaylistSelectId = pl.id;
     openGlobalSearch(true);
   };
 
+  // ── Edit chrome (create SECOND) ──
   let editChrome = document.getElementById("pl-edit-chrome");
   if (!editChrome) {
     editChrome = document.createElement("div");
@@ -3464,21 +3478,35 @@ function openPlaylistDetail(id) {
       <span id="pl-edit-mode-icon" class="pl-edit-mode-icon hidden" aria-hidden="true">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1.003 1.003 0 0 0 0-1.42l-2.34-2.34a1.003 1.003 0 0 0-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z"/></svg>
       </span>
-      <button type="button" id="pl-edit-cancel" class="circle-btn pl-edit-cancel hidden" title="Abbrechen">✕</button>
+      <button type="button" id="pl-edit-cancel" class="circle-btn pl-edit-cancel hidden" title="Abbrechen" aria-label="Abbrechen">
+        <span style="color:#ff6b6b;font-size:20px;line-height:1;font-weight:700">×</span>
+      </button>
       <button type="button" id="pl-edit-save" class="circle-btn pl-edit-save hidden" title="Fertig">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
       </button>
     `;
   }
-  editChrome.classList.remove("hidden"); // always show for playlists including fav
+  editChrome.classList.remove("hidden");
 
-  const albumMenu = $("#album-menu-btn");
-  const bar = albumMenu?.parentElement || document.querySelector(".game-sticky-bar-right");
-  if (bar) {
-    // order: … play shuffle | +Songs | editChrome | ⋯
-    if (addSongsChip.parentElement !== bar) bar.insertBefore(addSongsChip, albumMenu || null);
-    if (editChrome.parentElement !== bar) bar.insertBefore(editChrome, albumMenu || null);
+  // ── Left cluster next to cover / under title ──
+  const meta = document.querySelector(".game-meta") || $("#game-title")?.parentElement;
+  let leftCluster = document.getElementById("pl-left-actions");
+  if (!leftCluster) {
+    leftCluster = document.createElement("div");
+    leftCluster.id = "pl-left-actions";
+    leftCluster.className = "pl-left-actions";
+    const countEl = $("#game-track-count");
+    countEl?.parentElement?.insertBefore(leftCluster, countEl.nextSibling);
+    if (!leftCluster.parentElement) meta?.appendChild(leftCluster);
   }
+  leftCluster.innerHTML = "";
+  leftCluster.appendChild(addSongsChip);
+  leftCluster.appendChild(editChrome);
+
+  // Clean any leftover edit chrome state
+  document.body.classList.remove("pl-editing");
+  document.querySelectorAll(".pl-cover-edit-hit").forEach((n) => n.remove());
+
 
   const totalSec = items.reduce(
     (s, it) => s + (Number.isFinite(Number(it.track.duration)) ? Number(it.track.duration) : 0),
@@ -3539,7 +3567,7 @@ function openPlaylistDetail(id) {
         }
       </div>`;
     $("#pl-add-songs-btn")?.addEventListener("click", () => {
-      searchReturn = { type: "playlist", playlistId: pl.id };
+      searchReturn = { type: "playlist", playlistId: pl.id, stayInSearch: true };
       // Force quick-add / menu default to this playlist for the search session
       sessionQuickAddId = pl.id;
       window.__forcePlaylistSelectId = pl.id; // used by openAddToPlaylistMenu
@@ -3582,13 +3610,14 @@ function openPlaylistDetail(id) {
       const idx = +row.dataset.index;
       playFromPlaylist(pl, items, idx);
     });
-    row.addEventListener("contextmenu", (e) => {
+      row.addEventListener("contextmenu", (e) => {
       e.preventDefault();
       const it = items[+row.dataset.index];
       if (!it) return;
       showContextMenu(e.clientX, e.clientY, {
         game: it.game,
         track: it.track,
+        fromPlaylistId: pl.id,
         fromQueue: false,
       });
     });
@@ -3920,6 +3949,7 @@ function enterPlaylistEditMode() {
   const pl = state.currentPlaylist && getPlaylist(state.currentPlaylist.id);
   if (!pl) return;
   plEdit.active = true;
+  plEdit.selected = new Set(); plEdit.multi = false;
   plEdit.snapshot = {
     name: pl.name,
     coverMode: pl.coverMode,
@@ -4006,6 +4036,7 @@ function exitPlaylistEditMode(discard) {
   $("#pl-edit-mode-icon")?.classList.add("hidden");
   $("#pl-edit-cancel")?.classList.add("hidden");
   $("#pl-edit-save")?.classList.add("hidden");
+  $("#pl-multi-wrap")?.classList.add("hidden");
   $("#pl-add-songs-chip")?.classList.remove("hidden");
   if (pl) openPlaylistDetail(pl.id);
 }
@@ -4054,62 +4085,95 @@ function openPlaylistEditMetaModal(pl) {
     )
     .join("");
 
-  let pendingMode = current;
+  let pendingMode = pl.coverMode || "auto";
   let pendingSrc = pl.coverSrc;
+  let pendingLabel = "";
 
-  modes.querySelectorAll(".pl-meta-mode").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      const mode = btn.dataset.mode;
-      if (mode === "auto") {
-        pendingMode = "auto";
-        pendingSrc = null;
-        modes.querySelectorAll(".pl-meta-mode").forEach((b) => b.classList.toggle("active", b.dataset.mode === "auto"));
-        return;
-      }
-      if (mode === "game") {
-        const pick = await openCoverPickList({
-          title: "Spiel-Album wählen",
-          items: LIBRARY.map((g) => ({ id: g.id, label: g.title, cover: g.cover })),
-          searchable: true,
-        });
-        if (!pick) return;
-        pendingMode = "game";
-        pendingSrc = pick.cover;
-        modes.querySelectorAll(".pl-meta-mode").forEach((b) => b.classList.toggle("active", b.dataset.mode === "game"));
-        return;
-      }
-      if (mode === "preset") {
-        // list files under Assets/PlaylistCovers except FavSongsCover.png
-        // static known list + any we can probe; user will add more later
-        const presets = [
-          // add more filenames here as you drop assets
-        ].filter((f) => f && f !== "FavSongsCover.png");
-        // Also try fetch directory is not possible; allow manual path list:
-        const known = ["FavSongsCover.png"]; // excluded
-        const files = (window.__PLAYLIST_PRESETS || []).filter((f) => !known.includes(f));
-        const items = files.map((f) => ({
-          id: f,
-          label: f.replace(/\.[^.]+$/, ""),
-          cover: `Assets/PlaylistCovers/${f}`,
-        }));
-        if (!items.length) {
-          showToast?.("Keine Presets in Assets/PlaylistCovers (außer FavSongs)");
+  function modeLabel() {
+    if (pendingMode === "auto") return "Mosaik / Auto";
+    if (pendingMode === "game") {
+      const g = LIBRARY.find((x) => x.cover === pendingSrc);
+      return g ? `Spiel: ${g.title}` : "Spiel-Album";
+    }
+    if (pendingMode === "preset") {
+      const name = String(pendingSrc || "").split("/").pop() || "Preset";
+      return `Preset: ${name.replace(/\.[^.]+$/, "")}`;
+    }
+    return "";
+  }
+
+  function paintModes() {
+    const modes = [
+      { id: "auto", label: "Mosaik / Auto" },
+      { id: "game", label: "Spiel-Album…" },
+      { id: "preset", label: "Preset…" },
+    ];
+    const preview =
+      pendingMode === "auto"
+        ? ""
+        : pendingSrc
+          ? `<div class="pl-meta-preview"><img src="${escapeHtml(pendingSrc)}" alt=""><span>${escapeHtml(modeLabel())}</span></div>`
+          : "";
+    modesEl.innerHTML =
+      modes
+        .map(
+          (m) =>
+            `<button type="button" class="pl-meta-mode ${pendingMode === m.id ? "is-active" : ""}" data-mode="${m.id}">${m.label}</button>`
+        )
+        .join("") + preview;
+
+    modesEl.querySelectorAll(".pl-meta-mode").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const mode = btn.dataset.mode;
+        if (mode === "auto") {
+          pendingMode = "auto";
+          pendingSrc = null;
+          paintModes();
           return;
         }
-        const pick = await openCoverPickList({
-          title: "Preset wählen",
-          items,
-          searchable: true,
-        });
-        if (!pick) return;
-        pendingMode = "preset";
-        pendingSrc = pick.cover;
-        modes.querySelectorAll(".pl-meta-mode").forEach((b) => b.classList.toggle("active", b.dataset.mode === "preset"));
-      }
+        if (mode === "game") {
+          const pick = await openCoverPickList({
+            title: "Spiel-Album wählen",
+            items: LIBRARY.map((g) => ({
+              id: g.id,
+              label: g.title,
+              cover: g.cover,
+            })),
+            searchable: true,
+          });
+          if (!pick) return;
+          pendingMode = "game";
+          pendingSrc = pick.cover;
+          paintModes();
+          return;
+        }
+        if (mode === "preset") {
+          const known = ["FavSongsCover.png"];
+          const files = (window.__PLAYLIST_PRESETS || []).filter((f) => !known.includes(f));
+          const items = files.map((f) => ({
+            id: f,
+            label: f.replace(/\.[^.]+$/, ""),
+            cover: `Assets/PlaylistCovers/${f}`,
+          }));
+          if (!items.length) {
+            showToast?.("Keine Presets in Assets/PlaylistCovers");
+            return;
+          }
+          const pick = await openCoverPickList({
+            title: "Preset wählen",
+            items,
+            searchable: true,
+          });
+          if (!pick) return;
+          pendingMode = "preset";
+          pendingSrc = pick.cover;
+          paintModes();
+        }
+      });
     });
-  });
-
-  ov.classList.remove("hidden");
+  }
+  const modesEl = ov.querySelector("#pl-meta-modes");
+  paintModes();
   const close = () => ov.classList.add("hidden");
   ov.querySelector("#pl-meta-cancel").onclick = close;
   ov.querySelector("#pl-meta-save").onclick = () => {
@@ -4127,6 +4191,7 @@ function openPlaylistEditMetaModal(pl) {
   ov.onclick = (e) => {
     if (e.target === ov) close();
   };
+  ov.classList.remove("hidden");
 }
 
 function openCoverPickList({ title, items, searchable }) {
@@ -4197,6 +4262,7 @@ function openCoverPickList({ title, items, searchable }) {
 function renderPlaylistEditUI() {
   const pl = state.currentPlaylist && getPlaylist(state.currentPlaylist.id);
   if (!pl) return;
+  if (!plEdit.selected) plEdit.selected = new Set();
 
   const items = resolvePlaylistTracks(pl);
   trackListEl.classList.add("is-playlist", "is-editing");
@@ -4209,9 +4275,15 @@ function renderPlaylistEditUI() {
         Number.isFinite(Number(t.duration)) && Number(t.duration) > 0
           ? formatTime(Number(t.duration))
           : "–:––";
+      const key = `${g.id}::${t.id}`;
+      const sel = plEdit.selected.has(key) ? "is-selected" : "";
       return `
-    <div class="track-row" draggable="true" data-track-id="${escapeHtml(t.id)}" data-game-id="${escapeHtml(g.id)}" data-index="${i}">
-      <span class="track-num"><span class="num">${i + 1}</span></span>
+    <div class="track-row ${sel}" data-track-id="${escapeHtml(t.id)}" data-game-id="${escapeHtml(g.id)}" data-index="${i}" data-key="${escapeHtml(key)}">
+      ${
+        plEdit.multi
+          ? `<label class="pl-ms-check"><input type="checkbox" data-ms="${escapeHtml(key)}" ${plEdit.selected.has(key) ? "checked" : ""}></label>`
+          : `<span class="track-num"><span class="num">${i + 1}</span></span>`
+      }
       <img class="pl-track-cover" src="${escapeHtml(g.cover || PLACEHOLDER)}" alt="" draggable="false">
       <div class="track-meta">
         <span class="track-name">${escapeHtml(t.title)}</span>
@@ -4225,6 +4297,18 @@ function renderPlaylistEditUI() {
     })
     .join("");
 
+  // multi checkbox
+  trackListEl.querySelectorAll("input[data-ms]").forEach((inp) => {
+    inp.addEventListener("click", (e) => e.stopPropagation());
+    inp.addEventListener("change", () => {
+      const k = inp.getAttribute("data-ms");
+      if (inp.checked) plEdit.selected.add(k);
+      else plEdit.selected.delete(k);
+      syncMultiTrash();
+      inp.closest(".track-row")?.classList.toggle("is-selected", inp.checked);
+    });
+  });
+
   trackListEl.querySelectorAll(".pl-row-trash").forEach((btn) => {
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -4235,41 +4319,148 @@ function renderPlaylistEditUI() {
   });
 
   bindPlaylistTrackDrag(pl);
+  ensureMultiSelectChrome();
+  syncMultiTrash();
 }
 
-function bindPlaylistTrackDrag(pl) {
-  let from = -1;
-  trackListEl.querySelectorAll(".track-row").forEach((row) => {
-    row.addEventListener("dragstart", (e) => {
-      from = +row.dataset.index;
-      row.classList.add("dragging");
-      // clear search so position is visible
-      const input = $("#game-track-search");
-      if (input && input.value) {
-        input.value = "";
-        input.dispatchEvent(new Event("input", { bubbles: true }));
-      }
-      e.dataTransfer.effectAllowed = "move";
-    });
-    row.addEventListener("dragend", () => row.classList.remove("dragging"));
-    row.addEventListener("dragover", (e) => {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = "move";
-    });
-    row.addEventListener("drop", (e) => {
-      e.preventDefault();
-      const to = +row.dataset.index;
-      if (from < 0 || to < 0 || from === to) return;
-      const [item] = pl.tracks.splice(from, 1);
-      pl.tracks.splice(to, 0, item);
-      from = -1;
+function ensureMultiSelectChrome() {
+  let ms = document.getElementById("pl-multi-wrap");
+  if (!ms) {
+    ms = document.createElement("div");
+    ms.id = "pl-multi-wrap";
+    ms.className = "pl-multi-wrap";
+    ms.innerHTML = `
+      <button type="button" id="pl-multi-btn" class="circle-btn" title="Mehrfachauswahl" aria-label="Mehrfachauswahl">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14l4-4h12c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-9 11l-3-3 1.4-1.4L10 11.2l4.6-4.6L16 8l-6 6z"/></svg>
+      </button>
+      <button type="button" id="pl-multi-trash" class="circle-btn pl-edit-cancel hidden" title="Auswahl löschen" aria-label="Auswahl löschen">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+      </button>`;
+    document.getElementById("pl-edit-chrome")?.appendChild(ms);
+    document.getElementById("pl-multi-btn")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      plEdit.multi = !plEdit.multi;
+      if (!plEdit.multi) plEdit.selected = new Set();
+      document.getElementById("pl-multi-btn")?.classList.toggle("is-active", plEdit.multi);
       renderPlaylistEditUI();
-      // scroll to new position
-      requestAnimationFrame(() => {
-        trackListEl
-          .querySelector(`.track-row[data-index="${to}"]`)
-          ?.scrollIntoView({ block: "center", behavior: "smooth" });
-      });
+    });
+    document.getElementById("pl-multi-trash")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const pl = state.currentPlaylist && getPlaylist(state.currentPlaylist.id);
+      if (!pl || !plEdit.selected?.size) return;
+      pl.tracks = (pl.tracks || []).filter(
+        (ref) => !plEdit.selected.has(`${ref.gameId}::${ref.trackId}`)
+      );
+      plEdit.selected = new Set();
+      renderPlaylistEditUI();
+    });
+  }
+  ms.classList.toggle("hidden", !plEdit.active);
+}
+
+function syncMultiTrash() {
+  const trash = document.getElementById("pl-multi-trash");
+  if (!trash) return;
+  const n = plEdit.selected?.size || 0;
+  trash.classList.toggle("hidden", !(plEdit.multi && n > 0));
+}
+
+/** Queue-like pointer drag with ghost + drop gap */
+function bindPlaylistTrackDrag(pl) {
+  const list = trackListEl;
+  if (!list) return;
+
+  let dragFrom = -1;
+  let draggingKeys = [];
+  let ghost = null;
+  let dropIndex = -1;
+  let pointerId = null;
+
+  function clearGap() {
+    list.querySelectorAll(".track-row").forEach((r) => {
+      r.classList.remove("drag-gap-before", "drag-gap-after", "dragging");
+    });
+    list.querySelector(".pl-drag-slot")?.remove();
+  }
+
+  function selectedIndices() {
+    if (plEdit.multi && plEdit.selected?.size) {
+      return [...list.querySelectorAll(".track-row")]
+        .map((r, i) => (plEdit.selected.has(r.dataset.key) ? i : -1))
+        .filter((i) => i >= 0)
+        .sort((a, b) => a - b);
+    }
+    return dragFrom >= 0 ? [dragFrom] : [];
+  }
+
+  function onMove(e) {
+    if (dragFrom < 0) return;
+    if (ghost) {
+      ghost.style.left = `${e.clientX + 12}px`;
+      ghost.style.top = `${e.clientY + 12}px`;
+    }
+    const rows = [...list.querySelectorAll(".track-row:not(.dragging)")];
+    let insertAt = rows.length ? +rows[rows.length - 1].dataset.index + 1 : 0;
+    for (const row of rows) {
+      const r = row.getBoundingClientRect();
+      if (e.clientY < r.top + r.height / 2) {
+        insertAt = +row.dataset.index;
+        break;
+      }
+    }
+    dropIndex = insertAt;
+    clearGap();
+    // re-mark dragging
+    selectedIndices().forEach((i) => {
+      list.querySelector(`.track-row[data-index="${i}"]`)?.classList.add("dragging");
+    });
+    const slot = document.createElement("div");
+    slot.className = "pl-drag-slot active";
+    const anchor = list.querySelector(`.track-row:not(.dragging)[data-index="${insertAt}"]`);
+    if (anchor) list.insertBefore(slot, anchor);
+    else list.appendChild(slot);
+  }
+
+  function onUp() {
+    if (dragFrom < 0) return;
+    const idxs = selectedIndices().sort((a, b) => a - b);
+    if (idxs.length && dropIndex >= 0) {
+      const moving = idxs.map((i) => pl.tracks[i]);
+      // remove from back to front
+      for (let i = idxs.length - 1; i >= 0; i--) pl.tracks.splice(idxs[i], 1);
+      let insert = dropIndex;
+      for (const i of idxs) if (i < dropIndex) insert--;
+      pl.tracks.splice(Math.max(0, insert), 0, ...moving);
+    }
+    ghost?.remove();
+    ghost = null;
+    dragFrom = -1;
+    dropIndex = -1;
+    clearGap();
+    window.removeEventListener("pointermove", onMove);
+    window.removeEventListener("pointerup", onUp);
+    renderPlaylistEditUI();
+  }
+
+  list.querySelectorAll(".track-row").forEach((row) => {
+    row.addEventListener("pointerdown", (e) => {
+      if (e.button != null && e.button !== 0) return;
+      if (e.target.closest("button, input, .pl-row-trash, .pl-ms-check")) return;
+      dragFrom = +row.dataset.index;
+      pointerId = e.pointerId;
+      const idxs = selectedIndices().length ? selectedIndices() : [dragFrom];
+      if (plEdit.multi && plEdit.selected?.size && !plEdit.selected.has(row.dataset.key)) {
+        // drag only this row
+        dragFrom = +row.dataset.index;
+      }
+      row.classList.add("dragging");
+      ghost = row.cloneNode(true);
+      ghost.className = "pl-drag-ghost";
+      ghost.style.width = `${row.getBoundingClientRect().width}px`;
+      document.body.appendChild(ghost);
+      onMove(e);
+      window.addEventListener("pointermove", onMove);
+      window.addEventListener("pointerup", onUp);
     });
   });
 }
@@ -4943,7 +5134,15 @@ function closeGlobalSearch() {
     document.querySelector('.tab[data-tab="playlists"]')?.classList.add("active");
     document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
     $("#tab-playlists")?.classList.add("active");
-    openPlaylistDetail(ret.playlistId);
+    // Back from "add songs" session → library list, not auto-open playlist
+    if (ret.stayInSearch) {
+      gameDetail?.classList.add("hidden");
+      gameDetail?.classList.remove("active", "is-playlist-detail");
+      state.currentPlaylist = null;
+      renderLibrary({ animate: false });
+    } else {
+      openPlaylistDetail(ret.playlistId);
+    }
     return;
   }
 
@@ -8662,7 +8861,13 @@ function showContextMenu(x, y, payload, anchorEl = null) {
     }
   });
 
-  const inPlaylistDetail = !!state.currentPlaylist && !isPlaylist && !isAlbum && !!track;
+  const inPlaylistDetail = 
+    !!state.currentPlaylist && 
+    !isPlaylist && 
+    !isAlbum && 
+    !!track && 
+    !!(payload?.fromPlaylistId || state.currentPlaylist);
+    
   contextMenu?.querySelectorAll(".ctx-pl-track-only").forEach((btn) => {
     btn.classList.toggle("hidden", !inPlaylistDetail);
   });
@@ -8759,19 +8964,6 @@ function bindContextMenu() {
           hideContextMenu();
           return;
         }
-        if (action === "remove-from-playlist") {
-          const pid = payload.fromPlaylistId || state.currentPlaylist?.id;
-          if (pid && game && track) {
-            setTrackInPlaylist(pid, game.id, track.id, false);
-            hideContextMenu();
-            syncTrackPlusButtons(game.id, track.id);
-            if (state.currentPlaylist?.id === pid) {
-              refreshOpenPlaylistDetail({ flashTrackId: track.id, flashType: "remove" });
-            }
-            showToast?.({ cover: game.cover, title: track.title, sub: "Aus Playlist entfernt" });
-          }
-          return;
-        }
         if (action === "delete-playlist") {
           hideContextMenu();
           openDeletePlaylistConfirm(pl.id);
@@ -8845,6 +9037,26 @@ function bindContextMenu() {
             searchReturn = { type: "library" };
           }
           openGame(game.id);
+          return;
+        }
+        if (action === "remove-from-playlist") {
+          const pid = payload.fromPlaylistId || state.currentPlaylist?.id;
+          if (pid) {
+            setTrackInPlaylist(pid, game.id, track.id, false);
+            hideContextMenu();
+            syncTrackPlusButtons(game.id, track.id);
+            if (state.currentPlaylist?.id === pid) {
+              refreshOpenPlaylistDetail({
+                flashTrackId: track.id,
+                flashType: "remove",
+              });
+            }
+            showToast?.({
+              cover: game.cover || PLACEHOLDER,
+              title: track.title,
+              sub: "Aus Playlist entfernt",
+            });
+          }
           return;
         }
       }
@@ -9188,43 +9400,54 @@ function setMarqueeText(el, text) {
   el.textContent = text ?? "";
   el.style.removeProperty("--marquee-dist");
   el.style.removeProperty("--marquee-dur");
-  wrap?.classList.remove("is-overflowing", "is-scrolling");
+  wrap?.classList.remove("is-overflowing");
+  if (wrap) {
+    wrap.style.setProperty("--mq-left", "1");
+    wrap.style.setProperty("--mq-right", "0");
+    if (wrap._mqTimer) {
+      clearInterval(wrap._mqTimer);
+      wrap._mqTimer = null;
+    }
+  }
 
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       if (!wrap || !el) return;
       const overflow = el.scrollWidth - wrap.clientWidth;
-      if (overflow > 4) {
-        wrap.classList.add("is-overflowing");
-        // stop when last glyphs are fully visible (no overscroll)
-        const dist = overflow + 4;
-        const dur = Math.max(9, Math.min(20, dist / 26));
-        el.style.setProperty("--marquee-dist", `${dist}px`);
-        el.style.setProperty("--marquee-dur", `${dur}s`);
-        // left fade only while mid-scroll
-        el.addEventListener(
-          "animationstart",
-          () => {
-            const tick = () => {
-              if (!wrap.classList.contains("is-overflowing")) return;
-              wrap.classList.add("is-scrolling");
-              // roughly after pause portion of keyframes
-              setTimeout(() => wrap.classList.add("is-scrolling"), 50);
-            };
-            tick();
-          },
-          { once: true }
-        );
-        // simpler reliable toggle via interval tied to duration
-        if (wrap._marqueeTimer) clearInterval(wrap._marqueeTimer);
-        const ms = dur * 1000;
-        wrap._marqueeTimer = setInterval(() => {
-          wrap.classList.remove("is-scrolling");
-          setTimeout(() => wrap.classList.add("is-scrolling"), ms * 0.08);
-          setTimeout(() => wrap.classList.remove("is-scrolling"), ms * 0.88);
-        }, ms);
-        setTimeout(() => wrap.classList.add("is-scrolling"), ms * 0.08);
-      }
+      if (overflow <= 4) return;
+      wrap.classList.add("is-overflowing");
+      const dist = overflow + 4;
+      const dur = Math.max(9, Math.min(20, dist / 26));
+      el.style.setProperty("--marquee-dist", `${dist}px`);
+      el.style.setProperty("--marquee-dur", `${dur}s`);
+
+      // mask: start solid left / soft right; while mid-scroll both soft;
+      // during crossfade both fade with text opacity
+      const ms = dur * 1000;
+      const beat = () => {
+        wrap.style.setProperty("--mq-left", "1");
+        wrap.style.setProperty("--mq-right", "0");
+        setTimeout(() => {
+          wrap.style.setProperty("--mq-left", "0");
+          wrap.style.setProperty("--mq-right", "0");
+        }, ms * 0.1);
+        setTimeout(() => {
+          // approaching end – both edges soft
+          wrap.style.setProperty("--mq-left", "0");
+          wrap.style.setProperty("--mq-right", "0");
+        }, ms * 0.72);
+        setTimeout(() => {
+          // crossfade hold at end / restart: no harsh cut
+          wrap.style.setProperty("--mq-left", "1");
+          wrap.style.setProperty("--mq-right", "1");
+        }, ms * 0.82);
+        setTimeout(() => {
+          wrap.style.setProperty("--mq-left", "1");
+          wrap.style.setProperty("--mq-right", "0");
+        }, ms * 0.92);
+      };
+      beat();
+      wrap._mqTimer = setInterval(beat, ms);
     });
   });
 }
