@@ -6158,20 +6158,17 @@ body.fs-open.fs-queue-open .fs-title-wrap {
   max-width: min(320px, 48vw);
 }
 
-/* ── Playlist detail track rows (≈2× album row height, cover + game) ── */
 .track-list.is-playlist .track-row {
-  grid-template-columns: 56px 32px minmax(0, 1fr) auto 32px 32px;
-  gap: 6px;
+  grid-template-columns: 28px 56px minmax(0, 1fr) auto 32px 32px;
+  gap: 8px;
   padding: 10px 12px;
   min-height: 72px;
   border-radius: 12px;
 }
-.track-list.is-playlist .track-row .pl-track-cover {
-  margin-right: 2px;
-}
 .track-list.is-playlist .track-num {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 40px;
+  justify-self: start;
 }
 .track-list.is-playlist .track-row .pl-track-cover {
   width: 56px;
@@ -6198,78 +6195,57 @@ body.fs-open.fs-queue-open .fs-title-wrap {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.track-list.is-playlist .track-num {
-  width: 40px;
-  height: 40px;
-}
 
-/* Playlist cards: clear press */
-.pl-card {
-  transition: transform 0.16s var(--ease);
-}
-.pl-card.is-pressed {
-  transform: scale(0.96) !important;
-}
-.pl-card:hover.is-pressed {
-  transform: scale(0.96) !important;
-}
-@media (hover: none), (pointer: coarse) {
-  .pl-card.is-pressed {
-    transform: scale(0.96) !important;
-  }
-}
-
-.track-row.pl-flash-add {
-  animation: plFlashAdd 0.7s var(--ease);
-}
-.track-row.pl-flash-remove {
-  animation: plFlashRemove 0.55s var(--ease) forwards;
-}
-@keyframes plFlashAdd {
-  0% { background: rgba(124, 156, 255, 0.45); }
-  100% { background: transparent; }
-}
-@keyframes plFlashRemove {
-  0% { background: rgba(255, 80, 80, 0.4); opacity: 1; max-height: 88px; }
-  70% { background: rgba(255, 80, 80, 0.15); opacity: 0.4; }
-  100% { opacity: 0; max-height: 0; padding-top: 0; padding-bottom: 0; margin: 0; }
-}
-
-/* Playlist Edit Mode */
-
+/* Edit mode: hide +Songs / play / shuffle / menu */
 body.pl-editing #play-all-btn,
 body.pl-editing #shuffle-all-btn,
 body.pl-editing #album-lib-btn,
-body.pl-editing #album-menu-btn {
-  opacity: 0;
-  pointer-events: none;
+body.pl-editing #album-menu-btn,
+body.pl-editing #pl-add-songs-chip {
+  opacity: 0 !important;
+  pointer-events: none !important;
   transform: scale(0.9);
+}
+#play-all-btn, #shuffle-all-btn, #album-lib-btn, #album-menu-btn, #pl-add-songs-chip {
   transition: opacity 0.25s, transform 0.25s;
 }
-#play-all-btn, #shuffle-all-btn, #album-lib-btn, #album-menu-btn {
-  transition: opacity 0.25s, transform 0.25s;
-}
+
 .pl-edit-save { color: var(--accent) !important; }
 .pl-edit-cancel { color: #ff6b6b !important; }
 .pl-edit-mode-icon { opacity: 0.7; display: grid; place-items: center; }
-.pl-edit-mode-icon.hidden { display: none; }
-.pl-cover-edit-wrap { position: relative; }
-.pl-cover-edit-btn {
-  position: absolute; inset: 0;
-  border: 0; cursor: pointer;
+.pl-edit-mode-icon.hidden { display: none !important; }
+
+/* Cover pencil ONLY on the cover image, not sticky top */
+.game-cover-lg.pl-cover-editable,
+#game-cover.pl-cover-editable {
+  position: relative;
+  cursor: pointer;
+}
+.pl-cover-edit-hit {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  border-radius: inherit;
+  cursor: pointer;
   background: rgba(0,0,0,0.45);
   color: #fff;
   opacity: 0;
   transition: opacity 0.2s;
-  display: grid; place-items: center;
+  display: grid;
+  place-items: center;
+  z-index: 2;
 }
-.pl-cover-edit-wrap:hover .pl-cover-edit-btn,
-body.pl-editing .pl-cover-edit-btn { opacity: 1; }
+body.pl-editing .pl-cover-edit-hit { opacity: 1; }
+body.pl-editing .pl-cover-edit-hit:hover { background: rgba(0,0,0,0.55); }
+
+/* never leave title outline around */
+#game-title {
+  outline: none !important;
+}
 #game-title.pl-title-editing {
-  outline: 1px solid var(--accent);
-  border-radius: 6px;
-  padding: 2px 6px;
+  outline: none !important;
 }
+
 .pl-row-trash {
   border: 0; background: transparent;
   color: #ff6b6b; cursor: pointer;
@@ -6284,16 +6260,18 @@ body.pl-editing .pl-cover-edit-btn { opacity: 1; }
   gap: 14px; padding: 40px 16px;
 }
 
+/* Edit chrome + +Songs = same circle size as play/shuffle (not collapsed) */
 #pl-edit-chrome {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
+#pl-edit-chrome.hidden { display: none !important; }
 #pl-edit-chrome .circle-btn,
-#pl-edit-btn.circle-btn {
-  width: 40px;
-  height: 40px;
-  min-width: 40px;
+#pl-add-songs-chip.circle-btn {
+  width: 48px !important;
+  height: 48px !important;
+  min-width: 48px !important;
   border-radius: 50%;
   display: grid;
   place-items: center;
@@ -6301,5 +6279,86 @@ body.pl-editing .pl-cover-edit-btn { opacity: 1; }
   background: rgba(255,255,255,0.08);
   color: var(--text);
   cursor: pointer;
+  padding: 0;
+  font-size: 0;
 }
-#pl-edit-chrome.hidden { display: none !important; }
+.game-sticky-top.is-collapsed #pl-edit-chrome .circle-btn,
+.game-sticky-top.is-collapsed #pl-add-songs-chip.circle-btn {
+  width: 40px !important;
+  height: 40px !important;
+  min-width: 40px !important;
+}
+
+/* Confirm / Fertig colors */
+.confirm-cancel {
+  background: rgba(255, 80, 80, 0.18) !important;
+  border-color: rgba(255, 80, 80, 0.45) !important;
+  color: #ff8a8a !important;
+}
+.confirm-cancel:hover {
+  background: rgba(255, 80, 80, 0.3) !important;
+}
+.confirm-ok,
+#add-to-pl-done.confirm-ok {
+  background: rgba(124, 156, 255, 0.22) !important;
+  border-color: rgba(124, 156, 255, 0.5) !important;
+  color: #a8c0ff !important;
+}
+.confirm-ok:hover,
+#add-to-pl-done.confirm-ok:hover {
+  background: rgba(124, 156, 255, 0.35) !important;
+}
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  width: 100%;
+}
+.add-to-pl-sticky-bottom {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* Marquee: left fade only after scroll starts; soft loop */
+.marquee-wrap {
+  position: relative;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+.marquee-wrap:not(.is-overflowing) {
+  mask-image: none;
+  -webkit-mask-image: none;
+}
+.marquee-wrap.is-overflowing {
+  /* right fade always; left fades in after start */
+  mask-image: linear-gradient(90deg, #000 0, #000 8px, #000 calc(100% - 14px), transparent 100%);
+  -webkit-mask-image: linear-gradient(90deg, #000 0, #000 8px, #000 calc(100% - 14px), transparent 100%);
+}
+.marquee-wrap.is-overflowing.is-scrolling {
+  mask-image: linear-gradient(90deg, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%);
+}
+.marquee-text {
+  display: inline-block;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  will-change: transform, opacity;
+}
+.marquee-wrap.is-overflowing .marquee-text {
+  max-width: none;
+  overflow: visible;
+  text-overflow: clip;
+  animation: marquee-scroll var(--marquee-dur, 12s) linear infinite;
+}
+@keyframes marquee-scroll {
+  0%   { transform: translateX(0); opacity: 1; }
+  8%   { transform: translateX(0); opacity: 1; } /* ~pause */
+  78%  { transform: translateX(calc(-1 * var(--marquee-dist, 0px))); opacity: 1; }
+  88%  { transform: translateX(calc(-1 * var(--marquee-dist, 0px))); opacity: 0; }
+  89%  { transform: translateX(0); opacity: 0; }
+  100% { transform: translateX(0); opacity: 1; }
+}

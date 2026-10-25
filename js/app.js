@@ -113,13 +113,13 @@ function getPlaylist(id) {
 }
 
 function playlistCoverSrc(pl) {
-  // Lieblingssongs always uses fixed cover
   if (pl.id === FAVORITES_ID) {
     return "Assets/PlaylistCovers/FavSongsCover.png";
   }
   if (pl.coverMode === "preset" || pl.coverMode === "game") {
     if (pl.coverSrc) return pl.coverSrc;
   }
+  // auto: mosaic only if >3 distinct games, else first track's game cover
   const covers = [];
   const seen = new Set();
   for (const ref of pl.tracks || []) {
@@ -129,10 +129,61 @@ function playlistCoverSrc(pl) {
       covers.push(g.cover);
       seen.add(ref.gameId);
     }
-    if (covers.length >= 4) break;
   }
   if (!covers.length) return PLACEHOLDER;
-  return covers;
+  if (covers.length > 3) return covers.slice(0, 4); // mosaic array
+  return covers[0]; // single cover
+}
+
+/** Apply cover to an <img> OR mosaic container */
+function applyCoverToEl(el, pl) {
+  if (!el) return;
+  const src = playlistCoverSrc(pl);
+  if (Array.isArray(src)) {
+    if (el.tagName === "IMG") {
+      // replace img with mosaic div of same size
+      const mosaic = document.createElement("div");
+      mosaic.className = el.className.replace("pl-card-cover", "pl-cover-mosaic") || "pl-cover-mosaic";
+      if (el.id) mosaic.id = el.id;
+      mosaic.innerHTML = src
+        .map((u) => `<img src="${escapeHtml(u)}" alt="" draggable="false">`)
+        .join("");
+      el.replaceWith(mosaic);
+      return mosaic;
+    }
+    el.classList.add("pl-cover-mosaic");
+    el.innerHTML = src
+      .map((u) => `<img src="${escapeHtml(u)}" alt="" draggable="false">`)
+      .join("");
+    if (el.tagName === "IMG") el.removeAttribute("src");
+    return el;
+  }
+  // single url
+  if (el.tagName === "IMG") {
+    el.src = src || PLACEHOLDER;
+    return el;
+  }
+  // was mosaic div → back to img if needed
+  if (el.classList.contains("pl-cover-mosaic") && el.id === "game-cover") {
+    const img = document.createElement("img");
+    img.id = "game-cover";
+    img.className = "game-cover-lg";
+    img.alt = "";
+    img.src = src || PLACEHOLDER;
+    el.replaceWith(img);
+    return img;
+  }
+  return el;
+}
+
+function playlistCoverHtml(pl, className = "pl-card-cover") {
+  const src = playlistCoverSrc(pl);
+  if (Array.isArray(src)) {
+    return `<div class="pl-cover-mosaic ${className === "pl-card-cover" ? "" : className}">${src
+      .map((u) => `<img src="${escapeHtml(u)}" alt="" draggable="false">`)
+      .join("")}</div>`;
+  }
+  return `<img class="${className}" src="${escapeHtml(src || PLACEHOLDER)}" alt="" draggable="false">`;
 }
 
 function createPlaylist(name = "Neue Playlist") {
@@ -3119,7 +3170,7 @@ function renderLibrary({ animate = true } = {}) {
             const coverUrl = Array.isArray(cover) ? cover[0] || PLACEHOLDER : cover;
             const n = (pl.tracks || []).length;
             return `<div class="pl-list-row" data-pl-id="${escapeHtml(pl.id)}" data-kind="playlist">
-              <img class="pl-list-cover" src="${escapeHtml(coverUrl)}" alt="">
+              <img class="pl-list-cover" src="${playlistCoverHtml(pl, "pl-list-cover")}" alt="">
               <div class="pl-list-meta">
                 <div class="pl-card-title">${escapeHtml(pl.name)}${pl.pinned ? " 📌" : ""}</div>
                 <div class="pl-card-sub">${n} Songs</div>
@@ -3166,7 +3217,7 @@ function renderLibrary({ animate = true } = {}) {
           const n = g.tracks?.length || 0;
           return `<div class="pl-card" data-game-id="${escapeHtml(g.id)}" data-kind="game" role="button" tabindex="0">
             <div class="pl-card-cover-wrap">
-              <img class="pl-card-cover" src="${escapeHtml(g.cover || PLACEHOLDER)}" alt="">
+              <img class="pl-card-cover" src="${playlistCoverHtml(pl, "pl-card-cover")}" alt="">
               <div class="card-hover-actions">
                 <button type="button" class="card-hover-menu" data-menu-game="${escapeHtml(g.id)}" title="Mehr" aria-label="Mehr">⋮</button>
                 <button type="button" class="card-hover-play" data-play-game="${escapeHtml(g.id)}" title="Alles abspielen" aria-label="Alles abspielen">
@@ -3361,6 +3412,9 @@ function openPlaylistDetail(id) {
     titleEl.dataset.full = pl.name || "Playlist";
     titleEl.dataset.short = pl.name || "Playlist";
     titleEl.textContent = pl.name || "Playlist";
+    titleEl.contentEditable = "false";
+    titleEl.classList.remove("pl-title-editing");
+    titleEl.style.outline = "";
   }
 
   // Hide album-only controls
@@ -3371,25 +3425,34 @@ function openPlaylistDetail(id) {
   const labelEl = document.querySelector(".game-label");
   if (labelEl) labelEl.textContent = "Playlist";
 
+  // Header cover (mosaic-aware)
+  const coverHost = $("#game-cover");
+  if (coverHost) applyCoverToEl(coverHost, pl);
+
+  // Clean any leftover edit chrome state
+  document.body.classList.remove("pl-editing");
+  document.querySelectorAll(".pl-cover-edit-hit").forEach((n) => n.remove());
+  // + Songs = circle plus, sits left of edit / menu
   let addSongsChip = document.getElementById("pl-add-songs-chip");
   if (!addSongsChip) {
     addSongsChip = document.createElement("button");
     addSongsChip.type = "button";
     addSongsChip.id = "pl-add-songs-chip";
-    addSongsChip.className = "lib-create-chip";
-    addSongsChip.textContent = "+ Songs";
-    $("#play-all-btn")?.parentElement?.insertBefore(addSongsChip, $("#play-all-btn"));
+    addSongsChip.className = "circle-btn";
+    addSongsChip.title = "Songs hinzufügen";
+    addSongsChip.setAttribute("aria-label", "Songs hinzufügen");
+    addSongsChip.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>`;
   }
-  addSongsChip.classList.toggle("hidden", pl.id === FAVORITES_ID);
+  addSongsChip.classList.remove("hidden");
   addSongsChip.onclick = () => {
+    if (plEdit.active) exitPlaylistEditMode(true);
     searchReturn = { type: "playlist", playlistId: pl.id };
     sessionQuickAddId = pl.id;
     window.__forcePlaylistSelectId = pl.id;
     openGlobalSearch(true);
   };
 
-  // Ensure edit chrome exists once
-   let editChrome = document.getElementById("pl-edit-chrome");
+  let editChrome = document.getElementById("pl-edit-chrome");
   if (!editChrome) {
     editChrome = document.createElement("div");
     editChrome.id = "pl-edit-chrome";
@@ -3406,14 +3469,16 @@ function openPlaylistDetail(id) {
         <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
       </button>
     `;
-    const albumMenu = $("#album-menu-btn");
-    if (albumMenu?.parentElement) {
-      albumMenu.parentElement.insertBefore(editChrome, albumMenu);
-    } else {
-      document.querySelector(".game-sticky-bar-right")?.appendChild(editChrome);
-    }
   }
-  editChrome.classList.toggle("hidden", pl.id === FAVORITES_ID);
+  editChrome.classList.remove("hidden"); // always show for playlists including fav
+
+  const albumMenu = $("#album-menu-btn");
+  const bar = albumMenu?.parentElement || document.querySelector(".game-sticky-bar-right");
+  if (bar) {
+    // order: … play shuffle | +Songs | editChrome | ⋯
+    if (addSongsChip.parentElement !== bar) bar.insertBefore(addSongsChip, albumMenu || null);
+    if (editChrome.parentElement !== bar) bar.insertBefore(editChrome, albumMenu || null);
+  }
 
   const totalSec = items.reduce(
     (s, it) => s + (Number.isFinite(Number(it.track.duration)) ? Number(it.track.duration) : 0),
@@ -3441,7 +3506,6 @@ function openPlaylistDetail(id) {
       const gameLabel = g.title || g.short || "";
       return `
     <div class="track-row" data-track-id="${escapeHtml(t.id)}" data-game-id="${escapeHtml(g.id)}" data-index="${i}">
-      <img class="pl-track-cover" src="${escapeHtml(g.cover || PLACEHOLDER)}" alt="" draggable="false">
       <span class="track-num">
         <span class="num">${i + 1}</span>
         <span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
@@ -3449,6 +3513,7 @@ function openPlaylistDetail(id) {
           <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
         </span>
       </span>
+      <img class="pl-track-cover" src="${escapeHtml(g.cover || PLACEHOLDER)}" alt="" draggable="false">
       <div class="track-meta">
         <span class="track-name">${escapeHtml(t.title)}</span>
         <span class="track-sub">${escapeHtml(gameLabel)}</span>
@@ -3508,6 +3573,7 @@ function openPlaylistDetail(id) {
           showContextMenu(rect.left, rect.bottom + 4, {
             game: it.game,
             track: it.track,
+            fromPlaylistId: pl.id,
             fromQueue: false,
           });
         }
@@ -3816,45 +3882,6 @@ let plEdit = {
   multi: false,
 };
 
-function enterPlaylistEditMode() {
-  const pl = state.currentPlaylist && getPlaylist(state.currentPlaylist.id);
-  if (!pl || pl.id === FAVORITES_ID) return;
-  plEdit.active = true;
-  plEdit.snapshot = {
-    name: pl.name,
-    coverMode: pl.coverMode,
-    coverSrc: pl.coverSrc,
-    tracks: structuredClone(pl.tracks || []),
-  };
-  document.body.classList.add("pl-editing");
-  $("#pl-edit-btn")?.classList.add("hidden");
-  $("#pl-edit-mode-icon")?.classList.remove("hidden");
-  $("#pl-edit-cancel")?.classList.remove("hidden");
-  $("#pl-edit-save")?.classList.remove("hidden");
-  // hide play-all / shuffle / album-lib smoothly via CSS body.pl-editing
-  renderPlaylistEditUI();
-}
-
-function exitPlaylistEditMode(discard) {
-  const pl = state.currentPlaylist && getPlaylist(state.currentPlaylist.id);
-  if (discard && pl && plEdit.snapshot) {
-    pl.name = plEdit.snapshot.name;
-    pl.coverMode = plEdit.snapshot.coverMode;
-    pl.coverSrc = plEdit.snapshot.coverSrc;
-    pl.tracks = plEdit.snapshot.tracks;
-    saveUserLibrary();
-  }
-  plEdit.active = false;
-  plEdit.snapshot = null;
-  plEdit.multi = false;
-  document.body.classList.remove("pl-editing");
-  $("#pl-edit-btn")?.classList.remove("hidden");
-  $("#pl-edit-mode-icon")?.classList.add("hidden");
-  $("#pl-edit-cancel")?.classList.add("hidden");
-  $("#pl-edit-save")?.classList.add("hidden");
-  if (pl) openPlaylistDetail(pl.id);
-}
-
 function bindPlaylistEditChrome() {
   // Delegation: button is created later inside openPlaylistDetail
   if (document.body.dataset.plEditBound === "1") return;
@@ -3889,42 +3916,288 @@ function bindPlaylistEditChrome() {
   });
 }
 
+function enterPlaylistEditMode() {
+  const pl = state.currentPlaylist && getPlaylist(state.currentPlaylist.id);
+  if (!pl) return;
+  plEdit.active = true;
+  plEdit.snapshot = {
+    name: pl.name,
+    coverMode: pl.coverMode,
+    coverSrc: pl.coverSrc,
+    tracks: structuredClone(pl.tracks || []),
+  };
+  document.body.classList.add("pl-editing");
+  $("#pl-edit-btn")?.classList.add("hidden");
+  $("#pl-edit-mode-icon")?.classList.remove("hidden");
+  $("#pl-edit-cancel")?.classList.remove("hidden");
+  $("#pl-edit-save")?.classList.remove("hidden");
+  $("#pl-add-songs-chip")?.classList.add("hidden");
+
+  // Cover hit only for non-favorites
+  document.querySelectorAll(".pl-cover-edit-hit").forEach((n) => n.remove());
+  if (pl.id !== FAVORITES_ID) {
+    const coverEl = document.getElementById("game-cover");
+    if (coverEl) {
+      coverEl.classList.add("pl-cover-editable");
+      // ensure positioned parent
+      const parent = coverEl.parentElement;
+      if (parent && getComputedStyle(parent).position === "static") {
+        parent.style.position = "relative";
+      }
+      const hit = document.createElement("button");
+      hit.type = "button";
+      hit.className = "pl-cover-edit-hit";
+      hit.title = "Name & Cover";
+      hit.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1.003 1.003 0 0 0 0-1.42l-2.34-2.34a1.003 1.003 0 0 0-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z"/></svg>`;
+      hit.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        openPlaylistEditMetaModal(pl);
+      });
+      // position over cover only
+      if (coverEl.tagName === "IMG") {
+        coverEl.style.position = "relative";
+        parent.style.position = "relative";
+        hit.style.position = "absolute";
+        // match cover box
+        const place = () => {
+          const r = coverEl.getBoundingClientRect();
+          const pr = parent.getBoundingClientRect();
+          hit.style.left = `${r.left - pr.left}px`;
+          hit.style.top = `${r.top - pr.top}px`;
+          hit.style.width = `${r.width}px`;
+          hit.style.height = `${r.height}px`;
+          hit.style.borderRadius = getComputedStyle(coverEl).borderRadius;
+        };
+        place();
+        parent.appendChild(hit);
+      } else {
+        coverEl.style.position = "relative";
+        coverEl.appendChild(hit);
+        hit.style.inset = "0";
+      }
+    }
+  }
+
+  renderPlaylistEditUI();
+}
+
+function exitPlaylistEditMode(discard) {
+  const pl = state.currentPlaylist && getPlaylist(state.currentPlaylist.id);
+  if (discard && pl && plEdit.snapshot) {
+    pl.name = plEdit.snapshot.name;
+    pl.coverMode = plEdit.snapshot.coverMode;
+    pl.coverSrc = plEdit.snapshot.coverSrc;
+    pl.tracks = plEdit.snapshot.tracks;
+    saveUserLibrary();
+  }
+  plEdit.active = false;
+  plEdit.snapshot = null;
+  plEdit.multi = false;
+  document.body.classList.remove("pl-editing");
+  document.querySelectorAll(".pl-cover-edit-hit").forEach((n) => n.remove());
+  const titleEl = $("#game-title");
+  if (titleEl) {
+    titleEl.contentEditable = "false";
+    titleEl.classList.remove("pl-title-editing");
+    titleEl.removeAttribute("contenteditable");
+  }
+  $("#pl-edit-btn")?.classList.remove("hidden");
+  $("#pl-edit-mode-icon")?.classList.add("hidden");
+  $("#pl-edit-cancel")?.classList.add("hidden");
+  $("#pl-edit-save")?.classList.add("hidden");
+  $("#pl-add-songs-chip")?.classList.remove("hidden");
+  if (pl) openPlaylistDetail(pl.id);
+}
+
+function cancelEditIfNeeded() {
+  if (plEdit.active) exitPlaylistEditMode(true);
+}
+
+/** Modal: name + cover mode */
+function openPlaylistEditMetaModal(pl) {
+  if (pl.id === FAVORITES_ID) return;
+  let ov = document.getElementById("pl-meta-overlay");
+  if (!ov) {
+    ov = document.createElement("div");
+    ov.id = "pl-meta-overlay";
+    ov.className = "add-to-pl-overlay";
+    ov.innerHTML = `
+      <div class="add-to-pl-panel" style="max-width:420px">
+        <div class="add-to-pl-sticky-top">
+          <h3>Playlist bearbeiten</h3>
+          <label class="muted" style="display:block;margin:8px 0 4px">Name</label>
+          <input id="pl-meta-name" type="text" autocomplete="off" spellcheck="false"
+            style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:var(--surface-2);color:var(--text);font:inherit">
+          <p class="muted" style="margin:14px 0 8px">Cover</p>
+          <div id="pl-meta-modes" style="display:flex;flex-direction:column;gap:8px"></div>
+        </div>
+        <div class="add-to-pl-sticky-bottom">
+          <button type="button" id="pl-meta-cancel" class="confirm-btn confirm-cancel">Abbrechen</button>
+          <button type="button" id="pl-meta-save" class="confirm-btn confirm-ok">Fertig</button>
+        </div>
+      </div>`;
+    document.body.appendChild(ov);
+  }
+  const nameInput = ov.querySelector("#pl-meta-name");
+  nameInput.value = pl.name || "";
+  const modes = ov.querySelector("#pl-meta-modes");
+  const current = pl.coverMode || "auto";
+  modes.innerHTML = [
+    { id: "auto", label: "Mosaik / Auto" },
+    { id: "game", label: "Spiel-Album…" },
+    { id: "preset", label: "Preset…" },
+  ]
+    .map(
+      (m) =>
+        `<button type="button" class="lib-create-chip pl-meta-mode ${current === m.id ? "active" : ""}" data-mode="${m.id}" style="justify-content:flex-start">${m.label}</button>`
+    )
+    .join("");
+
+  let pendingMode = current;
+  let pendingSrc = pl.coverSrc;
+
+  modes.querySelectorAll(".pl-meta-mode").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const mode = btn.dataset.mode;
+      if (mode === "auto") {
+        pendingMode = "auto";
+        pendingSrc = null;
+        modes.querySelectorAll(".pl-meta-mode").forEach((b) => b.classList.toggle("active", b.dataset.mode === "auto"));
+        return;
+      }
+      if (mode === "game") {
+        const pick = await openCoverPickList({
+          title: "Spiel-Album wählen",
+          items: LIBRARY.map((g) => ({ id: g.id, label: g.title, cover: g.cover })),
+          searchable: true,
+        });
+        if (!pick) return;
+        pendingMode = "game";
+        pendingSrc = pick.cover;
+        modes.querySelectorAll(".pl-meta-mode").forEach((b) => b.classList.toggle("active", b.dataset.mode === "game"));
+        return;
+      }
+      if (mode === "preset") {
+        // list files under Assets/PlaylistCovers except FavSongsCover.png
+        // static known list + any we can probe; user will add more later
+        const presets = [
+          // add more filenames here as you drop assets
+        ].filter((f) => f && f !== "FavSongsCover.png");
+        // Also try fetch directory is not possible; allow manual path list:
+        const known = ["FavSongsCover.png"]; // excluded
+        const files = (window.__PLAYLIST_PRESETS || []).filter((f) => !known.includes(f));
+        const items = files.map((f) => ({
+          id: f,
+          label: f.replace(/\.[^.]+$/, ""),
+          cover: `Assets/PlaylistCovers/${f}`,
+        }));
+        if (!items.length) {
+          showToast?.("Keine Presets in Assets/PlaylistCovers (außer FavSongs)");
+          return;
+        }
+        const pick = await openCoverPickList({
+          title: "Preset wählen",
+          items,
+          searchable: true,
+        });
+        if (!pick) return;
+        pendingMode = "preset";
+        pendingSrc = pick.cover;
+        modes.querySelectorAll(".pl-meta-mode").forEach((b) => b.classList.toggle("active", b.dataset.mode === "preset"));
+      }
+    });
+  });
+
+  ov.classList.remove("hidden");
+  const close = () => ov.classList.add("hidden");
+  ov.querySelector("#pl-meta-cancel").onclick = close;
+  ov.querySelector("#pl-meta-save").onclick = () => {
+    const name = (nameInput.value || "").trim() || pl.name;
+    pl.name = name;
+    pl.coverMode = pendingMode;
+    pl.coverSrc = pendingSrc;
+    pl.updatedAt = Date.now();
+    saveUserLibrary();
+    const t = $("#game-title");
+    if (t) t.textContent = pl.name;
+    applyCoverToEl(document.getElementById("game-cover"), pl);
+    close();
+  };
+  ov.onclick = (e) => {
+    if (e.target === ov) close();
+  };
+}
+
+function openCoverPickList({ title, items, searchable }) {
+  return new Promise((resolve) => {
+    let ov = document.getElementById("pl-cover-pick-overlay");
+    if (!ov) {
+      ov = document.createElement("div");
+      ov.id = "pl-cover-pick-overlay";
+      ov.className = "add-to-pl-overlay";
+      ov.innerHTML = `
+        <div class="add-to-pl-panel">
+          <div class="add-to-pl-sticky-top">
+            <h3 id="pl-cover-pick-title"></h3>
+            <div class="add-to-pl-search-wrap">
+              <input id="pl-cover-pick-search" type="search" placeholder="Suchen…" autocomplete="off">
+            </div>
+          </div>
+          <ul id="pl-cover-pick-list" class="add-to-pl-list"></ul>
+          <div class="add-to-pl-sticky-bottom">
+            <button type="button" id="pl-cover-pick-cancel" class="confirm-btn confirm-cancel">Abbrechen</button>
+          </div>
+        </div>`;
+      document.body.appendChild(ov);
+    }
+    ov.querySelector("#pl-cover-pick-title").textContent = title;
+    const list = ov.querySelector("#pl-cover-pick-list");
+    const search = ov.querySelector("#pl-cover-pick-search");
+    search.value = "";
+    search.style.display = searchable ? "" : "none";
+
+    const paint = () => {
+      const q = (search.value || "").trim().toLowerCase();
+      const filtered = items.filter((it) => !q || it.label.toLowerCase().includes(q));
+      list.innerHTML = filtered
+        .map(
+          (it) => `<li>
+          <button type="button" class="add-to-pl-item" data-id="${escapeHtml(it.id)}">
+            <img src="${escapeHtml(it.cover || PLACEHOLDER)}" alt="">
+            <span class="add-to-pl-name">${escapeHtml(it.label)}</span>
+          </button>
+        </li>`
+        )
+        .join("");
+      list.querySelectorAll(".add-to-pl-item").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const it = items.find((x) => x.id === btn.dataset.id);
+          ov.classList.add("hidden");
+          resolve(it || null);
+        });
+      });
+    };
+    paint();
+    search.oninput = paint;
+    ov.querySelector("#pl-cover-pick-cancel").onclick = () => {
+      ov.classList.add("hidden");
+      resolve(null);
+    };
+    ov.onclick = (e) => {
+      if (e.target === ov) {
+        ov.classList.add("hidden");
+        resolve(null);
+      }
+    };
+    ov.classList.remove("hidden");
+  });
+}
 
 function renderPlaylistEditUI() {
   const pl = state.currentPlaylist && getPlaylist(state.currentPlaylist.id);
   if (!pl) return;
 
-  // Name editable
-  const titleEl = $("#game-title");
-  if (titleEl) {
-    titleEl.contentEditable = "true";
-    titleEl.classList.add("pl-title-editing");
-    titleEl.addEventListener(
-      "blur",
-      () => {
-        pl.name = (titleEl.textContent || "").trim() || pl.name;
-      },
-      { once: true }
-    );
-  }
-
-  // Cover pencil overlay
-  const coverEl = $("#game-cover");
-  const wrap = coverEl?.parentElement;
-  if (wrap && !wrap.querySelector(".pl-cover-edit-btn")) {
-    wrap.classList.add("pl-cover-edit-wrap");
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "pl-cover-edit-btn";
-    btn.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1.003 1.003 0 0 0 0-1.42l-2.34-2.34a1.003 1.003 0 0 0-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z"/></svg>`;
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      openPlaylistCoverPicker(pl);
-    });
-    wrap.appendChild(btn);
-  }
-
-  // Rows: drag handle + trash, no fav
   const items = resolvePlaylistTracks(pl);
   trackListEl.classList.add("is-playlist", "is-editing");
   trackListEl.innerHTML = items
@@ -3938,10 +4211,8 @@ function renderPlaylistEditUI() {
           : "–:––";
       return `
     <div class="track-row" draggable="true" data-track-id="${escapeHtml(t.id)}" data-game-id="${escapeHtml(g.id)}" data-index="${i}">
+      <span class="track-num"><span class="num">${i + 1}</span></span>
       <img class="pl-track-cover" src="${escapeHtml(g.cover || PLACEHOLDER)}" alt="" draggable="false">
-      <span class="track-num">
-        <span class="num">${i + 1}</span>
-      </span>
       <div class="track-meta">
         <span class="track-name">${escapeHtml(t.title)}</span>
         <span class="track-sub">${escapeHtml(gameLabel)}</span>
@@ -3959,7 +4230,6 @@ function renderPlaylistEditUI() {
       e.stopPropagation();
       const idx = +btn.dataset.index;
       pl.tracks.splice(idx, 1);
-      // no confirm
       renderPlaylistEditUI();
     });
   });
@@ -4569,6 +4839,8 @@ function openGlobalSearch(clearInput = true) {
     return;
   }
 
+  cancelEditIfNeeded();
+
   // Prefer explicit context over tab heuristics
   if (state.currentPlaylist) {
     searchReturn = {
@@ -4670,13 +4942,8 @@ function closeGlobalSearch() {
     document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
     document.querySelector('.tab[data-tab="playlists"]')?.classList.add("active");
     document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
-    // stay on library list OR reopen playlist — user asked NOT to auto-reopen after Songs hinzufügen
-    // So: go back to library browse, not into the playlist
     $("#tab-playlists")?.classList.add("active");
-    gameDetail?.classList.add("hidden");
-    gameDetail?.classList.remove("active", "is-playlist-detail");
-    state.currentPlaylist = null;
-    renderLibrary({ animate: false });
+    openPlaylistDetail(ret.playlistId);
     return;
   }
 
@@ -4685,10 +4952,15 @@ function closeGlobalSearch() {
     document.querySelector('.tab[data-tab="playlists"]')?.classList.add("active");
     document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
     $("#tab-playlists")?.classList.add("active");
-    gameDetail?.classList.add("hidden");
-    gameDetail?.classList.remove("active");
-    state.currentGame = null;
-    renderLibrary({ animate: false });
+    if (ret.gameId) {
+      searchReturn = { type: "library" };
+      openGame(ret.gameId);
+    } else {
+      gameDetail?.classList.add("hidden");
+      gameDetail?.classList.remove("active");
+      state.currentGame = null;
+      renderLibrary({ animate: false });
+    }
     return;
   }
 
@@ -5290,6 +5562,7 @@ function applyGamesLocalFilter() {
 function openGame(id) {
   const game = LIBRARY.find((g) => g.id === id);
   if (!game) return;
+  cancelEditIfNeeded();
   state.currentPlaylist = null;
   gameDetail?.classList.remove("is-playlist-detail");
   trackListEl?.classList.remove("is-playlist");
@@ -5650,6 +5923,7 @@ document.querySelectorAll(".tab").forEach((tab) => {
   $("#back-to-games").addEventListener("click", () => {
     // From playlist detail → library
     if (state.currentPlaylist) {
+      cancelEditIfNeeded();
       state.currentPlaylist = null;
       state.currentGame = null;
       gameDetail.classList.add("hidden");
@@ -8388,6 +8662,11 @@ function showContextMenu(x, y, payload, anchorEl = null) {
     }
   });
 
+  const inPlaylistDetail = !!state.currentPlaylist && !isPlaylist && !isAlbum && !!track;
+  contextMenu?.querySelectorAll(".ctx-pl-track-only").forEach((btn) => {
+    btn.classList.toggle("hidden", !inPlaylistDetail);
+  });
+
   const playNextBtn = contextMenu?.querySelector('[data-action="play-next"]');
   if (playNextBtn) {
     playNextBtn.lastChild.textContent = isPlaylist
@@ -8478,6 +8757,19 @@ function bindContextMenu() {
             showToast?.(pl.pinned ? "Angepinnt" : "Losgelöst");
           }
           hideContextMenu();
+          return;
+        }
+        if (action === "remove-from-playlist") {
+          const pid = payload.fromPlaylistId || state.currentPlaylist?.id;
+          if (pid && game && track) {
+            setTrackInPlaylist(pid, game.id, track.id, false);
+            hideContextMenu();
+            syncTrackPlusButtons(game.id, track.id);
+            if (state.currentPlaylist?.id === pid) {
+              refreshOpenPlaylistDetail({ flashTrackId: track.id, flashType: "remove" });
+            }
+            showToast?.({ cover: game.cover, title: track.title, sub: "Aus Playlist entfernt" });
+          }
           return;
         }
         if (action === "delete-playlist") {
@@ -8896,7 +9188,7 @@ function setMarqueeText(el, text) {
   el.textContent = text ?? "";
   el.style.removeProperty("--marquee-dist");
   el.style.removeProperty("--marquee-dur");
-  wrap?.classList.remove("is-overflowing");
+  wrap?.classList.remove("is-overflowing", "is-scrolling");
 
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
@@ -8904,11 +9196,34 @@ function setMarqueeText(el, text) {
       const overflow = el.scrollWidth - wrap.clientWidth;
       if (overflow > 4) {
         wrap.classList.add("is-overflowing");
-        // distance to scroll + a little gap
-        const dist = overflow + 32;
-        const dur = Math.max(8, Math.min(22, dist / 28)); // ~28px/s
+        // stop when last glyphs are fully visible (no overscroll)
+        const dist = overflow + 4;
+        const dur = Math.max(9, Math.min(20, dist / 26));
         el.style.setProperty("--marquee-dist", `${dist}px`);
         el.style.setProperty("--marquee-dur", `${dur}s`);
+        // left fade only while mid-scroll
+        el.addEventListener(
+          "animationstart",
+          () => {
+            const tick = () => {
+              if (!wrap.classList.contains("is-overflowing")) return;
+              wrap.classList.add("is-scrolling");
+              // roughly after pause portion of keyframes
+              setTimeout(() => wrap.classList.add("is-scrolling"), 50);
+            };
+            tick();
+          },
+          { once: true }
+        );
+        // simpler reliable toggle via interval tied to duration
+        if (wrap._marqueeTimer) clearInterval(wrap._marqueeTimer);
+        const ms = dur * 1000;
+        wrap._marqueeTimer = setInterval(() => {
+          wrap.classList.remove("is-scrolling");
+          setTimeout(() => wrap.classList.add("is-scrolling"), ms * 0.08);
+          setTimeout(() => wrap.classList.remove("is-scrolling"), ms * 0.88);
+        }, ms);
+        setTimeout(() => wrap.classList.add("is-scrolling"), ms * 0.08);
       }
     });
   });
