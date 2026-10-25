@@ -334,15 +334,16 @@ function handleTrackPlusClick(gameId, trackId) {
     cover: game?.cover || PLACEHOLDER,
   });
   syncTrackPlusButtons(gameId, trackId);
-  if (state.currentPlaylist && targetId === state.currentPlaylist.id) {
-    const stillIn = isTrackInPlaylist(targetId, gameId, trackId);
-    refreshOpenPlaylistDetail({
-      flashTrackId: trackId,
-      flashType: stillIn ? "add" : "remove",
-    });
-  } else if (state.currentPlaylist) {
-    // membership of other playlists changed but row still relevant — soft refresh
-    refreshOpenPlaylistDetail();
+  // Do NOT rebuild playlist detail while global search is open (that closes search)
+  if (!globalSearchOpen && state.currentPlaylist) {
+    if (targetId === state.currentPlaylist.id) {
+      refreshOpenPlaylistDetail({
+        flashTrackId: trackId,
+        flashType: isTrackInPlaylist(targetId, gameId, trackId) ? "add" : "remove",
+      });
+    } else {
+      refreshOpenPlaylistDetail();
+    }
   }
   if (typeof renderLibrary === "function") renderLibrary({ animate: false });
 }
@@ -2262,6 +2263,24 @@ function bindHotkeys() {
         break;
       case "Escape":
         e.preventDefault();
+        // Confirm dialogs first
+        if (!$("#confirm-overlay")?.classList.contains("hidden")) {
+          closeClearQueueConfirm?.();
+          $("#confirm-overlay")?.classList.add("hidden");
+          $("#confirm-overlay")?.setAttribute("aria-hidden", "true");
+          handled = true;
+          break;
+        }
+        if (!$("#pl-meta-overlay")?.classList.contains("hidden") && $("#pl-meta-overlay")) {
+          $("#pl-meta-overlay").classList.add("hidden");
+          handled = true;
+          break;
+        }
+        if (!$("#add-to-pl-overlay")?.classList.contains("hidden")) {
+          closeAddToPlMenu?.();
+          handled = true;
+          break;
+        }
         // Settings wins over search / category / game back
         if (!$("#settings-view")?.classList.contains("hidden")) {
           closeSettings();
@@ -3488,20 +3507,14 @@ function openPlaylistDetail(id) {
   }
   editChrome.classList.remove("hidden");
 
-  // ── Left cluster next to cover / under title ──
-  const meta = document.querySelector(".game-meta") || $("#game-title")?.parentElement;
-  let leftCluster = document.getElementById("pl-left-actions");
-  if (!leftCluster) {
-    leftCluster = document.createElement("div");
-    leftCluster.id = "pl-left-actions";
-    leftCluster.className = "pl-left-actions";
-    const countEl = $("#game-track-count");
-    countEl?.parentElement?.insertBefore(leftCluster, countEl.nextSibling);
-    if (!leftCluster.parentElement) meta?.appendChild(leftCluster);
+  // ── + / edit between shuffle and ⋯ ──
+  const albumMenu = $("#album-menu-btn");
+  const bar = albumMenu?.parentElement;
+  if (bar && albumMenu) {
+    bar.insertBefore(addSongsChip, albumMenu);
+    bar.insertBefore(editChrome, albumMenu);
   }
-  leftCluster.innerHTML = "";
-  leftCluster.appendChild(addSongsChip);
-  leftCluster.appendChild(editChrome);
+  document.getElementById("pl-left-actions")?.remove();
 
   // Clean any leftover edit chrome state
   document.body.classList.remove("pl-editing");
@@ -3949,7 +3962,8 @@ function enterPlaylistEditMode() {
   const pl = state.currentPlaylist && getPlaylist(state.currentPlaylist.id);
   if (!pl) return;
   plEdit.active = true;
-  plEdit.selected = new Set(); plEdit.multi = false;
+  plEdit.selected = new Set(); 
+  plEdit.multi = false;
   plEdit.snapshot = {
     name: pl.name,
     coverMode: pl.coverMode,
@@ -3957,6 +3971,7 @@ function enterPlaylistEditMode() {
     tracks: structuredClone(pl.tracks || []),
   };
   document.body.classList.add("pl-editing");
+  document.getElementById("pl-multi-btn")?.classList.remove("is-active");
   $("#pl-edit-btn")?.classList.add("hidden");
   $("#pl-edit-mode-icon")?.classList.remove("hidden");
   $("#pl-edit-cancel")?.classList.remove("hidden");
@@ -4281,7 +4296,7 @@ function renderPlaylistEditUI() {
     <div class="track-row ${sel}" data-track-id="${escapeHtml(t.id)}" data-game-id="${escapeHtml(g.id)}" data-index="${i}" data-key="${escapeHtml(key)}">
       ${
         plEdit.multi
-          ? `<label class="pl-ms-check"><input type="checkbox" data-ms="${escapeHtml(key)}" ${plEdit.selected.has(key) ? "checked" : ""}></label>`
+          ? `<button type="button" class="pl-ms-check ${plEdit.selected.has(key) ? "is-selected" : ""}" data-ms="${escapeHtml(key)}" aria-label="Auswählen"></button>`
           : `<span class="track-num"><span class="num">${i + 1}</span></span>`
       }
       <img class="pl-track-cover" src="${escapeHtml(g.cover || PLACEHOLDER)}" alt="" draggable="false">
@@ -4297,15 +4312,15 @@ function renderPlaylistEditUI() {
     })
     .join("");
 
-  // multi checkbox
-  trackListEl.querySelectorAll("input[data-ms]").forEach((inp) => {
-    inp.addEventListener("click", (e) => e.stopPropagation());
-    inp.addEventListener("change", () => {
-      const k = inp.getAttribute("data-ms");
-      if (inp.checked) plEdit.selected.add(k);
-      else plEdit.selected.delete(k);
+  trackListEl.querySelectorAll(".pl-ms-check").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const k = btn.getAttribute("data-ms");
+      if (plEdit.selected.has(k)) plEdit.selected.delete(k);
+      else plEdit.selected.add(k);
+      btn.classList.toggle("is-selected", plEdit.selected.has(k));
+      btn.closest(".track-row")?.classList.toggle("is-selected", plEdit.selected.has(k));
       syncMultiTrash();
-      inp.closest(".track-row")?.classList.toggle("is-selected", inp.checked);
     });
   });
 
@@ -4331,12 +4346,14 @@ function ensureMultiSelectChrome() {
     ms.className = "pl-multi-wrap";
     ms.innerHTML = `
       <button type="button" id="pl-multi-btn" class="circle-btn" title="Mehrfachauswahl" aria-label="Mehrfachauswahl">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14l4-4h12c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-9 11l-3-3 1.4-1.4L10 11.2l4.6-4.6L16 8l-6 6z"/></svg>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M4 7h4v2H4V7zm6 0h10v2H10V7zM4 11h4v2H4v-2zm6 0h10v2H10v-2zM4 15h4v2H4v-2zm6 0h10v2H10v-2z"/></svg>
       </button>
       <button type="button" id="pl-multi-trash" class="circle-btn pl-edit-cancel hidden" title="Auswahl löschen" aria-label="Auswahl löschen">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
       </button>`;
-    document.getElementById("pl-edit-chrome")?.appendChild(ms);
+    const chrome = document.getElementById("pl-edit-chrome");
+    chrome?.appendChild(ms);
+
     document.getElementById("pl-multi-btn")?.addEventListener("click", (e) => {
       e.stopPropagation();
       plEdit.multi = !plEdit.multi;
@@ -4348,14 +4365,14 @@ function ensureMultiSelectChrome() {
       e.stopPropagation();
       const pl = state.currentPlaylist && getPlaylist(state.currentPlaylist.id);
       if (!pl || !plEdit.selected?.size) return;
-      pl.tracks = (pl.tracks || []).filter(
-        (ref) => !plEdit.selected.has(`${ref.gameId}::${ref.trackId}`)
-      );
+      pl.tracks = (pl.tracks || []).filter((ref) => !plEdit.selected.has(`${ref.gameId}::${ref.trackId}`));
       plEdit.selected = new Set();
       renderPlaylistEditUI();
     });
   }
-  ms.classList.toggle("hidden", !plEdit.active);
+  ms.classList.remove("hidden");
+  document.getElementById("pl-multi-btn")?.classList.toggle("is-active", !!plEdit.multi);
+  syncMultiTrash();
 }
 
 function syncMultiTrash() {
@@ -4371,49 +4388,45 @@ function bindPlaylistTrackDrag(pl) {
   if (!list) return;
 
   let dragFrom = -1;
-  let draggingKeys = [];
   let ghost = null;
   let dropIndex = -1;
-  let pointerId = null;
+  let lastY = 0;
+  let scrollRaf = null;
 
   function clearGap() {
-    list.querySelectorAll(".track-row").forEach((r) => {
-      r.classList.remove("drag-gap-before", "drag-gap-after", "dragging");
-    });
+    list.querySelectorAll(".track-row").forEach((r) => r.classList.remove("dragging"));
     list.querySelector(".pl-drag-slot")?.remove();
   }
 
-  function selectedIndices() {
-    if (plEdit.multi && plEdit.selected?.size) {
-      return [...list.querySelectorAll(".track-row")]
-        .map((r, i) => (plEdit.selected.has(r.dataset.key) ? i : -1))
-        .filter((i) => i >= 0)
-        .sort((a, b) => a - b);
-    }
-    return dragFrom >= 0 ? [dragFrom] : [];
+  function autoScroll() {
+    if (dragFrom < 0) return;
+    const r = list.getBoundingClientRect();
+    const edge = 48;
+    let d = 0;
+    if (lastY < r.top + edge) d = -12;
+    else if (lastY > r.bottom - edge) d = 12;
+    if (d) list.scrollTop += d;
+    scrollRaf = requestAnimationFrame(autoScroll);
   }
 
   function onMove(e) {
     if (dragFrom < 0) return;
+    lastY = e.clientY;
     if (ghost) {
-      ghost.style.left = `${e.clientX + 12}px`;
-      ghost.style.top = `${e.clientY + 12}px`;
+      ghost.style.left = `${e.clientX}px`;
+      ghost.style.top = `${e.clientY}px`;
     }
     const rows = [...list.querySelectorAll(".track-row:not(.dragging)")];
     let insertAt = rows.length ? +rows[rows.length - 1].dataset.index + 1 : 0;
     for (const row of rows) {
-      const r = row.getBoundingClientRect();
-      if (e.clientY < r.top + r.height / 2) {
+      const rr = row.getBoundingClientRect();
+      if (e.clientY < rr.top + rr.height / 2) {
         insertAt = +row.dataset.index;
         break;
       }
     }
     dropIndex = insertAt;
-    clearGap();
-    // re-mark dragging
-    selectedIndices().forEach((i) => {
-      list.querySelector(`.track-row[data-index="${i}"]`)?.classList.add("dragging");
-    });
+    list.querySelector(".pl-drag-slot")?.remove();
     const slot = document.createElement("div");
     slot.className = "pl-drag-slot active";
     const anchor = list.querySelector(`.track-row:not(.dragging)[data-index="${insertAt}"]`);
@@ -4423,42 +4436,54 @@ function bindPlaylistTrackDrag(pl) {
 
   function onUp() {
     if (dragFrom < 0) return;
-    const idxs = selectedIndices().sort((a, b) => a - b);
-    if (idxs.length && dropIndex >= 0) {
-      const moving = idxs.map((i) => pl.tracks[i]);
-      // remove from back to front
-      for (let i = idxs.length - 1; i >= 0; i--) pl.tracks.splice(idxs[i], 1);
-      let insert = dropIndex;
-      for (const i of idxs) if (i < dropIndex) insert--;
-      pl.tracks.splice(Math.max(0, insert), 0, ...moving);
-    }
+    const from = dragFrom;
+    let to = dropIndex;
     ghost?.remove();
     ghost = null;
     dragFrom = -1;
-    dropIndex = -1;
+    if (scrollRaf) cancelAnimationFrame(scrollRaf);
+    scrollRaf = null;
     clearGap();
     window.removeEventListener("pointermove", onMove);
     window.removeEventListener("pointerup", onUp);
+
+    if (to < 0 || to === from || to === from + 1) return;
+    if (from < to) to = to - 1;
+    const [item] = pl.tracks.splice(from, 1);
+    pl.tracks.splice(Math.max(0, to), 0, item);
     renderPlaylistEditUI();
+    requestAnimationFrame(() => {
+      const row = trackListEl?.querySelector(`.track-row[data-index="${to}"]`);
+      if (!row) return;
+      row.classList.remove("drop-flash");
+      void row.offsetWidth;
+      row.classList.add("drop-flash");
+    });
   }
 
   list.querySelectorAll(".track-row").forEach((row) => {
     row.addEventListener("pointerdown", (e) => {
       if (e.button != null && e.button !== 0) return;
-      if (e.target.closest("button, input, .pl-row-trash, .pl-ms-check")) return;
+      if (e.target.closest("button, .pl-row-trash, .pl-ms-check")) return;
       dragFrom = +row.dataset.index;
-      pointerId = e.pointerId;
-      const idxs = selectedIndices().length ? selectedIndices() : [dragFrom];
-      if (plEdit.multi && plEdit.selected?.size && !plEdit.selected.has(row.dataset.key)) {
-        // drag only this row
-        dragFrom = +row.dataset.index;
-      }
+      dropIndex = dragFrom;
+      lastY = e.clientY;
       row.classList.add("dragging");
-      ghost = row.cloneNode(true);
-      ghost.className = "pl-drag-ghost";
-      ghost.style.width = `${row.getBoundingClientRect().width}px`;
+
+      const t = row.querySelector(".track-name")?.textContent || "";
+      const sub = row.querySelector(".track-sub")?.textContent || "";
+      const cover = row.querySelector(".pl-track-cover")?.src || PLACEHOLDER;
+      ghost = document.createElement("div");
+      ghost.className = "queue-drag-ghost";
+      ghost.innerHTML = `
+        <img src="${cover}" alt="">
+        <div>
+          <div class="ghost-title">${escapeHtml(t)}</div>
+          <div class="ghost-sub">${escapeHtml(sub)}</div>
+        </div>`;
       document.body.appendChild(ghost);
       onMove(e);
+      scrollRaf = requestAnimationFrame(autoScroll);
       window.addEventListener("pointermove", onMove);
       window.addEventListener("pointerup", onUp);
     });
@@ -4768,7 +4793,7 @@ function bindAddToPlaylistUI() {
     closeAddToPlMenu();
     renderLibrary({ animate: false });
     syncTrackPlusButtons(gameId, trackId);
-    if (state.currentPlaylist) {
+    if (state.currentPlaylist && !globalSearchOpen) {
       const stillIn = isTrackInPlaylist(state.currentPlaylist.id, gameId, trackId);
       refreshOpenPlaylistDetail({
         flashTrackId: trackId,
@@ -5037,6 +5062,7 @@ function openGlobalSearch(clearInput = true) {
     searchReturn = {
       type: "playlist",
       playlistId: state.currentPlaylist.id,
+      stayInSearch: !!(window.__forcePlaylistSelectId || searchReturn?.stayInSearch),
     };
   } else if (
     gameDetail?.classList.contains("active") &&
@@ -5134,15 +5160,7 @@ function closeGlobalSearch() {
     document.querySelector('.tab[data-tab="playlists"]')?.classList.add("active");
     document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
     $("#tab-playlists")?.classList.add("active");
-    // Back from "add songs" session → library list, not auto-open playlist
-    if (ret.stayInSearch) {
-      gameDetail?.classList.add("hidden");
-      gameDetail?.classList.remove("active", "is-playlist-detail");
-      state.currentPlaylist = null;
-      renderLibrary({ animate: false });
-    } else {
-      openPlaylistDetail(ret.playlistId);
-    }
+    openPlaylistDetail(ret.playlistId);
     return;
   }
 
@@ -8843,6 +8861,15 @@ function showContextMenu(x, y, payload, anchorEl = null) {
     }
   });
 
+  contextMenu?.querySelectorAll(".ctx-playlist-only").forEach((el) => {
+    el.classList.toggle("hidden", !payload.playlist);
+  });
+  // hide edit for favorites
+  const editBtn = contextMenu?.querySelector('[data-action="edit-playlist"]');
+  if (editBtn) {
+    editBtn.classList.toggle("hidden", !payload.playlist || payload.playlist.id === FAVORITES_ID);
+  }
+
   // album-only: true album menus only (not playlist)
   contextMenu?.querySelectorAll(".ctx-album-only").forEach((btn) => {
     btn.classList.toggle("hidden", !isAlbum);
@@ -8962,6 +8989,14 @@ function bindContextMenu() {
             showToast?.(pl.pinned ? "Angepinnt" : "Losgelöst");
           }
           hideContextMenu();
+          return;
+        }
+        if (action === "edit-playlist") {
+          const pl = payload.playlist;
+          hideContextMenu();
+          if (!pl || pl.id === FAVORITES_ID) return;
+          if (state.currentPlaylist?.id !== pl.id) openPlaylistDetail(pl.id);
+          openPlaylistEditMetaModal(pl);
           return;
         }
         if (action === "delete-playlist") {
@@ -9400,10 +9435,10 @@ function setMarqueeText(el, text) {
   el.textContent = text ?? "";
   el.style.removeProperty("--marquee-dist");
   el.style.removeProperty("--marquee-dur");
-  wrap?.classList.remove("is-overflowing");
+  wrap?.classList.remove("is-overflowing", "is-scrolling");
   if (wrap) {
-    wrap.style.setProperty("--mq-left", "1");
-    wrap.style.setProperty("--mq-right", "0");
+    wrap.style.setProperty("--mq-left", "1"); // 1 = no left fade
+    wrap.style.setProperty("--mq-right", "0"); // 0 = right fade on
     if (wrap._mqTimer) {
       clearInterval(wrap._mqTimer);
       wrap._mqTimer = null;
@@ -9414,37 +9449,41 @@ function setMarqueeText(el, text) {
     requestAnimationFrame(() => {
       if (!wrap || !el) return;
       const overflow = el.scrollWidth - wrap.clientWidth;
-      if (overflow <= 4) return;
+      if (overflow <= 2) return; // fits — no scroll, no ellipsis needed
       wrap.classList.add("is-overflowing");
-      const dist = overflow + 4;
-      const dur = Math.max(9, Math.min(20, dist / 26));
+      const dist = overflow + 8; // last word fully visible
+      const dur = Math.max(10, Math.min(22, dist / 24));
       el.style.setProperty("--marquee-dist", `${dist}px`);
       el.style.setProperty("--marquee-dur", `${dur}s`);
 
-      // mask: start solid left / soft right; while mid-scroll both soft;
-      // during crossfade both fade with text opacity
+      // --mq-left / --mq-right: 1 = solid (no fade), 0 = transparent edge (fade)
       const ms = dur * 1000;
       const beat = () => {
+        // pause at start: left solid, right soft
+        wrap.classList.remove("is-scrolling");
         wrap.style.setProperty("--mq-left", "1");
         wrap.style.setProperty("--mq-right", "0");
         setTimeout(() => {
+          // mid scroll: both fades on
+          wrap.classList.add("is-scrolling");
           wrap.style.setProperty("--mq-left", "0");
           wrap.style.setProperty("--mq-right", "0");
-        }, ms * 0.1);
+        }, ms * 0.12);
         setTimeout(() => {
-          // approaching end – both edges soft
+          // at end: right fade off (text fully in), left still soft
           wrap.style.setProperty("--mq-left", "0");
-          wrap.style.setProperty("--mq-right", "0");
-        }, ms * 0.72);
+          wrap.style.setProperty("--mq-right", "1");
+        }, ms * 0.78);
         setTimeout(() => {
-          // crossfade hold at end / restart: no harsh cut
+          // crossfade restart
           wrap.style.setProperty("--mq-left", "1");
           wrap.style.setProperty("--mq-right", "1");
-        }, ms * 0.82);
+        }, ms * 0.88);
         setTimeout(() => {
+          wrap.classList.remove("is-scrolling");
           wrap.style.setProperty("--mq-left", "1");
           wrap.style.setProperty("--mq-right", "0");
-        }, ms * 0.92);
+        }, ms * 0.94);
       };
       beat();
       wrap._mqTimer = setInterval(beat, ms);

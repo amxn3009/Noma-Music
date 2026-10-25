@@ -6113,43 +6113,49 @@ body.fs-open .noma-toast {
   -webkit-mask-image: none;
 }
 /* edge fades only while overflowing; strength driven by animation phases */
+.marquee-wrap {
+  position: relative;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+.marquee-wrap:not(.is-overflowing) {
+  mask-image: none;
+  -webkit-mask-image: none;
+}
 .marquee-wrap.is-overflowing {
   mask-image: linear-gradient(
     90deg,
-    rgba(0,0,0,var(--mq-left,1)) 0,
+    rgba(0,0,0, var(--mq-left, 1)) 0,
     #000 16px,
     #000 calc(100% - 16px),
-    rgba(0,0,0,var(--mq-right,0)) 100%
+    rgba(0,0,0, var(--mq-right, 0)) 100%
   );
   -webkit-mask-image: linear-gradient(
     90deg,
-    rgba(0,0,0,var(--mq-left,1)) 0,
+    rgba(0,0,0, var(--mq-left, 1)) 0,
     #000 16px,
     #000 calc(100% - 16px),
-    rgba(0,0,0,var(--mq-right,0)) 100%
+    rgba(0,0,0, var(--mq-right, 0)) 100%
   );
 }
 .marquee-text {
   display: inline-block;
   white-space: nowrap;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  max-width: none;
+  overflow: visible;
+  text-overflow: clip; /* NEVER ellipsis */
   will-change: transform, opacity;
 }
 .marquee-wrap.is-overflowing .marquee-text {
-  max-width: none;
-  overflow: visible;
-  text-overflow: clip;
   animation: marquee-scroll var(--marquee-dur, 12s) linear infinite;
 }
 @keyframes marquee-scroll {
   0%   { transform: translateX(0); opacity: 1; }
   10%  { transform: translateX(0); opacity: 1; }
-  75%  { transform: translateX(calc(-1 * var(--marquee-dist, 0px))); opacity: 1; }
-  82%  { transform: translateX(calc(-1 * var(--marquee-dist, 0px))); opacity: 0; }
-  83%  { transform: translateX(0); opacity: 0; }
-  92%  { transform: translateX(0); opacity: 1; }
+  78%  { transform: translateX(calc(-1 * var(--marquee-dist, 0px))); opacity: 1; }
+  88%  { transform: translateX(calc(-1 * var(--marquee-dist, 0px))); opacity: 0; }
+  89%  { transform: translateX(0); opacity: 0; }
   100% { transform: translateX(0); opacity: 1; }
 }
 
@@ -6489,4 +6495,47 @@ body.pl-editing .pl-cover-edit-hit:hover { background: rgba(0,0,0,0.55); }
   display: inline-flex;
   gap: 6px;
   align-items: center;
+}
+
+.pl-ms-check {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+.pl-ms-check.is-selected {
+  background: #fff;
+  border-color: #fff;
+}
+.pl-ms-check.is-selected::after {
+  content: "";
+  width: 10px;
+  height: 6px;
+  border-left: 2px solid #0a0a0a;
+  border-bottom: 2px solid #0a0a0a;
+  transform: rotate(-45deg) translateY(-1px);
+}
+#pl-multi-btn.is-active {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.track-row.drop-flash {
+  animation: drop-flash-anim 0.45s ease;
+}
+@keyframes drop-flash-anim {
+  0% { background: var(--accent-soft); }
+  100% { background: transparent; }
+}
+.pl-drag-slot.active {
+  height: 3px;
+  margin: 2px 12px;
+  border-radius: 2px;
+  background: var(--accent);
 }
