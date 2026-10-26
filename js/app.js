@@ -11,6 +11,7 @@ const DEV_DURATION_TOOL = false; // true only when scanning
 const state = {
   currentGame: null,
   currentPlaylist: null,
+  playingPlaylistId: null, // which playlist “owns” current playback
   queue: [],
   queueIndex: -1,
   playing: false,
@@ -236,6 +237,7 @@ function isInFavorites(gameId, trackId) {
   return isTrackInPlaylist(FAVORITES_ID, gameId, trackId);
 }
 
+
 function setTrackInPlaylist(plId, gameId, trackId, on) {
   const pl = getPlaylist(plId);
   if (!pl) return;
@@ -246,6 +248,83 @@ function setTrackInPlaylist(plId, gameId, trackId, on) {
   if (!on && idx >= 0) pl.tracks.splice(idx, 1);
   pl.updatedAt = Date.now();
   saveUserLibrary();
+
+  // If this is the playlist currently driving playback, mirror into queue
+  if (on && state.playingPlaylistId === plId) {
+    insertIntoPlayingPlaylistQueue(plId, gameId, trackId);
+  }
+}
+
+/** Insert a newly-added playlist track into the live queue at playlist order. */
+function insertIntoPlayingPlaylistQueue(plId, gameId, trackId) {
+  if (state.playingPlaylistId !== plId) return;
+  if (state.queueIndex < 0 || !state.queue.length) return;
+  if (state.queue.some((i) => i.gameId === gameId && i.track?.id === trackId)) return;
+
+  const pl = getPlaylist(plId);
+  const game = LIBRARY.find((g) => g.id === gameId);
+  const track = game?.tracks?.find((t) => t.id === trackId);
+  if (!pl || !track) return;
+
+  const order = pl.tracks || [];
+  const newOrd = order.findIndex((t) => t.gameId === gameId && t.trackId === trackId);
+  if (newOrd < 0) return;
+
+  let insertAt = state.queue.length;
+  for (let i = 0; i < state.queue.length; i++) {
+    const q = state.queue[i];
+    const qOrd = order.findIndex(
+      (t) => t.gameId === q.gameId && t.trackId === q.track?.id
+    );
+    // skip items not from this playlist (user-added foreign songs)
+    if (qOrd < 0) continue;
+    if (qOrd >= newOrd) {
+      insertAt = i;
+      break;
+    }
+  }
+
+  const item = { gameId, track, insert: null };
+  state.queue.splice(insertAt, 0, item);
+  if (insertAt <= state.queueIndex) state.queueIndex++;
+
+  if (state.shuffle && unshuffledQueue) {
+    const uAt = Math.min(insertAt, unshuffledQueue.length);
+    unshuffledQueue.splice(uAt, 0, { ...item });
+  }
+
+  renderQueue();
+  updatePlayerUI();
+}
+
+function setPlayingPlaylist(plId) {
+  state.playingPlaylistId = plId || null;
+  markPlayingLibraryCards();
+}
+
+function clearPlayingPlaylist() {
+  state.playingPlaylistId = null;
+  markPlayingLibraryCards();
+}
+
+function markPlayingLibraryCards() {
+  const pid = state.playingPlaylistId;
+  const gid =
+    !pid && state.queue[state.queueIndex]
+      ? state.queue[state.queueIndex].gameId
+      : null;
+  const audioOn = !!state.playing;
+
+  document.querySelectorAll("#lib-browse [data-kind='playlist']").forEach((el) => {
+    const on = pid && el.dataset.plId === pid;
+    el.classList.toggle("is-playing", !!on);
+    el.classList.toggle("audio-on", !!(on && audioOn));
+  });
+  document.querySelectorAll("#lib-browse [data-kind='game']").forEach((el) => {
+    const on = !pid && gid && el.dataset.gameId === gid;
+    el.classList.toggle("is-playing", !!on);
+    el.classList.toggle("audio-on", !!(on && audioOn));
+  });
 }
 
 function toggleFavorite(gameId, trackId) {
@@ -1022,6 +1101,7 @@ function resetPlayerToIdle() {
   fsQueuePreferOpen = false;
   setFsQueueOpen(false);
   unshuffledQueue = null;
+  clearPlayingPlaylist();
 
   document.body.classList.remove("is-playing", "is-transitioning");
 
@@ -3327,6 +3407,7 @@ function renderLibrary({ animate = true } = {}) {
                 <div class="pl-card-title">${escapeHtml(pl.name)}${pin}</div>
                 <div class="pl-card-sub">${n} Songs</div>
               </div>
+              <span class="pl-list-eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
               <span class="pl-list-len">${n ? `${n}` : "—"}</span>
               <button type="button" class="pl-list-menu" data-pl-menu="${escapeHtml(pl.id)}" aria-label="Menü">⋮</button>
             </div>`;
@@ -3354,6 +3435,7 @@ function renderLibrary({ animate = true } = {}) {
               <div class="pl-card-cover-wrap">
                 ${renderPlaylistCoverHTML(pl)}
                 ${pl.pinned ? `<span class="pl-pin" title="Angepinnt"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg></span>` : ""}
+                <span class="pl-card-eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
                 <div class="card-hover-actions">
                   <button type="button" class="card-hover-menu" data-pl-menu="${escapeHtml(pl.id)}" title="Mehr" aria-label="Mehr">⋮</button>
                   <button type="button" class="card-hover-play" data-play-pl="${escapeHtml(pl.id)}" title="Abspielen" aria-label="Abspielen">
@@ -3386,6 +3468,12 @@ function renderLibrary({ animate = true } = {}) {
 
     browse.querySelectorAll("[data-kind='playlist']").forEach((el) => {
       el.addEventListener("click", (e) => {
+        if (el.dataset.suppressClick === "1") {
+          delete el.dataset.suppressClick;
+          e.preventDefault();
+          e.stopPropagation();
+          return;
+        }
         if (e.target.closest(".card-hover-actions, [data-pl-menu], .pl-list-menu, .card-hover-play, .card-hover-menu")) return;
         openPlaylistDetail(el.dataset.plId);
       });
@@ -3393,6 +3481,32 @@ function renderLibrary({ animate = true } = {}) {
         e.preventDefault();
         showPlaylistContextMenu(e.clientX, e.clientY, el.dataset.plId);
       });
+      // long-press → context menu (mobile)
+      let lpTimer = null, lpMoved = false;
+      el.addEventListener("pointerdown", (e) => {
+        if (e.pointerType === "mouse") return;
+        if (e.target.closest("button, .card-hover-actions")) return;
+        lpMoved = false;
+        const x = e.clientX, y = e.clientY;
+        lpTimer = setTimeout(() => {
+          lpTimer = null;
+          if (lpMoved) return;
+          el.dataset.suppressClick = "1";
+          armClickSuppress?.(600);
+          showPlaylistContextMenu(x, y, el.dataset.plId);
+        }, 480);
+      }, { passive: true });
+      el.addEventListener("pointermove", (e) => {
+        if (!lpTimer) return;
+        if (Math.abs(e.movementX) + Math.abs(e.movementY) > 6) {
+          lpMoved = true;
+          clearTimeout(lpTimer);
+          lpTimer = null;
+        }
+      }, { passive: true });
+      const cancelLp = () => { clearTimeout(lpTimer); lpTimer = null; };
+      el.addEventListener("pointerup", cancelLp);
+      el.addEventListener("pointercancel", cancelLp);
     });
 
     browse.querySelectorAll("[data-kind='game']").forEach((el) => {
@@ -3458,6 +3572,7 @@ function renderLibrary({ animate = true } = {}) {
         state.shuffle = false;
         pl.lastPlayedAt = Date.now();
         saveUserLibrary();
+        setPlayingPlaylist(pl.id);
         playCurrent();
         renderQueue();
         updatePlayerUI();
@@ -3472,6 +3587,7 @@ function renderLibrary({ animate = true } = {}) {
         unlockMediaElement().catch(() => {});
         state.queue = (game.tracks || []).map((t) => ({ gameId: game.id, track: t, insert: null }));
         state.queueIndex = 0;
+        clearPlayingPlaylist();
         playCurrent();
         renderQueue();
         updatePlayerUI();
@@ -3498,6 +3614,7 @@ function renderLibrary({ animate = true } = {}) {
 
     if (typeof bindPressMinHold === "function") {
       bindPressMinHold(browse);
+      markPlayingLibraryCards();
     }
   };
 
@@ -3628,6 +3745,16 @@ function openPlaylistDetail(id) {
     `;
   }
   editChrome.classList.remove("hidden");
+  // openGame hides these — always restore when opening a playlist
+  $("#pl-edit-chrome")?.classList.remove("hidden");
+  $("#pl-edit-btn")?.classList.remove("hidden");
+  $("#pl-edit-cancel")?.classList.add("hidden");
+  $("#pl-edit-save")?.classList.add("hidden");
+  $("#pl-edit-mode-icon")?.classList.add("hidden");
+  // Favorites: no edit
+  if (pl.id === FAVORITES_ID) {
+    $("#pl-edit-btn")?.classList.add("hidden");
+  }
 
   // ── + / edit between shuffle and ⋯ ──
   const albumMenu = $("#album-menu-btn");
@@ -3776,6 +3903,7 @@ function openPlaylistDetail(id) {
       else state.loopsRemaining = 0;
       pl.lastPlayedAt = Date.now();
       saveUserLibrary();
+      setPlayingPlaylist(pl.id);
       playCurrent();
       renderQueue();
       updatePlayerUI();
@@ -3804,13 +3932,14 @@ function openPlaylistDetail(id) {
       else state.loopsRemaining = 0;
       pl.lastPlayedAt = Date.now();
       saveUserLibrary();
+      setPlayingPlaylist(pl.id);
       playCurrent();
       renderQueue();
       updatePlayerUI();
     };
   }
 
-  // Album menu → pin playlist (simple)
+  // Album menu → pin playlist
   const albumBtn = $("#album-menu-btn");
   if (albumBtn) {
     albumBtn.onclick = (e) => {
@@ -3891,6 +4020,7 @@ function playFromPlaylist(pl, items, index) {
   if (pl) {
     pl.lastPlayedAt = Date.now();
     saveUserLibrary();
+    setPlayingPlaylist(pl.id);
   }
   playCurrent();
   renderQueue();
@@ -6305,6 +6435,7 @@ function openGame(id) {
       }));
       state.queueIndex = 0;
       state.shuffle = false;
+      clearPlayingPlaylist();
       if (state.loopMode === "count") {
         state.loopsRemaining = settings.loopTimes;
       } else {
@@ -7568,6 +7699,7 @@ function updatePlayerUI() {
 
   // sync lock screen / Control Center — NOT bindMediaSession()
   updateMediaSession();
+  markPlayingLibraryCards();
 }
 
 function absoluteAssetUrl(path) {
