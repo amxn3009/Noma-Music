@@ -612,18 +612,22 @@ body.search-mode #global-search-results {
 
 /* Mini mosaic thumbs (settings dropdown, edit playlist modal) */
 .pl-thumb-mosaic,
-.pl-meta-preview .pl-cover-mosaic,
 .custom-select-list .pl-cover-mosaic,
 #setting-quick-pl-list .pl-cover-mosaic {
-  width: 32px;
-  height: 32px;
+  width: 28px !important;
+  height: 28px !important;
+  min-width: 28px !important;
+  min-height: 28px !important;
+  max-width: 28px !important;
+  max-height: 28px !important;
   border-radius: 6px;
   overflow: hidden;
-  display: grid;
+  display: grid !important;
   grid-template-columns: 1fr 1fr;
   grid-template-rows: 1fr 1fr;
   flex-shrink: 0;
   background: #222;
+  box-sizing: border-box;
 }
 .pl-thumb-mosaic img,
 .pl-meta-preview .pl-cover-mosaic img,
@@ -2703,15 +2707,20 @@ body.fs-open .progress-row {
 .custom-select-list li > .pl-thumb-mosaic,
 #setting-quick-pl-list li > .pl-cover-mosaic,
 #setting-quick-pl-list li > .pl-thumb-mosaic {
-  width: 28px;
-  height: 28px;
+  width: 28px !important;
+  height: 28px !important;
+  min-width: 28px !important;
+  min-height: 28px !important;
+  max-width: 28px !important;
+  max-height: 28px !important;
   border-radius: 6px;
   overflow: hidden;
-  display: grid;
+  display: grid !important;
   grid-template-columns: 1fr 1fr;
   grid-template-rows: 1fr 1fr;
   flex-shrink: 0;
   background: #222;
+  box-sizing: border-box;
 }
 .custom-select-list li .pl-cover-mosaic img,
 .custom-select-list li .pl-thumb-mosaic img,
@@ -5883,8 +5892,10 @@ body.fs-open .noma-toast {
   object-fit: cover;
   display: block;
 }
-/* card/list mosaics only — NOT #game-cover */
-.pl-cover-mosaic:not(#game-cover):not(.game-cover-lg) {
+/* Only fill the parent inside real cover slots — never menus/settings */
+.pl-card-cover-wrap .pl-cover-mosaic,
+.pl-list-row .pl-cover-mosaic,
+.pl-list-cover.pl-cover-mosaic {
   width: 100%;
   height: 100%;
   display: grid;
@@ -6306,17 +6317,22 @@ body.fs-open .noma-toast {
 .add-to-pl-item > img,
 .add-to-pl-item > .pl-cover-mosaic,
 .add-to-pl-item > .add-to-pl-cover {
-  width: 44px;
-  height: 44px;
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px !important;
+  min-height: 44px !important;
+  max-width: 44px !important;
+  max-height: 44px !important;
   border-radius: 8px;
   object-fit: cover;
   flex-shrink: 0;
   overflow: hidden;
   background: #222;
+  box-sizing: border-box;
 }
 .add-to-pl-item > .pl-cover-mosaic,
 .add-to-pl-item > .add-to-pl-cover.pl-cover-mosaic {
-  display: grid;
+  display: grid !important;
   grid-template-columns: 1fr 1fr;
   grid-template-rows: 1fr 1fr;
 }

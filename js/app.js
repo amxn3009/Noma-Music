@@ -2,7 +2,7 @@ import { Bfstm } from './bfstm.js';
 import { Kawarp } from 'https://cdn.jsdelivr.net/npm/@kawarp/core@1.3.1/+esm';
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = "26.10.26, added inside of a playlist, fixed minimize issues with loops. fix 3";
+const APP_VERSION = "26.10.26, Fixed many many issues and added X Loop button for playlists";
 
 let LIBRARY = [];
 
@@ -471,6 +471,10 @@ function toastAlbumLib(game, added) {
     cover,
   });
 }
+
+window.__PLAYLIST_PRESETS = [
+  "Nachthimmel mit Mond und Bäumen.jpg",   // ← your file names here
+];
 
 const CONSOLE_META = {
   switch2: {
@@ -4572,7 +4576,6 @@ function openPlaylistEditMetaModal(pl) {
 
   let pendingMode = pl.coverMode || "auto";
   let pendingSrc = pl.coverSrc;
-  let pendingLabel = "";
 
   function modeLabel() {
     if (pendingMode === "auto") return "Mosaik / Auto";
