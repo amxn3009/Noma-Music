@@ -3428,7 +3428,14 @@ function renderLibrary({ animate = true } = {}) {
         .map((it) => {
           if (it.kind === "playlist") {
             const pl = it.pl;
-            const n = (pl.tracks || []).length;
+            const resolved = resolvePlaylistTracks(pl);
+            const n = resolved.length;
+            const totalSec = resolved.reduce(
+              (s, x) => s + (Number.isFinite(Number(x.track?.duration)) ? Number(x.track.duration) : 0),
+              0
+            );
+            const dur = formatAlbumDuration(totalSec);
+            const sub = dur ? `${n} Songs · ${dur}` : `${n} Songs`;
             const pin = pl.pinned
               ? `<span class="pl-pin-inline" title="Angepinnt" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg></span>`
               : "";
@@ -3436,22 +3443,27 @@ function renderLibrary({ animate = true } = {}) {
               ${playlistCoverHtml(pl, "pl-list-cover")}
               <div class="pl-list-meta">
                 <div class="pl-card-title">${escapeHtml(pl.name)}${pin}</div>
-                <div class="pl-card-sub">${n} Songs</div>
+                <div class="pl-card-sub">${sub}</div>
               </div>
               <span class="pl-list-eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
-              <span class="pl-list-len">${n ? `${n}` : "—"}</span>
               <button type="button" class="pl-list-menu" data-pl-menu="${escapeHtml(pl.id)}" aria-label="Menü">⋮</button>
             </div>`;
           }
           const g = it.game;
           const n = g.tracks?.length || 0;
+          const totalSec = (g.tracks || []).reduce(
+            (s, t) => s + (Number.isFinite(Number(t.duration)) ? Number(t.duration) : 0),
+            0
+          );
+          const dur = formatAlbumDuration(totalSec);
+          const sub = dur ? `Album · ${n} Titel · ${dur}` : `Album · ${n} Titel`;
           return `<div class="pl-list-row" data-game-id="${escapeHtml(g.id)}" data-kind="game">
             <img class="pl-list-cover" src="${escapeHtml(g.cover || PLACEHOLDER)}" alt="" draggable="false">
             <div class="pl-list-meta">
               <div class="pl-card-title">${escapeHtml(g.title)}</div>
-              <div class="pl-card-sub">Album · ${n} Titel</div>
+              <div class="pl-card-sub">${sub}</div>
             </div>
-            <span class="pl-list-len">${n || "—"}</span>
+            <span class="pl-list-eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
             <button type="button" class="pl-list-menu" data-menu-game="${escapeHtml(g.id)}" aria-label="Menü">⋮</button>
           </div>`;
         })
@@ -3461,7 +3473,14 @@ function renderLibrary({ animate = true } = {}) {
         .map((it) => {
           if (it.kind === "playlist") {
             const pl = it.pl;
-            const n = (pl.tracks || []).length;
+            const resolved = resolvePlaylistTracks(pl);
+            const n = resolved.length;
+            const totalSec = resolved.reduce(
+              (s, x) => s + (Number.isFinite(Number(x.track?.duration)) ? Number(x.track.duration) : 0),
+              0
+            );
+            const dur = formatAlbumDuration(totalSec);
+            const sub = dur ? `${n} Songs · ${dur}` : `${n} Songs`;
             return `<div class="pl-card" data-pl-id="${escapeHtml(pl.id)}" data-kind="playlist" role="button" tabindex="0">
               <div class="pl-card-cover-wrap">
                 ${renderPlaylistCoverHTML(pl)}
@@ -3475,14 +3494,21 @@ function renderLibrary({ animate = true } = {}) {
                 </div>
               </div>
               <div class="pl-card-title">${escapeHtml(pl.name)}</div>
-              <div class="pl-card-sub">${n} Songs</div>
+              <div class="pl-card-sub">${sub}</div>
             </div>`;
           }
           const g = it.game;
           const n = g.tracks?.length || 0;
+          const totalSec = (g.tracks || []).reduce(
+            (s, t) => s + (Number.isFinite(Number(t.duration)) ? Number(t.duration) : 0),
+            0
+          );
+          const dur = formatAlbumDuration(totalSec);
+          const sub = dur ? `Album · ${n} Titel · ${dur}` : `Album · ${n} Titel`;
           return `<div class="pl-card" data-game-id="${escapeHtml(g.id)}" data-kind="game" role="button" tabindex="0">
             <div class="pl-card-cover-wrap">
                <img class="pl-card-cover" src="${escapeHtml(g.cover || PLACEHOLDER)}" alt="" draggable="false">
+               <span class="pl-card-eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
               <div class="card-hover-actions">
                 <button type="button" class="card-hover-menu" data-menu-game="${escapeHtml(g.id)}" title="Mehr" aria-label="Mehr">⋮</button>
                 <button type="button" class="card-hover-play" data-play-game="${escapeHtml(g.id)}" title="Alles abspielen" aria-label="Alles abspielen">
@@ -3491,7 +3517,7 @@ function renderLibrary({ animate = true } = {}) {
               </div>
             </div>
             <div class="pl-card-title">${escapeHtml(g.title)}</div>
-            <div class="pl-card-sub">Album · ${n} Titel</div>
+            <div class="pl-card-sub">${sub}</div>
           </div>`;
         })
         .join("");
@@ -3682,6 +3708,41 @@ function resolvePlaylistTracks(pl) {
     if (g && t) items.push({ gameId: g.id, game: g, track: t });
   }
   return items;
+}
+
+/** Per-track X-loop count for a playlist ref (null = use settings.loopTimes). */
+function getPlaylistTrackLoops(pl, gameId, trackId) {
+  if (!pl) return null;
+  const ref = (pl.tracks || []).find(
+    (t) => t.gameId === gameId && t.trackId === trackId
+  );
+  const n = Number(ref?.loops);
+  if (!Number.isFinite(n) || n < 1) return null;
+  return Math.min(99, Math.max(1, Math.floor(n)));
+}
+
+function setPlaylistTrackLoops(pl, gameId, trackId, value) {
+  if (!pl) return;
+  const ref = (pl.tracks || []).find(
+    (t) => t.gameId === gameId && t.trackId === trackId
+  );
+  if (!ref) return;
+  if (value == null || value === "") {
+    delete ref.loops;
+  } else {
+    ref.loops = clampInt(value, 1, 99, settings.loopTimes);
+  }
+  pl.updatedAt = Date.now();
+}
+
+/** Effective X-count when starting a track (playlist override or settings). */
+function resolveLoopsForQueueItem(item) {
+  const fallback = Number(settings.loopTimes) || DEFAULT_SETTINGS.loopTimes;
+  if (!item || !state.playingPlaylistId) return fallback;
+  const pl = getPlaylist(state.playingPlaylistId);
+  if (!pl?.useTrackLoops) return fallback;
+  const n = getPlaylistTrackLoops(pl, item.gameId, item.track?.id);
+  return n != null ? n : fallback;
 }
 
 function openPlaylistDetail(id) {
@@ -3930,8 +3991,11 @@ function openPlaylistDetail(id) {
       }));
       state.queueIndex = 0;
       state.shuffle = false;
-      if (state.loopMode === "count") state.loopsRemaining = settings.loopTimes;
-      else state.loopsRemaining = 0;
+      if (state.loopMode === "count") {
+        state.loopsRemaining = resolveLoopsForQueueItem(state.queue[state.queueIndex]);
+      } else {
+        state.loopsRemaining = 0;
+      }
       pl.lastPlayedAt = Date.now();
       saveUserLibrary();
       setPlayingPlaylist(pl.id);
@@ -3959,8 +4023,11 @@ function openPlaylistDetail(id) {
       state.queue = q;
       state.queueIndex = 0;
       state.shuffle = true;
-      if (state.loopMode === "count") state.loopsRemaining = settings.loopTimes;
-      else state.loopsRemaining = 0;
+      if (state.loopMode === "count") {
+        state.loopsRemaining = resolveLoopsForQueueItem(state.queue[state.queueIndex]);
+      } else {
+        state.loopsRemaining = 0;
+      }
       pl.lastPlayedAt = Date.now();
       saveUserLibrary();
       setPlayingPlaylist(pl.id);
@@ -3969,6 +4036,42 @@ function openPlaylistDetail(id) {
       updatePlayerUI();
     };
   }
+
+   // Per-track X-loops toggle (playlist only)
+  let plLoopsBtn = document.getElementById("pl-loops-btn");
+  if (!plLoopsBtn) {
+    plLoopsBtn = document.createElement("button");
+    plLoopsBtn.type = "button";
+    plLoopsBtn.id = "pl-loops-btn";
+    plLoopsBtn.className = "circle-btn pl-loops-btn";
+    plLoopsBtn.title = "Song-Loops (X)";
+    plLoopsBtn.setAttribute("aria-label", "Song-Loops");
+    plLoopsBtn.innerHTML = `
+      <svg class="icon" viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+        <path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/>
+      </svg>
+      <span class="loop-badge pl-loops-btn-badge">×</span>`;
+  }
+  plLoopsBtn.classList.toggle("is-active", !!pl.useTrackLoops);
+  plLoopsBtn.onclick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    pl.useTrackLoops = !pl.useTrackLoops;
+    pl.updatedAt = Date.now();
+    saveUserLibrary();
+    plLoopsBtn.classList.toggle("is-active", !!pl.useTrackLoops);
+    // If turning on while already in count mode, refresh remaining for current song
+    if (pl.useTrackLoops && state.loopMode === "count" && state.playingPlaylistId === pl.id) {
+      state.loopsRemaining = resolveLoopsForQueueItem(state.queue[state.queueIndex]);
+      updatePlayerUI();
+    }
+  };
+  const shuffleBtn = $("#shuffle-all-btn");
+  const actions = document.querySelector(".game-play-actions");
+  if (actions && shuffleBtn && plLoopsBtn.parentElement !== actions) {
+    actions.insertBefore(plLoopsBtn, shuffleBtn.nextSibling);
+  }
+  plLoopsBtn.classList.remove("hidden");
 
   // Album menu → pin playlist
   const albumBtn = $("#album-menu-btn");
@@ -4656,6 +4759,11 @@ function renderPlaylistEditUI() {
           : "–:––";
       const key = `${g.id}::${t.id}`;
       const sel = plEdit.selected.has(key) ? "is-selected" : "";
+      const ref = (pl.tracks || [])[i];
+      const loopsVal =
+        ref && Number.isFinite(Number(ref.loops)) && Number(ref.loops) >= 1
+          ? String(Math.min(99, Math.floor(Number(ref.loops))))
+          : "";
       return `
     <div class="track-row ${sel}" data-track-id="${escapeHtml(t.id)}" data-game-id="${escapeHtml(g.id)}" data-index="${i}" data-key="${escapeHtml(key)}">
       ${
@@ -4668,6 +4776,27 @@ function renderPlaylistEditUI() {
         <span class="track-name">${escapeHtml(t.title)}</span>
         <span class="track-sub">${escapeHtml(gameLabel)}</span>
       </div>
+      <label class="pl-track-loops" title="Loops für diesen Song (X-Modus)">
+        <span class="pl-track-loops-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+            <path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/>
+          </svg>
+          <span class="pl-track-loops-badge">×</span>
+        </span>
+        <input
+          type="number"
+          class="settings-number pl-track-loops-input"
+          min="1"
+          max="99"
+          step="1"
+          inputmode="numeric"
+          placeholder="${settings.loopTimes}"
+          value="${loopsVal}"
+          data-game-id="${escapeHtml(g.id)}"
+          data-track-id="${escapeHtml(t.id)}"
+          aria-label="Loops"
+        >
+      </label>
       <span class="track-duration">${dur}</span>
       <button type="button" class="pl-row-trash" data-index="${i}" title="Entfernen" aria-label="Entfernen">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
@@ -4694,6 +4823,32 @@ function renderPlaylistEditUI() {
       const idx = +btn.dataset.index;
       pl.tracks.splice(idx, 1);
       renderPlaylistEditUI();
+    });
+  });
+
+    trackListEl.querySelectorAll(".pl-track-loops-input").forEach((inp) => {
+    const commit = () => {
+      const raw = String(inp.value || "").replace(/[^\d]/g, "").slice(0, 2);
+      if (!raw) {
+        inp.value = "";
+        setPlaylistTrackLoops(pl, inp.dataset.gameId, inp.dataset.trackId, null);
+        saveUserLibrary();
+        return;
+      }
+      const n = clampInt(raw, 1, 99, settings.loopTimes);
+      inp.value = String(n);
+      setPlaylistTrackLoops(pl, inp.dataset.gameId, inp.dataset.trackId, n);
+      saveUserLibrary();
+    };
+    inp.addEventListener("click", (e) => e.stopPropagation());
+    inp.addEventListener("pointerdown", (e) => e.stopPropagation());
+    inp.addEventListener("change", commit);
+    inp.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        commit();
+        inp.blur();
+      }
     });
   });
 
@@ -6266,6 +6421,7 @@ function openGame(id) {
   $("#pl-edit-chrome")?.classList.add("hidden");
   $("#pl-multi-btn")?.classList.add("hidden");
   $("#pl-multi-trash")?.classList.add("hidden");
+  $("#pl-loops-btn")?.classList.add("hidden");
 
   const coverEl = $("#game-cover");
   if (coverEl) coverEl.src = game.cover || PLACEHOLDER;
@@ -6568,15 +6724,15 @@ document.querySelectorAll(".tab").forEach((tab) => {
 
       const name = tab.dataset.tab;
 
-      if (name === "games" && state.currentGame) {
-        gameDetail.classList.remove("hidden");
-        gameDetail.classList.add("active");
-        openGame(state.currentGame.id);
-        return;
-      }
-
+      // Always leave album/playlist detail when switching tabs
+      if (plEdit?.active) exitPlaylistEditMode(true);
+      state.currentGame = null;
+      state.currentPlaylist = null;
       gameDetail.classList.add("hidden");
-      gameDetail.classList.remove("active");
+      gameDetail.classList.remove("active", "is-playlist-detail");
+      trackListEl?.classList.remove("is-playlist");
+      searchReturn = null;
+
       const panel = $(`#tab-${name}`);
       if (panel) panel.classList.add("active");
 
@@ -6730,8 +6886,7 @@ async function playCurrent() {
   const track = item.track;
 
   if (state.loopMode === "count") {
-    state.loopsRemaining =
-      Number(settings.loopTimes) || DEFAULT_SETTINGS.loopTimes;
+    state.loopsRemaining = resolveLoopsForQueueItem(item);
   }
 
   $("#now-cover").src = game?.cover || PLACEHOLDER;
@@ -9801,7 +9956,7 @@ function bindPressMinHold(root = document) {
         if (e.button != null && e.button !== 0) return;
         // Don't capture on game/playlist cards when the real target is a nested control
         if (
-          btn.matches(".game-card, .pl-card") &&
+          btn.matches(".game-card, .pl-card, .pl-list-row") &&
           e.target.closest(
             "button, .card-hover-actions, .card-hover-play, .card-hover-menu, .pl-list-menu"
           )
