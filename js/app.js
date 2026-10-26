@@ -2,7 +2,7 @@ import { Bfstm } from './bfstm.js';
 import { Kawarp } from 'https://cdn.jsdelivr.net/npm/@kawarp/core@1.3.1/+esm';
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = "26.10.26, added inside of a playlist, fixed minimize issues with loops.";
+const APP_VERSION = "26.10.26, added inside of a playlist, fixed minimize issues with loops. fix stuff";
 
 let LIBRARY = [];
 
@@ -1276,16 +1276,30 @@ function syncSoftEndFromClock() {
 
   const now = audioCtx.currentTime;
   const fadeEnd = softEndFadeAt + Math.max(0, softEndFadeSec);
+  const gainVal =
+    currentGain && Number.isFinite(currentGain.gain.value)
+      ? currentGain.gain.value
+      : 1;
+
+  // Already fully faded (audio clock or gain) → advance now, no bar
+  if (state.playing && (now >= fadeEnd || gainVal < 0.03)) {
+    if (state.loopMode === "count") {
+      state.loopsRemaining = 0;
+      updatePlayerUI();
+    }
+    finishTransition();
+    return;
+  }
 
   if (now >= softEndFadeAt && now < fadeEnd) {
-    // Mid-fade after minimize — restore transition UI from real audio time
     transitioning = true;
     transitionStartedAt = softEndFadeAt;
     document.body.classList.add("is-transitioning");
+    if (state.loopMode === "count") {
+      state.loopsRemaining = 0;
+      updatePlayerUI();
+    }
     if (state.playing) updateProgressUI();
-  } else if (now >= fadeEnd && state.playing) {
-    // Fade already finished while backgrounded
-    finishTransition();
   }
 }
 
@@ -2763,11 +2777,9 @@ async function init() {
   mountDurationDevTool();
    document.addEventListener("visibilitychange", () => {
     if (document.visibilityState !== "visible") {
-      // Freeze wall-clock soft-end timers — audioCtx may stall in background
-      // while setTimeout keeps running (that was the desync).
-      if (softEndFadeAt > 0 && !useMediaEl) {
-        clearSoftEndTimeoutsOnly();
-      }
+      // Do NOT freeze soft-end timers — on iOS the gain ramp keeps running in
+      // background; if we clear timeouts, finishTransition only runs on return
+      // (late transition bar + delayed next track).
       syncSoftEndFromClock();
       try {
         kawarp?.stop();
@@ -2790,8 +2802,15 @@ async function init() {
       audioCtx.resume().catch(() => {});
     }
     syncSoftEndFromClock();
-    // Re-arm soft-end from the audio clock (timers were frozen while hidden)
-    if (state.playing && !useMediaEl && softEndFadeAt > 0) {
+    // Only re-arm if soft-end is still in the future (not already finished)
+    if (
+      state.playing &&
+      !useMediaEl &&
+      softEndFadeAt > 0 &&
+      !transitioning &&
+      audioCtx &&
+      audioCtx.currentTime < softEndFadeAt - 0.05
+    ) {
       rescheduleSoftEndAfterResume();
     }
     if (transitioning && state.loopMode === "count" && state.loopsRemaining !== 0) {
@@ -9187,7 +9206,10 @@ function showContextMenu(x, y, payload, anchorEl = null) {
       btn.classList.toggle("hidden", !isPlaylist || locked);
     } else if (btn.dataset.action === "pin-playlist") {
       const pl = payload?.playlist;
-      btn.classList.toggle("hidden", !isPlaylist || !pl || pl.pinLocked);
+      btn.classList.toggle(
+        "hidden",
+        !isPlaylist || !pl || pl.pinLocked || pl.id === FAVORITES_ID
+      );
       const lab = btn.querySelector(".ctx-pin-label");
       if (lab && pl) lab.textContent = pl.pinned ? "Loslösen" : "Anpinnen";
     } else {
@@ -9573,7 +9595,7 @@ function pressMinMs(e) {
 
 function bindPressMinHold(root = document) {
     const selector =
-    ".ctrl-btn, .play-btn, #btn-play, .primary-btn, .tab, .back-btn, .settings-btn, .circle-btn, .header-toggle-btn, .fs-back-btn, .confirm-btn, .game-card, .games-view-btn, .games-row-title, #play-all-btn, #shuffle-all-btn, #album-menu-btn, #settings-reset-btn, .gs-tool-btn, .gs-chip, .context-menu button, #loop-menu button, [data-loop-delta], .card-hover-play, .card-hover-menu, .pl-list-menu, .lib-create-chip, .lib-filter-btn, .pl-card";
+    ".ctrl-btn, .play-btn, #btn-play, .primary-btn, .tab, .back-btn, .settings-btn, .circle-btn, .header-toggle-btn, .fs-back-btn, .confirm-btn, .game-card, .games-view-btn, .games-row-title, #play-all-btn, #shuffle-all-btn, #album-menu-btn, #settings-reset-btn, .gs-tool-btn, .gs-chip, .context-menu button, #loop-menu button, [data-loop-delta], .card-hover-play, .card-hover-menu, .pl-list-menu, .lib-create-chip, .lib-filter-btn, .pl-card , .pl-list-row";
 
   root.querySelectorAll(selector).forEach((btn) => {
     if (btn.dataset.pressBound === "1") return;
@@ -9769,10 +9791,10 @@ function setMarqueeText(el, text) {
   el.textContent = text ?? "";
   el.style.removeProperty("--marquee-dist");
   el.style.removeProperty("--marquee-dur");
-  wrap?.classList.remove("is-overflowing", "is-scrolling");
+  wrap?.classList.remove("is-overflowing", "is-scrolling", "mq-end", "mq-cross");
   if (wrap) {
-    wrap.style.setProperty("--mq-left", "1"); // 1 = no left fade
-    wrap.style.setProperty("--mq-right", "0"); // 0 = right fade on
+    wrap.style.setProperty("--mq-left", "1");
+    wrap.style.setProperty("--mq-right", "0");
     if (wrap._mqTimer) {
       clearInterval(wrap._mqTimer);
       wrap._mqTimer = null;
@@ -9783,38 +9805,40 @@ function setMarqueeText(el, text) {
     requestAnimationFrame(() => {
       if (!wrap || !el) return;
       const overflow = el.scrollWidth - wrap.clientWidth;
-      if (overflow <= 2) return; // fits — no scroll, no ellipsis needed
+      if (overflow <= 2) return; // fits — no scroll
       wrap.classList.add("is-overflowing");
-      const dist = overflow + 8; // last word fully visible
-      const dur = Math.max(10, Math.min(22, dist / 24));
+      // Only as far as needed so the last characters sit fully in the frame
+      const dist = Math.max(0, overflow);
+      const dur = Math.max(8, Math.min(20, dist / 28));
       el.style.setProperty("--marquee-dist", `${dist}px`);
       el.style.setProperty("--marquee-dur", `${dur}s`);
 
-      // --mq-left / --mq-right: 1 = solid (no fade), 0 = transparent edge (fade)
       const ms = dur * 1000;
       const beat = () => {
-        // pause at start: left solid, right soft
-        wrap.classList.remove("is-scrolling");
+        // hold at start: no left fade, soft right fade
+        wrap.classList.remove("is-scrolling", "mq-end", "mq-cross");
         wrap.style.setProperty("--mq-left", "1");
         wrap.style.setProperty("--mq-right", "0");
+        // start moving — fade left in only after motion begins
         setTimeout(() => {
-          // mid scroll: both fades on
           wrap.classList.add("is-scrolling");
           wrap.style.setProperty("--mq-left", "0");
           wrap.style.setProperty("--mq-right", "0");
         }, ms * 0.12);
+        // near end — drop right fade so last letters are solid
         setTimeout(() => {
-          // at end: right fade off (text fully in), left still soft
+          wrap.classList.add("mq-end");
           wrap.style.setProperty("--mq-left", "0");
           wrap.style.setProperty("--mq-right", "1");
-        }, ms * 0.78);
+        }, ms * 0.72);
+        // crossfade: both edges solid while text is opacity 0 (no pop)
         setTimeout(() => {
-          // crossfade restart
+          wrap.classList.add("mq-cross");
           wrap.style.setProperty("--mq-left", "1");
           wrap.style.setProperty("--mq-right", "1");
-        }, ms * 0.88);
+        }, ms * 0.86);
         setTimeout(() => {
-          wrap.classList.remove("is-scrolling");
+          wrap.classList.remove("is-scrolling", "mq-end", "mq-cross");
           wrap.style.setProperty("--mq-left", "1");
           wrap.style.setProperty("--mq-right", "0");
         }, ms * 0.94);
