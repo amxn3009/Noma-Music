@@ -313,17 +313,48 @@ function markPlayingLibraryCards() {
     !pid && state.queue[state.queueIndex]
       ? state.queue[state.queueIndex].gameId
       : null;
-  const audioOn = !!state.playing;
+
+  const paintEq = (el, on) => {
+    el.classList.toggle("is-playing", !!on);
+    const bars = el.querySelectorAll(".pl-card-eq i, .pl-list-eq i");
+    if (!on) {
+      el.classList.remove("audio-on");
+      bars.forEach((bar) => {
+        bar.style.transition = "";
+        bar.style.transform = "";
+        bar.style.animation = "";
+      });
+      return;
+    }
+    if (state.playing) {
+      bars.forEach((bar) => {
+        bar.style.transition = "";
+        bar.style.transform = "";
+        bar.style.animation = "";
+      });
+      el.classList.add("audio-on");
+    } else {
+      // same smooth pause as markPlayingGameCards / track rows
+      bars.forEach((bar) => {
+        const current = getComputedStyle(bar).transform;
+        bar.style.animation = "none";
+        bar.style.transform =
+          current === "none" ? "scaleY(0.35)" : current;
+        requestAnimationFrame(() => {
+          bar.style.transition =
+            "transform 0.35s cubic-bezier(0.22, 1, 0.36, 1)";
+          bar.style.transform = "scaleY(0.35)";
+        });
+      });
+      el.classList.remove("audio-on");
+    }
+  };
 
   document.querySelectorAll("#lib-browse [data-kind='playlist']").forEach((el) => {
-    const on = pid && el.dataset.plId === pid;
-    el.classList.toggle("is-playing", !!on);
-    el.classList.toggle("audio-on", !!(on && audioOn));
+    paintEq(el, !!(pid && el.dataset.plId === pid));
   });
   document.querySelectorAll("#lib-browse [data-kind='game']").forEach((el) => {
-    const on = !pid && gid && el.dataset.gameId === gid;
-    el.classList.toggle("is-playing", !!on);
-    el.classList.toggle("audio-on", !!(on && audioOn));
+    paintEq(el, !!( !pid && gid && el.dataset.gameId === gid ));
   });
 }
 
@@ -6469,6 +6500,7 @@ function openGame(id) {
       state.queue = items;
       state.queueIndex = 0;
       state.shuffle = true;
+      clearPlayingPlaylist();
       if (state.loopMode === "count") {
         state.loopsRemaining = settings.loopTimes;
       } else {
@@ -6674,6 +6706,7 @@ function playFromGame(game, track) {
   } else {
     state.loopsRemaining = 0;
   }
+  clearPlayingPlaylist();
   playCurrent();
   renderQueue();
   updatePlayerUI();
@@ -6875,6 +6908,7 @@ function markPlayingTrack(trackId) {
   });
 
   markPlayingGameCards();
+  markPlayingLibraryCards();
 
   // Global search rows: update in place (keeps smooth EQ pause)
   document.querySelectorAll("#global-search-results .gs-row").forEach((row) => {

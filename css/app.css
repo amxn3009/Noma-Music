@@ -3807,8 +3807,8 @@ body.games-cat-open .games-page-top.is-leaving {
     border-color 0.18s ease;
 }
 
-.pl-card.is-pressed,
-.pl-card:active {
+/* press = JS .is-pressed only (NOT :active → no right-click anim) */
+.pl-card.is-pressed {
   transform: scale(0.97) !important;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
   background: transparent !important;
@@ -3816,15 +3816,23 @@ body.games-cat-open .games-page-top.is-leaving {
 .pl-list-row {
   transition: transform 0.15s cubic-bezier(0.22, 1, 0.36, 1), background 0.15s ease;
   -webkit-tap-highlight-color: transparent;
-  background: transparent;
+  background: transparent !important;
+  outline: none;
 }
-.pl-list-row:hover {
-  background: rgba(255, 255, 255, 0.06);
+/* hover tint only on real hover devices */
+@media (hover: hover) and (pointer: fine) {
+  .pl-list-row:hover {
+    background: rgba(255, 255, 255, 0.06) !important;
+  }
 }
-.pl-list-row.is-pressed,
-.pl-list-row:active {
+.pl-list-row.is-pressed {
   transform: scale(0.97) !important;
   background: transparent !important;
+}
+.pl-card,
+.pl-list-row {
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
 }
 .pl-card-title,
 .pl-card-sub,
@@ -3834,39 +3842,43 @@ body.games-cat-open .games-page-top.is-leaving {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* playing playlist / album in library */
-.pl-card.is-playing .pl-card-cover-wrap,
-.pl-list-row.is-playing .pl-list-cover,
-.pl-list-row.is-playing .pl-cover-mosaic {
-  box-shadow: 0 0 0 2px var(--accent), 0 10px 28px rgba(0, 0, 0, 0.35);
-}
+/* same language as .game-card-eq */
 .pl-card-eq {
-  display: none;
   position: absolute;
   left: 10px;
   bottom: 10px;
-  z-index: 4;
-  gap: 2px;
-  align-items: flex-end;
-  height: 16px;
-  pointer-events: none;
-}
-.pl-card.is-playing .pl-card-eq {
   display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 18px;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 4;
+  transition: opacity 0.2s ease;
 }
 .pl-card-eq i {
   display: block;
   width: 3px;
   border-radius: 2px;
   background: var(--accent);
-  transform-origin: bottom center;
-  height: 8px;
+  transform-origin: center center;
+  transform: scaleY(0.35);
 }
 .pl-card-eq i:nth-child(1) { height: 6px; }
 .pl-card-eq i:nth-child(2) { height: 12px; }
 .pl-card-eq i:nth-child(3) { height: 16px; }
-.pl-card-eq i:nth-child(4) { height: 10px; }
-.pl-card-eq i:nth-child(5) { height: 7px; }
+.pl-card-eq i:nth-child(4) { height: 12px; }
+.pl-card-eq i:nth-child(5) { height: 8px; }
+
+.pl-card.is-playing .pl-card-cover-wrap {
+  box-shadow: 0 0 0 2px rgba(124, 156, 255, 0.55), 0 10px 28px rgba(0, 0, 0, 0.35);
+}
+.pl-card.is-playing .pl-card-title {
+  color: var(--accent);
+}
+.pl-card.is-playing .pl-card-eq {
+  opacity: 1;
+}
 .pl-card.is-playing.audio-on .pl-card-eq i {
   animation: eq 0.8s ease-in-out infinite alternate;
 }
@@ -3875,27 +3887,59 @@ body.games-cat-open .games-page-top.is-leaving {
 .pl-card.is-playing.audio-on .pl-card-eq i:nth-child(3) { animation-delay: 0.3s; }
 .pl-card.is-playing.audio-on .pl-card-eq i:nth-child(4) { animation-delay: 0.15s; }
 .pl-card.is-playing.audio-on .pl-card-eq i:nth-child(5) { animation-delay: 0s; }
-
-.pl-list-eq {
-  display: none;
-  gap: 2px;
-  align-items: flex-end;
-  height: 14px;
-  margin-right: 4px;
+.pl-card.is-playing:not(.audio-on) .pl-card-eq i {
+  animation: none;
+  transform: scaleY(0.35);
 }
-.pl-list-row.is-playing .pl-list-eq {
+
+/* list-row EQ — same bars */
+.pl-list-eq {
   display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 14px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
 }
 .pl-list-eq i {
   display: block;
   width: 2px;
   border-radius: 2px;
   background: var(--accent);
-  transform-origin: bottom center;
-  height: 8px;
+  transform-origin: center center;
+  transform: scaleY(0.35);
+}
+.pl-list-eq i:nth-child(1) { height: 6px; }
+.pl-list-eq i:nth-child(2) { height: 10px; }
+.pl-list-eq i:nth-child(3) { height: 14px; }
+.pl-list-eq i:nth-child(4) { height: 10px; }
+.pl-list-eq i:nth-child(5) { height: 7px; }
+
+.pl-list-row.is-playing {
+  background: transparent !important;
+}
+.pl-list-row.is-playing .pl-list-cover,
+.pl-list-row.is-playing .pl-cover-mosaic {
+  box-shadow: 0 0 0 2px rgba(124, 156, 255, 0.55);
+}
+.pl-list-row.is-playing .pl-card-title {
+  color: var(--accent);
+}
+.pl-list-row.is-playing .pl-list-eq {
+  opacity: 1;
 }
 .pl-list-row.is-playing.audio-on .pl-list-eq i {
   animation: eq 0.8s ease-in-out infinite alternate;
+}
+.pl-list-row.is-playing.audio-on .pl-list-eq i:nth-child(1) { animation-delay: 0s; }
+.pl-list-row.is-playing.audio-on .pl-list-eq i:nth-child(2) { animation-delay: 0.15s; }
+.pl-list-row.is-playing.audio-on .pl-list-eq i:nth-child(3) { animation-delay: 0.3s; }
+.pl-list-row.is-playing.audio-on .pl-list-eq i:nth-child(4) { animation-delay: 0.15s; }
+.pl-list-row.is-playing.audio-on .pl-list-eq i:nth-child(5) { animation-delay: 0s; }
+.pl-list-row.is-playing:not(.audio-on) .pl-list-eq i {
+  animation: none;
+  transform: scaleY(0.35);
 }
 
 
@@ -5797,10 +5841,11 @@ body.fs-open .noma-toast {
   .pl-list-row:hover {
     background: transparent !important;
   }
+  .pl-list-row:hover {
+    background: transparent !important;
+  }
   .pl-card.is-pressed,
-  .pl-card:active,
-  .pl-list-row.is-pressed,
-  .pl-list-row:active {
+  .pl-list-row.is-pressed {
     transform: scale(0.97) !important;
     background: transparent !important;
   }
@@ -5840,9 +5885,6 @@ body.fs-open .noma-toast {
   color: inherit;
   font: inherit;
   text-align: left;
-}
-.pl-list-row:hover {
-  background: rgba(255, 255, 255, 0.06);
 }
 .pl-list-cover {
   width: 48px;
