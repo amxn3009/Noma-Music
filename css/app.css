@@ -6228,9 +6228,12 @@ body.pl-editing #shuffle-all-btn,
 body.pl-editing #album-lib-btn,
 body.pl-editing #album-menu-btn,
 body.pl-editing #pl-add-songs-chip {
-  opacity: 0 !important;
-  pointer-events: none !important;
-  transform: scale(0.9);
+  display: none !important;
+}
+body.pl-editing .game-play-actions {
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
 }
 #play-all-btn, #shuffle-all-btn, #album-lib-btn, #album-menu-btn, #pl-add-songs-chip {
   transition: opacity 0.25s, transform 0.25s;
@@ -6617,3 +6620,29 @@ body.pl-editing .pl-cover-edit-hit {
   margin-left: 0;
 }
 
+#game-cover.pl-cover-editable,
+.game-cover-lg.pl-cover-editable {
+  position: relative !important;
+  overflow: hidden;
+}
+#game-cover .pl-cover-edit-hit,
+.game-cover-lg .pl-cover-edit-hit {
+  position: absolute !important;
+  inset: 0 !important;
+  left: 0 !important;
+  top: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  border: 0;
+  border-radius: inherit;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  opacity: 1;
+  z-index: 3;
+  cursor: pointer;
+  transition: none; /* no lag — tied to cover size */
+}

@@ -3979,68 +3979,39 @@ function enterPlaylistEditMode() {
   $("#pl-edit-cancel")?.classList.remove("hidden");
   $("#pl-edit-save")?.classList.remove("hidden");
 
-  const coverEl = document.getElementById("game-cover");
+  // Put edit chrome exactly where play / shuffle / ⋯ live
+  const actions = document.querySelector(".game-play-actions");
   const chrome = document.getElementById("pl-edit-chrome");
-  const header = document.querySelector(".game-header");
-
-  // Host sits as next sibling of the cover inside .game-header
-  let host = document.getElementById("pl-edit-by-cover");
-  if (!host) {
-    host = document.createElement("div");
-    host.id = "pl-edit-by-cover";
-    host.className = "pl-edit-by-cover";
+  if (actions && chrome) {
+    actions.appendChild(chrome);
+    chrome.classList.remove("hidden");
   }
-  if (coverEl && header) {
-    // insert right after cover
-    if (coverEl.nextSibling !== host) {
-      header.insertBefore(host, coverEl.nextSibling);
-    }
-  }
-  if (chrome && host) host.appendChild(chrome);
-  host.classList.remove("hidden");
+  // hide leftover host from older builds
+  document.getElementById("pl-edit-by-cover")?.classList.add("hidden");
 
-  // Cover pencil hit — only over the cover, reposition on collapse
+  // Pencil overlay = child of cover → follows collapse animation, zero lag
   document.querySelectorAll(".pl-cover-edit-hit").forEach((n) => n.remove());
-  if (pl.id !== FAVORITES_ID && coverEl && header) {
-    if (getComputedStyle(header).position === "static") {
-      header.style.position = "relative";
-    }
+  const coverEl = document.getElementById("game-cover");
+  if (pl.id !== FAVORITES_ID && coverEl) {
+    coverEl.classList.add("pl-cover-editable");
     const hit = document.createElement("button");
     hit.type = "button";
     hit.className = "pl-cover-edit-hit";
     hit.title = "Name & Cover";
     hit.innerHTML = `<svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1.003 1.003 0 0 0 0-1.42l-2.34-2.34a1.003 1.003 0 0 0-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z"/></svg>`;
-    const openMeta = (e) => {
+    hit.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
       openPlaylistEditMetaModal(pl);
-    };
-    hit.addEventListener("click", openMeta);
-    header.appendChild(hit);
-
-    const placeHit = () => {
-      const r = coverEl.getBoundingClientRect();
-      const pr = header.getBoundingClientRect();
-      hit.style.position = "absolute";
-      hit.style.left = `${r.left - pr.left}px`;
-      hit.style.top = `${r.top - pr.top}px`;
-      hit.style.width = `${r.width}px`;
-      hit.style.height = `${r.height}px`;
-      hit.style.borderRadius = getComputedStyle(coverEl).borderRadius;
-    };
-    placeHit();
-    // keep aligned while header animates / collapses
-    window.__plPlaceCoverHit = placeHit;
-    const sticky = document.querySelector(".game-sticky-top");
-    sticky?.addEventListener("transitionend", placeHit);
-    // also after collapse class toggles
-    const mo = new MutationObserver(() => requestAnimationFrame(placeHit));
-    if (sticky) mo.observe(sticky, { attributes: true, attributeFilter: ["class"] });
-    hit._mo = mo;
+    });
+    // cover must be positioning context
+    if (getComputedStyle(coverEl).position === "static") {
+      coverEl.style.position = "relative";
+    }
+    coverEl.appendChild(hit);
   }
 
   ensureMultiSelectChrome();
-  // multi wrap lives inside chrome → already next to cover
   renderPlaylistEditUI();
 }
 
@@ -4057,6 +4028,8 @@ function exitPlaylistEditMode(discard) {
   plEdit.snapshot = null;
   plEdit.multi = false;
   document.body.classList.remove("pl-editing");
+  document.querySelectorAll(".pl-cover-edit-hit").forEach((n) => n.remove());
+  $("#game-cover")?.classList.remove("pl-cover-editable");
   document.getElementById("pl-edit-by-cover")?.classList.add("hidden");
   window.__plPlaceCoverHit = null;
   const titleEl = $("#game-title");
@@ -4421,6 +4394,7 @@ function bindPlaylistTrackDrag(pl) {
   if (!list) return;
 
   let dragIndices = [];
+  let dragFrom = -1;
   let ghost = null;
   let dropIndex = -1;
   let lastDropIndex = -2;
@@ -4431,23 +4405,22 @@ function bindPlaylistTrackDrag(pl) {
   function selectedIndices() {
     if (!plEdit.multi || !plEdit.selected?.size) return [];
     return [...list.querySelectorAll(".track-row")]
-      .map((r, i) => (plEdit.selected.has(r.dataset.key) ? i : -1))
-      .filter((i) => i >= 0);
-  }
-
-  function clearGapVisual() {
-    list.querySelectorAll(".track-row").forEach((r) => r.classList.remove("dragging"));
-    if (slotEl?.parentNode) slotEl.parentNode.removeChild(slotEl);
-    slotEl = null;
-    lastDropIndex = -2;
+      .map((r) => (plEdit.selected.has(r.dataset.key) ? +r.dataset.index : -1))
+      .filter((i) => i >= 0)
+      .sort((a, b) => a - b);
   }
 
   function ensureSlot() {
-    if (slotEl) return slotEl;
+    if (slotEl && slotEl.isConnected) return slotEl;
     slotEl = document.createElement("div");
     slotEl.className = "queue-drop-slot";
     slotEl.setAttribute("aria-hidden", "true");
     return slotEl;
+  }
+
+  function removeSlot() {
+    if (slotEl?.parentNode) slotEl.parentNode.removeChild(slotEl);
+    slotEl = null;
   }
 
   function stopAutoScroll() {
@@ -4460,41 +4433,53 @@ function bindPlaylistTrackDrag(pl) {
   function startAutoScroll() {
     stopAutoScroll();
     const tick = () => {
-      if (!dragIndices.length) return;
+      if (dragFrom < 0) {
+        stopAutoScroll();
+        return;
+      }
       const r = scroller.getBoundingClientRect();
       const edge = 56;
       let d = 0;
-      if (lastY < r.top + edge) d = -14;
-      else if (lastY > r.bottom - edge) d = 14;
-      if (d) scroller.scrollTop += d;
+      if (lastY < r.top + edge) d = -12;
+      else if (lastY > r.bottom - edge) d = 12;
+      if (d) {
+        scroller.scrollTop += d;
+        placeSlot(computeDropIndex(lastY));
+      }
       scrollRaf = requestAnimationFrame(tick);
     };
     scrollRaf = requestAnimationFrame(tick);
   }
 
+  function computeDropIndex(clientY) {
+    const rows = [...list.querySelectorAll(".track-row:not(.dragging)")];
+    if (!rows.length) return 0;
+    for (const row of rows) {
+      const r = row.getBoundingClientRect();
+      if (clientY < r.top + r.height / 2) return +row.dataset.index;
+    }
+    return +rows[rows.length - 1].dataset.index + 1;
+  }
+
   function placeSlot(insertBeforeIndex) {
+    // identical guard to queue → no flicker
     if (insertBeforeIndex === lastDropIndex) return;
-    // same as queue: no gap if dropping onto original block
+
     const min = Math.min(...dragIndices);
     const max = Math.max(...dragIndices);
     if (insertBeforeIndex >= min && insertBeforeIndex <= max + 1) {
-      clearGapVisual();
-      dragIndices.forEach((i) => {
-        list.querySelector(`.track-row[data-index="${i}"]`)?.classList.add("dragging");
-      });
+      removeSlot();
       dropIndex = insertBeforeIndex;
       lastDropIndex = insertBeforeIndex;
       return;
     }
+
     lastDropIndex = insertBeforeIndex;
     dropIndex = insertBeforeIndex;
-    list.querySelectorAll(".track-row").forEach((r) => r.classList.remove("dragging"));
-    dragIndices.forEach((i) => {
-      list.querySelector(`.track-row[data-index="${i}"]`)?.classList.add("dragging");
-    });
-    if (slotEl?.parentNode) slotEl.parentNode.removeChild(slotEl);
+
     const slot = ensureSlot();
     slot.classList.add("active");
+
     const rows = [...list.querySelectorAll(".track-row:not(.dragging)")];
     let anchor = null;
     for (const row of rows) {
@@ -4503,29 +4488,16 @@ function bindPlaylistTrackDrag(pl) {
         break;
       }
     }
-    if (anchor) list.insertBefore(slot, anchor);
+    const next = anchor || null;
+    // already in the right place → zero DOM writes
+    if (slot.parentNode === list && slot.nextSibling === next) return;
+
+    if (next) list.insertBefore(slot, next);
     else list.appendChild(slot);
   }
 
-  function computeDropIndex(clientY) {
-    const rows = [...list.querySelectorAll(".track-row:not(.dragging)")];
-    if (!rows.length) return 0;
-    const first = rows[0].getBoundingClientRect();
-    if (clientY < first.top + first.height * 0.4) return +rows[0].dataset.index;
-    const last = rows[rows.length - 1].getBoundingClientRect();
-    if (clientY > last.bottom - last.height * 0.4) return +rows[rows.length - 1].dataset.index + 1;
-    for (const row of rows) {
-      const r = row.getBoundingClientRect();
-      if (clientY >= r.top && clientY <= r.bottom) {
-        const mid = r.top + r.height / 2;
-        return clientY < mid ? +row.dataset.index : +row.dataset.index + 1;
-      }
-    }
-    return +rows[rows.length - 1].dataset.index + 1;
-  }
-
   function onMove(e) {
-    if (!dragIndices.length) return;
+    if (dragFrom < 0) return;
     lastY = e.clientY;
     if (ghost) {
       ghost.style.left = `${e.clientX}px`;
@@ -4535,22 +4507,23 @@ function bindPlaylistTrackDrag(pl) {
   }
 
   function onUp() {
-    if (!dragIndices.length) return;
+    if (dragFrom < 0) return;
     const froms = [...dragIndices].sort((a, b) => a - b);
     let to = dropIndex;
     ghost?.remove();
     ghost = null;
     stopAutoScroll();
-    clearGapVisual();
+    removeSlot();
+    list.querySelectorAll(".track-row").forEach((r) => r.classList.remove("dragging"));
     window.removeEventListener("pointermove", onMove);
     window.removeEventListener("pointerup", onUp);
+    dragFrom = -1;
     dragIndices = [];
+    lastDropIndex = -2;
 
     if (to < 0) return;
-    // extract block
     const moving = froms.map((i) => pl.tracks[i]);
     for (let i = froms.length - 1; i >= 0; i--) pl.tracks.splice(froms[i], 1);
-    // adjust target after removals
     const removedBefore = froms.filter((i) => i < to).length;
     to = Math.max(0, to - removedBefore);
     pl.tracks.splice(to, 0, ...moving);
@@ -4574,6 +4547,7 @@ function bindPlaylistTrackDrag(pl) {
       const idx = +row.dataset.index;
       const sel = selectedIndices();
       dragIndices = sel.length && sel.includes(idx) ? sel : [idx];
+      dragFrom = idx;
       dropIndex = idx;
       lastDropIndex = -2;
       lastY = e.clientY;
@@ -8642,17 +8616,18 @@ function toggleGameHeaderCollapse(force) {
   // If collapsed but content can’t scroll, snap back open
   if (willCollapse) {
     requestAnimationFrame(() => {
-      const sc = document.querySelector(".track-list-scroll");
-      if (!sc) return;
-      const canScroll = sc.scrollHeight > sc.clientHeight + 8;
-      if (!canScroll) {
-        sticky.classList.remove("is-collapsed");
-        sticky.classList.add("is-animating-header");
-        const titleEl = $("#game-title");
-        if (titleEl) titleEl.textContent = titleEl.dataset.full || titleEl.textContent;
-        const btn = document.querySelector(".header-toggle-btn");
-        if (btn) btn.setAttribute("aria-expanded", "true");
-      }
+      requestAnimationFrame(() => {
+        const sc = document.querySelector(".track-list-scroll");
+        const stickyEl = document.querySelector(".game-sticky-top");
+        if (!sc || !stickyEl) return;
+        if (sc.scrollHeight <= sc.clientHeight + 24) {
+          // collapsing removed scroll room → reopen
+          stickyEl.classList.remove("is-collapsed");
+          const titleEl = $("#game-title");
+          if (titleEl) titleEl.textContent = titleEl.dataset.full || titleEl.textContent;
+          document.querySelector(".header-toggle-btn")?.setAttribute("aria-expanded", "true");
+        }
+    });
     });
   }
 }
@@ -8735,7 +8710,7 @@ function bindTrackListFade() {
         ((ignoreDir > 0 && goingDown) || (ignoreDir < 0 && goingUp));
 
       if (!animating && !locked) {
-        const canScroll = scroller.scrollHeight > scroller.clientHeight + 8;
+        const canScroll = scroller.scrollHeight > scroller.clientHeight + 24;
         if (!collapsed && canScroll && y >= COLLAPSE_AT && goingDown) {
           lastY = y;
           toggleGameHeaderCollapse(true);
@@ -8763,7 +8738,14 @@ function bindTrackListFade() {
       if (scroller.dataset.scrollLocked === "1") return;
       updateTrackFade();
       if (!settings.autoCollapseAlbum) return;
-      if (!state.currentGame || !gameDetail?.classList.contains("active")) return;
+      if ((!state.currentGame && !state.currentPlaylist) || !gameDetail?.classList.contains("active")) return;
+      if (scroller.scrollHeight <= scroller.clientHeight + 24) {
+        // no overflow while collapsed → force expand
+        if (document.querySelector(".game-sticky-top")?.classList.contains("is-collapsed")) {
+          toggleGameHeaderCollapse(false);
+        }
+        return;
+      }
       const sticky = document.querySelector(".game-sticky-top");
       if (!sticky?.classList.contains("is-collapsed")) return;
       if (sticky.classList.contains("is-animating-header")) return;
