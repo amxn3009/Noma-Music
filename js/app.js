@@ -2,7 +2,7 @@ import { Bfstm } from './bfstm.js';
 import { Kawarp } from 'https://cdn.jsdelivr.net/npm/@kawarp/core@1.3.1/+esm';
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = "26.10.26, added inside of a playlist, fixed minimize issues with loops. fix 2";
+const APP_VERSION = "26.10.26, added inside of a playlist, fixed minimize issues with loops. fix 3";
 
 let LIBRARY = [];
 
@@ -1030,7 +1030,8 @@ function resetPlayerToIdle() {
   $("#now-game").textContent = "Keinen Song ausgewählt";
 
   $("#fs-cover").src = PLACEHOLDER;
-  setMarqueeText($("#fs-title"), "Nichts läuft");
+  const _fsT = $("#fs-title"); 
+  if (_fsT) _fsT.textContent = nowTitle;
   $("#fs-game").textContent = "Keinen Song ausgewählt";
 
   lastBgUrl = ""; // force clear old album
@@ -2494,7 +2495,7 @@ function toggleFullscreen() {
     const fsTitle = $("#fs-title");
     const fsGame = $("#fs-game");
     const fsCover = $("#fs-cover");
-    if (fsTitle) setMarqueeText(fsTitle, nowTitle);
+    if (fsTitle) fsTitle.textContent = nowTitle;
     if (fsGame) fsGame.textContent = nowGame;
     if (fsCover) fsCover.src = nowCover;
 
@@ -2763,7 +2764,8 @@ async function init() {
   $("#fs-cover").src = PLACEHOLDER;
   setMarqueeText($("#now-title"), "Nichts läuft");
   $("#now-game").textContent = "Keinen Song ausgewählt";
-  setMarqueeText($("#fs-title"), "Nichts läuft");
+  const _fsT = $("#fs-title"); 
+  if (_fsT) _fsT.textContent = "Nichts läuft";
   await initKawarp();
   applyBgModeClass();
   lastBgUrl = ""; // force idle paint
@@ -3919,7 +3921,9 @@ function addPlaylistPlayNext(pl) {
   } else {
     state.queue.splice(state.queueIndex + 1, 0, ...items);
   }
-  if (state.shuffle && unshuffledQueue) unshuffledQueue = cloneQueue(state.queue);
+    if (state.shuffle && unshuffledQueue) {
+    unshuffledQueue.push(...items.map((x) => ({ ...x })));
+  }
   renderQueue();
   updatePlayerUI();
 }
@@ -3934,7 +3938,9 @@ function addPlaylistToEnd(pl) {
   } else {
     state.queue.push(...items);
   }
-  if (state.shuffle && unshuffledQueue) unshuffledQueue = cloneQueue(state.queue);
+    if (state.shuffle && unshuffledQueue) {
+    unshuffledQueue.push(...items.map((x) => ({ ...x })));
+  }
   renderQueue();
   updatePlayerUI();
 }
@@ -3953,7 +3959,9 @@ function shufflePlaylistIntoQueue(pl) {
   } else {
     state.queue.splice(state.queueIndex + 1, 0, ...items);
   }
-  if (state.shuffle && unshuffledQueue) unshuffledQueue = cloneQueue(state.queue);
+  if (state.shuffle && unshuffledQueue) {
+    unshuffledQueue.push(...items.map((x) => ({ ...x })));
+  }
   renderQueue();
   updatePlayerUI();
 }
@@ -6566,7 +6574,8 @@ async function playCurrent() {
   setMarqueeText($("#now-title"), track.title);
   $("#now-game").textContent = gameNameForPlayer(game);
   $("#fs-cover").src = game?.cover || PLACEHOLDER;
-  setMarqueeText($("#fs-title"), track.title);
+  const _fsT = $("#fs-title"); 
+  if (_fsT) _fsT.textContent = track.title;
   $("#fs-game").textContent = gameNameForFullscreen(game);
   // set cover only once we know the track — avoids idle→placeholder→cover flash
   if (game?.cover) {
@@ -8374,10 +8383,6 @@ function reorderQueue(from, to, flash = false) {
   else if (from < state.queueIndex && to >= state.queueIndex) state.queueIndex--;
   else if (from > state.queueIndex && to <= state.queueIndex) state.queueIndex++;
 
-  if (state.shuffle) {
-    unshuffledQueue = cloneQueue(state.queue);
-  }
-
   renderQueue();
 
   if (list) {
@@ -8410,6 +8415,7 @@ function reorderQueue(from, to, flash = false) {
 function removeFromQueue(index) {
   if (index < 0 || index >= state.queue.length) return;
 
+  const removedId = state.queue[index]?.track?.id ?? null;
   const wasCurrent = index === state.queueIndex;
   state.queue.splice(index, 1);
 
@@ -8425,14 +8431,13 @@ function removeFromQueue(index) {
     state.queueIndex--;
   }
 
-  // Keep saved order in sync while shuffled
-  if (state.shuffle) {
-    unshuffledQueue = cloneQueue(state.queue);
+  if (state.shuffle && unshuffledQueue && removedId) {
+    const ui = unshuffledQueue.findIndex((x) => x.track?.id === removedId);
+    if (ui >= 0) unshuffledQueue.splice(ui, 1);
   }
 
   renderQueue();
 }
-
 
 function isQueuePanelOpen() {
   const panel = $("#queue-panel");
@@ -8544,9 +8549,6 @@ function setFsQueueOpen(open) {
 
   const wasOpen = document.body.classList.contains("fs-queue-open");
   document.body.classList.toggle("fs-queue-open", !!open);
-
-  const fs = $("#fs-title");
-  if (fs) setMarqueeText(fs, fs.textContent);
 
   const expandBtn = $("#queue-fs-expand");
   if (expandBtn) {
@@ -9607,8 +9609,7 @@ function pressMinMs(e) {
 
 function bindPressMinHold(root = document) {
     const selector =
-    ".ctrl-btn, .play-btn, #btn-play, .primary-btn, .tab, .back-btn, .settings-btn, .circle-btn, .header-toggle-btn, .fs-back-btn, .confirm-btn, .game-card, .games-view-btn, .games-row-title, #play-all-btn, #shuffle-all-btn, #album-menu-btn, #settings-reset-btn, .gs-tool-btn, .gs-chip, .context-menu button, #loop-menu button, [data-loop-delta], .card-hover-play, .card-hover-menu, .pl-list-menu, .lib-create-chip, .lib-filter-btn, .pl-card , .pl-list-row";
-
+    ".ctrl-btn, .play-btn, #btn-play, .primary-btn, .tab, .back-btn, .settings-btn, .circle-btn, .header-toggle-btn, .fs-back-btn, .confirm-btn, .game-card, .games-view-btn, .games-row-title, #play-all-btn, #shuffle-all-btn, #album-menu-btn, #settings-reset-btn, .gs-tool-btn, .gs-chip, .context-menu button, #loop-menu button, [data-loop-delta], .card-hover-play, .card-hover-menu, .pl-list-menu, .lib-create-chip, .lib-filter-btn, .pl-card, .pl-list-row";
   root.querySelectorAll(selector).forEach((btn) => {
     if (btn.dataset.pressBound === "1") return;
     btn.dataset.pressBound = "1";
@@ -9813,13 +9814,8 @@ function setMarqueeText(el, text) {
     }
   }
 
-  // Fullscreen title: only marquee while the FS queue is open.
-  // Normal FS / short titles stay static (no fake scroll).
-  const isFsTitle = el.id === "fs-title";
-  const fsQueueOpen = document.body.classList.contains("fs-queue-open");
-  if (isFsTitle && !fsQueueOpen) {
-    return;
-  }
+  // FS title is plain text + CSS ellipsis — never marquee
+  if (el.id === "fs-title") return;
 
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
@@ -9874,9 +9870,7 @@ window.addEventListener(
   "resize",
   () => {
     const now = $("#now-title");
-    const fs = $("#fs-title");
     if (now) setMarqueeText(now, now.textContent);
-    if (fs) setMarqueeText(fs, fs.textContent);
   },
   { passive: true }
 );

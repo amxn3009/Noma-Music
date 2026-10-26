@@ -1596,12 +1596,7 @@ body.is-transitioning .time {
   object-fit: cover;
   box-shadow: 0 30px 80px rgba(0,0,0,0.55);
 }
-.fs-title {
-  font-size: 1.75rem;
-  font-weight: 700;
-  text-align: center;
-}
-.fs-game { text-align: center; }
+
 
 .fs-cover,
 .fs-title,
@@ -3811,16 +3806,24 @@ body.games-cat-open .games-page-top.is-leaving {
     box-shadow 0.18s ease,
     border-color 0.18s ease;
 }
-.pl-card.is-pressed {
-  transform: scale(0.97);
+
+.pl-card.is-pressed,
+.pl-card:active {
+  transform: scale(0.97) !important;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+  background: transparent !important;
 }
 .pl-list-row {
   transition: transform 0.15s cubic-bezier(0.22, 1, 0.36, 1), background 0.15s ease;
 }
-.pl-list-row.is-pressed {
-  transform: scale(0.985);
-  background: rgba(255, 255, 255, 0.06);
+.pl-list-row.is-pressed,
+.pl-list-row:active {
+  transform: scale(0.97) !important;
+  background: transparent !important;
+}
+.pl-card-title,
+.pl-card-sub {
+  background: transparent !important;
 }
 
 
@@ -4619,19 +4622,6 @@ body.fs-open.fs-queue-open .fs-cover {
   max-width: min(280px, 46vw);
 }
 
-body.fs-open.fs-queue-open .fs-title {
-  font-size: 1.35rem;
-  max-width: min(320px, 48vw);
-  margin-bottom: 0;
-  line-height: 1.15;
-}
-
-body.fs-open.fs-queue-open .fs-game {
-  max-width: min(320px, 48vw);
-  margin-top: 0;
-  line-height: 1.2;
-}
-
 /* Queue panel: default floating (non-fs) unchanged.
    In fullscreen + open → docked column with slide animation */
 #queue-panel {
@@ -4913,6 +4903,47 @@ body.fs-queue-open .fs-cover {
 }
 body.fs-queue-open .fs-title {
   font-size: 1.4rem;
+}
+
+.fs-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  text-align: center;
+  margin: 0;
+  line-height: 1.2;
+  max-width: min(560px, 88vw);
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  word-break: break-word;
+  transition: font-size 0.42s var(--ease), max-width 0.42s var(--ease);
+}
+.fs-game {
+  text-align: center;
+  margin: 0;
+  line-height: 1.2;
+  max-width: min(560px, 88vw);
+  white-space: normal;
+  overflow: visible;
+  transition: font-size 0.42s var(--ease), max-width 0.42s var(--ease);
+}
+
+/* only ellipsis when FS queue is open */
+body.fs-queue-open .fs-title,
+body.fs-open.fs-queue-open .fs-title {
+  font-size: 1.35rem;
+  max-width: min(320px, 48vw);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: normal;
+}
+body.fs-queue-open .fs-game,
+body.fs-open.fs-queue-open .fs-game {
+  max-width: min(320px, 48vw);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Expanded mode: hide floating window */
@@ -5596,9 +5627,6 @@ body.fs-open .noma-toast {
 .pl-card:hover {
   transform: translateY(-4px);
 }
-.pl-card.is-pressed {
-  transform: scale(0.97);
-}
 
 .pl-card-cover-wrap {
   position: relative;
@@ -5708,6 +5736,13 @@ body.fs-open .noma-toast {
   }
   .pl-card:hover {
     transform: none;
+  }
+  .pl-card.is-pressed,
+  .pl-card:active,
+  .pl-list-row.is-pressed,
+  .pl-list-row:active {
+    transform: scale(0.97) !important;
+    background: transparent !important;
   }
 }
 
@@ -6173,24 +6208,6 @@ body.fs-open .noma-toast {
 }
 .now-title-wrap {
   max-width: 100%;
-}
-.fs-title-wrap {
-  max-width: min(420px, 70vw);
-  width: 100%;
-  display: flex;
-  justify-content: center;
-}
-.fs-title-wrap .fs-title {
-  text-align: center;
-  max-width: none;
-  margin: 0;
-}
-body.fs-open.fs-queue-open .fs-title-wrap {
-  max-width: min(420px, 56vw);
-}
-body.fs-queue-open .fs-title-wrap {
-  max-width: min(420px, 56vw);
-  width: 100%;
 }
 
 .track-list.is-playlist .track-row {
