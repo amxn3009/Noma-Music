@@ -936,7 +936,7 @@ body.search-mode #global-search-results {
 .game-header {
   display: flex;
   flex-direction: row;
-  align-items: center;     /* always – no flex-end */
+  align-items: center;    /* always – no flex-end */
   gap: 28px;
   margin-bottom: 4px;
   overflow: visible;
@@ -1755,43 +1755,44 @@ body.is-transitioning .time {
 
 .queue-drag-ghost {
   position: fixed;
-  z-index: 9999;
+  z-index: 99999;
   pointer-events: none;
-  display: grid;
-  grid-template-columns: 40px 1fr auto;
+  display: flex;
   align-items: center;
   gap: 10px;
   padding: 8px 12px;
-  min-width: 220px;
-  max-width: 320px;
   border-radius: 12px;
-  background: rgba(20, 20, 24, 0.92);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  transform: translate(-12px, -50%) scale(1.02);
-  opacity: 0.95;
+  background: rgba(28, 28, 28, 0.95);
+  border: 1px solid rgba(255,255,255,0.12);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.45);
+  max-width: min(280px, 70vw);
+  transform: translate(-20px, -20px);
 }
 .queue-drag-ghost img {
   width: 40px;
   height: 40px;
   border-radius: 6px;
   object-fit: cover;
+  flex-shrink: 0;
+}
+.queue-drag-ghost .ghost-meta {
+  min-width: 0;
+  flex: 1;
+}
+.queue-drag-ghost .ghost-title,
+.queue-drag-ghost .ghost-sub {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
 }
 .queue-drag-ghost .ghost-title {
   font-weight: 600;
   font-size: 0.9rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 .queue-drag-ghost .ghost-sub {
-  font-size: 0.75rem;
+  font-size: 0.78rem;
   color: var(--muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .q-drag {
@@ -6294,24 +6295,33 @@ body.pl-editing .pl-cover-edit-hit:hover { background: rgba(0,0,0,0.55); }
 #pl-edit-chrome.hidden { display: none !important; }
 #pl-edit-chrome .circle-btn,
 #pl-add-songs-chip.circle-btn {
-  width: 48px !important;
-  height: 48px !important;
-  min-width: 48px !important;
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px !important;
   border-radius: 50%;
   display: grid;
   place-items: center;
   border: 0;
-  background: rgba(255,255,255,0.08);
+  background: rgba(255, 255, 255, 0.1);
   color: var(--text);
   cursor: pointer;
   padding: 0;
   font-size: 0;
+  transition: opacity 0.25s var(--ease), transform 0.25s var(--ease), background 0.15s, box-shadow 0.2s;
 }
 .game-sticky-top.is-collapsed #pl-edit-chrome .circle-btn,
 .game-sticky-top.is-collapsed #pl-add-songs-chip.circle-btn {
   width: 40px !important;
   height: 40px !important;
   min-width: 40px !important;
+}
+#pl-add-songs-chip.chip-enter,
+#pl-edit-btn.chip-enter {
+  animation: chipIn 0.28s var(--ease) both;
+}
+@keyframes chipIn {
+  from { opacity: 0; transform: scale(0.7); }
+  to   { opacity: 1; transform: scale(1); }
 }
 
 /* Confirm / Fertig colors */
@@ -6526,8 +6536,23 @@ body.pl-editing .pl-cover-edit-hit:hover { background: rgba(0,0,0,0.55); }
   background: var(--accent-soft);
 }
 
+/* playlist rows are taller (cover + two text lines) */
+.track-list.is-playlist .queue-drop-slot.active,
+.track-list.is-editing .queue-drop-slot.active {
+  height: 72px;
+  margin: 2px 8px;
+  border-radius: 10px;
+  background: rgba(124, 156, 255, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(124, 156, 255, 0.35);
+}
+/* queue keeps its own size */
+#queue-list .queue-drop-slot.active,
+#fs-queue-list .queue-drop-slot.active {
+  height: 48px;
+}
+
 .track-row.drop-flash {
-  animation: drop-flash-anim 0.45s ease;
+  animation: dropFlash 0.55s ease;
 }
 @keyframes drop-flash-anim {
   0% { background: var(--accent-soft); }
@@ -6539,3 +6564,56 @@ body.pl-editing .pl-cover-edit-hit:hover { background: rgba(0,0,0,0.55); }
   border-radius: 2px;
   background: var(--accent);
 }
+
+.pl-edit-by-cover {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+  padding-bottom: 4px;
+}
+.pl-edit-by-cover #pl-edit-chrome {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pl-edit-by-cover.hidden {
+  display: none !important;
+}
+/* collapsed: keep stack tight next to small cover */
+.game-sticky-top.is-collapsed .pl-edit-by-cover {
+  flex-direction: row;
+  align-items: center;
+  padding-bottom: 0;
+}
+.game-sticky-top.is-collapsed .pl-edit-by-cover #pl-edit-chrome {
+  flex-direction: row;
+}
+.pl-cover-edit-hit {
+  position: absolute;
+  z-index: 6;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  background: rgba(0,0,0,0.45);
+  color: #fff;
+  opacity: 0;
+  transition: opacity 0.15s;
+  touch-action: manipulation;
+}
+body.pl-editing .pl-cover-edit-hit {
+  opacity: 1;
+}
+/* NEVER let the hit sit on track rows */
+.track-list .pl-cover-edit-hit {
+  display: none !important;
+}
+#game-cover + .pl-edit-by-cover,
+.game-cover-wrap .pl-edit-by-cover {
+  margin-left: 0;
+}
+

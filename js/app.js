@@ -3962,8 +3962,9 @@ function enterPlaylistEditMode() {
   const pl = state.currentPlaylist && getPlaylist(state.currentPlaylist.id);
   if (!pl) return;
   plEdit.active = true;
-  plEdit.selected = new Set(); 
+  plEdit.selected = new Set();
   plEdit.multi = false;
+  document.getElementById("pl-multi-btn")?.classList.remove("is-active");
   plEdit.snapshot = {
     name: pl.name,
     coverMode: pl.coverMode,
@@ -3971,59 +3972,75 @@ function enterPlaylistEditMode() {
     tracks: structuredClone(pl.tracks || []),
   };
   document.body.classList.add("pl-editing");
-  document.getElementById("pl-multi-btn")?.classList.remove("is-active");
+
   $("#pl-edit-btn")?.classList.add("hidden");
+  $("#pl-add-songs-chip")?.classList.add("hidden");
   $("#pl-edit-mode-icon")?.classList.remove("hidden");
   $("#pl-edit-cancel")?.classList.remove("hidden");
   $("#pl-edit-save")?.classList.remove("hidden");
-  $("#pl-add-songs-chip")?.classList.add("hidden");
 
-  // Cover hit only for non-favorites
-  document.querySelectorAll(".pl-cover-edit-hit").forEach((n) => n.remove());
-  if (pl.id !== FAVORITES_ID) {
-    const coverEl = document.getElementById("game-cover");
-    if (coverEl) {
-      coverEl.classList.add("pl-cover-editable");
-      // ensure positioned parent
-      const parent = coverEl.parentElement;
-      if (parent && getComputedStyle(parent).position === "static") {
-        parent.style.position = "relative";
-      }
-      const hit = document.createElement("button");
-      hit.type = "button";
-      hit.className = "pl-cover-edit-hit";
-      hit.title = "Name & Cover";
-      hit.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1.003 1.003 0 0 0 0-1.42l-2.34-2.34a1.003 1.003 0 0 0-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z"/></svg>`;
-      hit.addEventListener("click", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        openPlaylistEditMetaModal(pl);
-      });
-      // position over cover only
-      if (coverEl.tagName === "IMG") {
-        coverEl.style.position = "relative";
-        parent.style.position = "relative";
-        hit.style.position = "absolute";
-        // match cover box
-        const place = () => {
-          const r = coverEl.getBoundingClientRect();
-          const pr = parent.getBoundingClientRect();
-          hit.style.left = `${r.left - pr.left}px`;
-          hit.style.top = `${r.top - pr.top}px`;
-          hit.style.width = `${r.width}px`;
-          hit.style.height = `${r.height}px`;
-          hit.style.borderRadius = getComputedStyle(coverEl).borderRadius;
-        };
-        place();
-        parent.appendChild(hit);
-      } else {
-        coverEl.style.position = "relative";
-        coverEl.appendChild(hit);
-        hit.style.inset = "0";
-      }
+  const coverEl = document.getElementById("game-cover");
+  const chrome = document.getElementById("pl-edit-chrome");
+  const header = document.querySelector(".game-header");
+
+  // Host sits as next sibling of the cover inside .game-header
+  let host = document.getElementById("pl-edit-by-cover");
+  if (!host) {
+    host = document.createElement("div");
+    host.id = "pl-edit-by-cover";
+    host.className = "pl-edit-by-cover";
+  }
+  if (coverEl && header) {
+    // insert right after cover
+    if (coverEl.nextSibling !== host) {
+      header.insertBefore(host, coverEl.nextSibling);
     }
   }
+  if (chrome && host) host.appendChild(chrome);
+  host.classList.remove("hidden");
 
+  // Cover pencil hit — only over the cover, reposition on collapse
+  document.querySelectorAll(".pl-cover-edit-hit").forEach((n) => n.remove());
+  if (pl.id !== FAVORITES_ID && coverEl && header) {
+    if (getComputedStyle(header).position === "static") {
+      header.style.position = "relative";
+    }
+    const hit = document.createElement("button");
+    hit.type = "button";
+    hit.className = "pl-cover-edit-hit";
+    hit.title = "Name & Cover";
+    hit.innerHTML = `<svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1.003 1.003 0 0 0 0-1.42l-2.34-2.34a1.003 1.003 0 0 0-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z"/></svg>`;
+    const openMeta = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      openPlaylistEditMetaModal(pl);
+    };
+    hit.addEventListener("click", openMeta);
+    header.appendChild(hit);
+
+    const placeHit = () => {
+      const r = coverEl.getBoundingClientRect();
+      const pr = header.getBoundingClientRect();
+      hit.style.position = "absolute";
+      hit.style.left = `${r.left - pr.left}px`;
+      hit.style.top = `${r.top - pr.top}px`;
+      hit.style.width = `${r.width}px`;
+      hit.style.height = `${r.height}px`;
+      hit.style.borderRadius = getComputedStyle(coverEl).borderRadius;
+    };
+    placeHit();
+    // keep aligned while header animates / collapses
+    window.__plPlaceCoverHit = placeHit;
+    const sticky = document.querySelector(".game-sticky-top");
+    sticky?.addEventListener("transitionend", placeHit);
+    // also after collapse class toggles
+    const mo = new MutationObserver(() => requestAnimationFrame(placeHit));
+    if (sticky) mo.observe(sticky, { attributes: true, attributeFilter: ["class"] });
+    hit._mo = mo;
+  }
+
+  ensureMultiSelectChrome();
+  // multi wrap lives inside chrome → already next to cover
   renderPlaylistEditUI();
 }
 
@@ -4040,19 +4057,36 @@ function exitPlaylistEditMode(discard) {
   plEdit.snapshot = null;
   plEdit.multi = false;
   document.body.classList.remove("pl-editing");
-  document.querySelectorAll(".pl-cover-edit-hit").forEach((n) => n.remove());
+  document.getElementById("pl-edit-by-cover")?.classList.add("hidden");
+  window.__plPlaceCoverHit = null;
   const titleEl = $("#game-title");
   if (titleEl) {
     titleEl.contentEditable = "false";
     titleEl.classList.remove("pl-title-editing");
     titleEl.removeAttribute("contenteditable");
   }
-  $("#pl-edit-btn")?.classList.remove("hidden");
   $("#pl-edit-mode-icon")?.classList.add("hidden");
   $("#pl-edit-cancel")?.classList.add("hidden");
   $("#pl-edit-save")?.classList.add("hidden");
   $("#pl-multi-wrap")?.classList.add("hidden");
-  $("#pl-add-songs-chip")?.classList.remove("hidden");
+  const editBtn = $("#pl-edit-btn");
+  const addChip = $("#pl-add-songs-chip");
+  editBtn?.classList.remove("hidden");
+  if (pl?.id !== FAVORITES_ID) addChip?.classList.remove("hidden");
+  // re-appear anim
+  editBtn?.classList.remove("chip-enter");
+  addChip?.classList.remove("chip-enter");
+  void editBtn?.offsetWidth;
+  editBtn?.classList.add("chip-enter");
+  addChip?.classList.add("chip-enter");
+  // move chrome back into action bar (next to ⋯)
+  const albumMenu = $("#album-menu-btn");
+  const bar = albumMenu?.parentElement;
+  const chrome = document.getElementById("pl-edit-chrome");
+  if (bar && albumMenu && chrome) {
+    bar.insertBefore(chrome, albumMenu);
+    if (addChip) bar.insertBefore(addChip, chrome);
+  }
   if (pl) openPlaylistDetail(pl.id);
 }
 
@@ -4203,9 +4237,7 @@ function openPlaylistEditMetaModal(pl) {
     applyCoverToEl(document.getElementById("game-cover"), pl);
     close();
   };
-  ov.onclick = (e) => {
-    if (e.target === ov) close();
-  };
+  ov.onclick = null; // only Abbrechen / Fertig close it
   ov.classList.remove("hidden");
 }
 
@@ -4385,79 +4417,153 @@ function syncMultiTrash() {
 /** Queue-like pointer drag with ghost + drop gap */
 function bindPlaylistTrackDrag(pl) {
   const list = trackListEl;
+  const scroller = document.querySelector(".track-list-scroll") || list;
   if (!list) return;
 
-  let dragFrom = -1;
+  let dragIndices = [];
   let ghost = null;
   let dropIndex = -1;
+  let lastDropIndex = -2;
   let lastY = 0;
   let scrollRaf = null;
+  let slotEl = null;
 
-  function clearGap() {
-    list.querySelectorAll(".track-row").forEach((r) => r.classList.remove("dragging"));
-    list.querySelector(".pl-drag-slot")?.remove();
+  function selectedIndices() {
+    if (!plEdit.multi || !plEdit.selected?.size) return [];
+    return [...list.querySelectorAll(".track-row")]
+      .map((r, i) => (plEdit.selected.has(r.dataset.key) ? i : -1))
+      .filter((i) => i >= 0);
   }
 
-  function autoScroll() {
-    if (dragFrom < 0) return;
-    const r = list.getBoundingClientRect();
-    const edge = 48;
-    let d = 0;
-    if (lastY < r.top + edge) d = -12;
-    else if (lastY > r.bottom - edge) d = 12;
-    if (d) list.scrollTop += d;
-    scrollRaf = requestAnimationFrame(autoScroll);
+  function clearGapVisual() {
+    list.querySelectorAll(".track-row").forEach((r) => r.classList.remove("dragging"));
+    if (slotEl?.parentNode) slotEl.parentNode.removeChild(slotEl);
+    slotEl = null;
+    lastDropIndex = -2;
+  }
+
+  function ensureSlot() {
+    if (slotEl) return slotEl;
+    slotEl = document.createElement("div");
+    slotEl.className = "queue-drop-slot";
+    slotEl.setAttribute("aria-hidden", "true");
+    return slotEl;
+  }
+
+  function stopAutoScroll() {
+    if (scrollRaf) {
+      cancelAnimationFrame(scrollRaf);
+      scrollRaf = null;
+    }
+  }
+
+  function startAutoScroll() {
+    stopAutoScroll();
+    const tick = () => {
+      if (!dragIndices.length) return;
+      const r = scroller.getBoundingClientRect();
+      const edge = 56;
+      let d = 0;
+      if (lastY < r.top + edge) d = -14;
+      else if (lastY > r.bottom - edge) d = 14;
+      if (d) scroller.scrollTop += d;
+      scrollRaf = requestAnimationFrame(tick);
+    };
+    scrollRaf = requestAnimationFrame(tick);
+  }
+
+  function placeSlot(insertBeforeIndex) {
+    if (insertBeforeIndex === lastDropIndex) return;
+    // same as queue: no gap if dropping onto original block
+    const min = Math.min(...dragIndices);
+    const max = Math.max(...dragIndices);
+    if (insertBeforeIndex >= min && insertBeforeIndex <= max + 1) {
+      clearGapVisual();
+      dragIndices.forEach((i) => {
+        list.querySelector(`.track-row[data-index="${i}"]`)?.classList.add("dragging");
+      });
+      dropIndex = insertBeforeIndex;
+      lastDropIndex = insertBeforeIndex;
+      return;
+    }
+    lastDropIndex = insertBeforeIndex;
+    dropIndex = insertBeforeIndex;
+    list.querySelectorAll(".track-row").forEach((r) => r.classList.remove("dragging"));
+    dragIndices.forEach((i) => {
+      list.querySelector(`.track-row[data-index="${i}"]`)?.classList.add("dragging");
+    });
+    if (slotEl?.parentNode) slotEl.parentNode.removeChild(slotEl);
+    const slot = ensureSlot();
+    slot.classList.add("active");
+    const rows = [...list.querySelectorAll(".track-row:not(.dragging)")];
+    let anchor = null;
+    for (const row of rows) {
+      if (+row.dataset.index >= insertBeforeIndex) {
+        anchor = row;
+        break;
+      }
+    }
+    if (anchor) list.insertBefore(slot, anchor);
+    else list.appendChild(slot);
+  }
+
+  function computeDropIndex(clientY) {
+    const rows = [...list.querySelectorAll(".track-row:not(.dragging)")];
+    if (!rows.length) return 0;
+    const first = rows[0].getBoundingClientRect();
+    if (clientY < first.top + first.height * 0.4) return +rows[0].dataset.index;
+    const last = rows[rows.length - 1].getBoundingClientRect();
+    if (clientY > last.bottom - last.height * 0.4) return +rows[rows.length - 1].dataset.index + 1;
+    for (const row of rows) {
+      const r = row.getBoundingClientRect();
+      if (clientY >= r.top && clientY <= r.bottom) {
+        const mid = r.top + r.height / 2;
+        return clientY < mid ? +row.dataset.index : +row.dataset.index + 1;
+      }
+    }
+    return +rows[rows.length - 1].dataset.index + 1;
   }
 
   function onMove(e) {
-    if (dragFrom < 0) return;
+    if (!dragIndices.length) return;
     lastY = e.clientY;
     if (ghost) {
       ghost.style.left = `${e.clientX}px`;
       ghost.style.top = `${e.clientY}px`;
     }
-    const rows = [...list.querySelectorAll(".track-row:not(.dragging)")];
-    let insertAt = rows.length ? +rows[rows.length - 1].dataset.index + 1 : 0;
-    for (const row of rows) {
-      const rr = row.getBoundingClientRect();
-      if (e.clientY < rr.top + rr.height / 2) {
-        insertAt = +row.dataset.index;
-        break;
-      }
-    }
-    dropIndex = insertAt;
-    list.querySelector(".pl-drag-slot")?.remove();
-    const slot = document.createElement("div");
-    slot.className = "pl-drag-slot active";
-    const anchor = list.querySelector(`.track-row:not(.dragging)[data-index="${insertAt}"]`);
-    if (anchor) list.insertBefore(slot, anchor);
-    else list.appendChild(slot);
+    placeSlot(computeDropIndex(e.clientY));
   }
 
   function onUp() {
-    if (dragFrom < 0) return;
-    const from = dragFrom;
+    if (!dragIndices.length) return;
+    const froms = [...dragIndices].sort((a, b) => a - b);
     let to = dropIndex;
     ghost?.remove();
     ghost = null;
-    dragFrom = -1;
-    if (scrollRaf) cancelAnimationFrame(scrollRaf);
-    scrollRaf = null;
-    clearGap();
+    stopAutoScroll();
+    clearGapVisual();
     window.removeEventListener("pointermove", onMove);
     window.removeEventListener("pointerup", onUp);
+    dragIndices = [];
 
-    if (to < 0 || to === from || to === from + 1) return;
-    if (from < to) to = to - 1;
-    const [item] = pl.tracks.splice(from, 1);
-    pl.tracks.splice(Math.max(0, to), 0, item);
+    if (to < 0) return;
+    // extract block
+    const moving = froms.map((i) => pl.tracks[i]);
+    for (let i = froms.length - 1; i >= 0; i--) pl.tracks.splice(froms[i], 1);
+    // adjust target after removals
+    const removedBefore = froms.filter((i) => i < to).length;
+    to = Math.max(0, to - removedBefore);
+    pl.tracks.splice(to, 0, ...moving);
+    plEdit.selected = new Set();
     renderPlaylistEditUI();
     requestAnimationFrame(() => {
-      const row = trackListEl?.querySelector(`.track-row[data-index="${to}"]`);
-      if (!row) return;
-      row.classList.remove("drop-flash");
-      void row.offsetWidth;
-      row.classList.add("drop-flash");
+      for (let i = 0; i < moving.length; i++) {
+        const row = trackListEl?.querySelector(`.track-row[data-index="${to + i}"]`);
+        if (!row) continue;
+        row.classList.remove("drop-flash");
+        void row.offsetWidth;
+        row.classList.add("drop-flash");
+      }
     });
   }
 
@@ -4465,25 +4571,31 @@ function bindPlaylistTrackDrag(pl) {
     row.addEventListener("pointerdown", (e) => {
       if (e.button != null && e.button !== 0) return;
       if (e.target.closest("button, .pl-row-trash, .pl-ms-check")) return;
-      dragFrom = +row.dataset.index;
-      dropIndex = dragFrom;
+      const idx = +row.dataset.index;
+      const sel = selectedIndices();
+      dragIndices = sel.length && sel.includes(idx) ? sel : [idx];
+      dropIndex = idx;
+      lastDropIndex = -2;
       lastY = e.clientY;
-      row.classList.add("dragging");
+      dragIndices.forEach((i) => {
+        list.querySelector(`.track-row[data-index="${i}"]`)?.classList.add("dragging");
+      });
 
       const t = row.querySelector(".track-name")?.textContent || "";
       const sub = row.querySelector(".track-sub")?.textContent || "";
       const cover = row.querySelector(".pl-track-cover")?.src || PLACEHOLDER;
+      const extra = dragIndices.length > 1 ? ` · ${dragIndices.length}` : "";
       ghost = document.createElement("div");
       ghost.className = "queue-drag-ghost";
       ghost.innerHTML = `
         <img src="${cover}" alt="">
-        <div>
-          <div class="ghost-title">${escapeHtml(t)}</div>
+        <div class="ghost-meta">
+          <div class="ghost-title">${escapeHtml(t)}${extra}</div>
           <div class="ghost-sub">${escapeHtml(sub)}</div>
         </div>`;
       document.body.appendChild(ghost);
       onMove(e);
-      scrollRaf = requestAnimationFrame(autoScroll);
+      startAutoScroll();
       window.addEventListener("pointermove", onMove);
       window.addEventListener("pointerup", onUp);
     });
@@ -7851,13 +7963,26 @@ function bindQueuePointerDrag(list) {
     lastDropIndex = insertBeforeIndex;
     dropIndex = insertBeforeIndex;
 
-    clearGapVisual();
     const slot = ensureSlot();
+    if (!slot.classList.contains("active")) slot.classList.add("active");
+    // only move node if parent/anchor would change
+    const rows = [...list.querySelectorAll(".queue-item:not(.dragging)")];
+    let anchor = null;
+    for (const row of rows) {
+      if (+row.dataset.index >= insertBeforeIndex) {
+        anchor = row;
+        break;
+      }
+    }
+    const next = anchor || null;
+    if (slot.parentNode === list && slot.nextSibling === next) {
+      dropIndex = insertBeforeIndex;
+      lastDropIndex = insertBeforeIndex;
+      return; // already correct — no DOM write
+    }
+    clearGapVisual();
     slot.classList.add("active");
 
-    const rows = [...list.querySelectorAll(".queue-item:not(.dragging)")];
-    // find first row whose data-index >= insertBeforeIndex
-    let anchor = null;
     for (const row of rows) {
       if (+row.dataset.index >= insertBeforeIndex) {
         anchor = row;
@@ -7868,8 +7993,8 @@ function bindQueuePointerDrag(list) {
       list.insertBefore(slot, anchor);
     } else {
       list.appendChild(slot);
-    }
   }
+}
 
   function stopAutoScroll() {
     if (scrollRaf) {
@@ -8514,6 +8639,22 @@ function toggleGameHeaderCollapse(force) {
   } else {
     setTimeout(() => sticky.classList.remove("is-animating-header"), 450);
   }
+  // If collapsed but content can’t scroll, snap back open
+  if (willCollapse) {
+    requestAnimationFrame(() => {
+      const sc = document.querySelector(".track-list-scroll");
+      if (!sc) return;
+      const canScroll = sc.scrollHeight > sc.clientHeight + 8;
+      if (!canScroll) {
+        sticky.classList.remove("is-collapsed");
+        sticky.classList.add("is-animating-header");
+        const titleEl = $("#game-title");
+        if (titleEl) titleEl.textContent = titleEl.dataset.full || titleEl.textContent;
+        const btn = document.querySelector(".header-toggle-btn");
+        if (btn) btn.setAttribute("aria-expanded", "true");
+      }
+    });
+  }
 }
 
 function bindGameHeaderToggle() {
@@ -8572,7 +8713,7 @@ function bindTrackListFade() {
         lastY = scroller.scrollTop;
         return;
       }
-      if (!state.currentGame || !gameDetail?.classList.contains("active")) {
+      if ((!state.currentGame && !state.currentPlaylist) || !gameDetail?.classList.contains("active")) {
         lastY = scroller.scrollTop;
         return;
       }
@@ -8594,7 +8735,8 @@ function bindTrackListFade() {
         ((ignoreDir > 0 && goingDown) || (ignoreDir < 0 && goingUp));
 
       if (!animating && !locked) {
-        if (!collapsed && y >= COLLAPSE_AT && goingDown) {
+        const canScroll = scroller.scrollHeight > scroller.clientHeight + 8;
+        if (!collapsed && canScroll && y >= COLLAPSE_AT && goingDown) {
           lastY = y;
           toggleGameHeaderCollapse(true);
           ignoreUntil = now + 500;
