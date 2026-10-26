@@ -6387,7 +6387,8 @@ body.pl-editing #play-all-btn,
 body.pl-editing #shuffle-all-btn,
 body.pl-editing #album-lib-btn,
 body.pl-editing #album-menu-btn,
-body.pl-editing #pl-add-songs-chip {
+body.pl-editing #pl-add-songs-chip,
+body.pl-editing #pl-loops-btn {
   display: none !important; /* must leave the flex flow or gap creates empty space */
 }
 body.pl-editing .game-play-actions {
@@ -6914,6 +6915,24 @@ body:not(.pl-editing) #pl-loops-btn.hidden,
   font-size: 0.85rem !important;
 }
 body.pl-editing .track-list.is-playlist .track-row {
-  grid-template-columns: 36px 48px minmax(0, 1fr) auto auto 36px;
-  gap: 8px;
+  grid-template-columns: 32px 56px minmax(0, 1fr) auto auto auto 36px;
+  gap: 10px 12px;
+  align-items: center;
+}
+body.pl-editing .track-list.is-playlist .track-row .pl-track-cover {
+  width: 56px;
+  height: 56px;
+  margin-right: 0;
+  justify-self: start;
+}
+body.pl-editing .track-list.is-playlist .track-meta {
+  min-width: 0;
+  overflow: hidden;
+}
+body.pl-editing .track-list.is-playlist .track-meta .track-name,
+body.pl-editing .track-list.is-playlist .track-meta .track-sub {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
 }

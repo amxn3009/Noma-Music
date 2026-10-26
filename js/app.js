@@ -3843,10 +3843,7 @@ function openPlaylistDetail(id) {
   $("#pl-edit-cancel")?.classList.add("hidden");
   $("#pl-edit-save")?.classList.add("hidden");
   $("#pl-edit-mode-icon")?.classList.add("hidden");
-  // Favorites: no edit
-  if (pl.id === FAVORITES_ID) {
-    $("#pl-edit-btn")?.classList.add("hidden");
-  }
+  // Favorites can edit tracks / loops (name+cover still blocked in meta modal)
 
   // ── + / edit between shuffle and ⋯ ──
   const albumMenu = $("#album-menu-btn");
@@ -4060,8 +4057,8 @@ function openPlaylistDetail(id) {
     pl.updatedAt = Date.now();
     saveUserLibrary();
     plLoopsBtn.classList.toggle("is-active", !!pl.useTrackLoops);
-    // If turning on while already in count mode, refresh remaining for current song
-    if (pl.useTrackLoops && state.loopMode === "count" && state.playingPlaylistId === pl.id) {
+    // On or off: if this playlist is driving count-mode, refresh remaining now
+    if (state.loopMode === "count" && state.playingPlaylistId === pl.id) {
       state.loopsRemaining = resolveLoopsForQueueItem(state.queue[state.queueIndex]);
       updatePlayerUI();
     }
@@ -7466,7 +7463,7 @@ function toggleLoop() {
   state.loopMode = modes[(i + 1) % modes.length];
 
   if (state.loopMode === "count") {
-    state.loopsRemaining = Number(settings.loopTimes) || DEFAULT_SETTINGS.loopTimes;
+    state.loopsRemaining = resolveLoopsForQueueItem(state.queue[state.queueIndex]);
   } else {
     state.loopsRemaining = 0;
   }
@@ -10196,11 +10193,16 @@ window.addEventListener(
   { passive: true }
 );
 
-let settingsReturn = null; // { type: "games"|"playlists"|"game", gameId? }
+let settingsReturn = null; // { type: "games"|"playlists"|"game"|"playlist", gameId?, playlistId? }
 
 function openSettings() {
-  // remember where we were
-  if (!gameDetail.classList.contains("hidden") && state.currentGame) {
+  // remember where we were (detail first, then tabs)
+  if (!gameDetail.classList.contains("hidden") && state.currentPlaylist) {
+    settingsReturn = {
+      type: "playlist",
+      playlistId: state.currentPlaylist.id,
+    };
+  } else if (!gameDetail.classList.contains("hidden") && state.currentGame) {
     settingsReturn = { type: "game", gameId: state.currentGame.id };
   } else if ($("#tab-playlists")?.classList.contains("active")) {
     settingsReturn = { type: "playlists" };
@@ -10208,7 +10210,7 @@ function openSettings() {
     settingsReturn = { type: "games" };
   }
 
-  // hide main panels, show settings
+  // hide main panels, show settings (do NOT clear state.current*)
   document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
   gameDetail.classList.add("hidden");
   gameDetail.classList.remove("active");
@@ -10236,20 +10238,26 @@ function closeSettings() {
     document.body.classList.remove("settings-open");
   }, 290);
 
-  if (settingsReturn?.type === "game" && settingsReturn.gameId) {
-    openGame(settingsReturn.gameId);
-  } else if (settingsReturn?.type === "playlists") {
+  const ret = settingsReturn;
+  settingsReturn = null;
+
+  if (ret?.type === "playlist" && ret.playlistId) {
+    openPlaylistDetail(ret.playlistId);
+  } else if (ret?.type === "game" && ret.gameId) {
+    openGame(ret.gameId);
+  } else if (ret?.type === "playlists") {
     document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
     document.querySelector('.tab[data-tab="playlists"]')?.classList.add("active");
     document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
     $("#tab-playlists")?.classList.add("active");
+    renderLibrary?.({ animate: false });
   } else {
     document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
     document.querySelector('.tab[data-tab="games"]')?.classList.add("active");
     document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
     $("#tab-games")?.classList.add("active");
+    renderGames?.({ animate: false });
   }
-  settingsReturn = null;
 }
 
 function playlistThumbUrl(pl) {
