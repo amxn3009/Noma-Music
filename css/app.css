@@ -6134,18 +6134,17 @@ body.fs-open .noma-toast {
   mask-image: linear-gradient(
     90deg,
     rgba(0, 0, 0, var(--mq-left, 1)) 0,
-    #000 18px,
-    #000 calc(100% - 18px),
+    #000 8px,
+    #000 calc(100% - 8px),
     rgba(0, 0, 0, var(--mq-right, 0)) 100%
   );
   -webkit-mask-image: linear-gradient(
     90deg,
     rgba(0, 0, 0, var(--mq-left, 1)) 0,
-    #000 18px,
-    #000 calc(100% - 18px),
+    #000 8px,
+    #000 calc(100% - 8px),
     rgba(0, 0, 0, var(--mq-right, 0)) 100%
   );
-  transition: none; /* mask vars jump with animation phases */
 }
 .marquee-text {
   display: inline-block;
@@ -6162,8 +6161,8 @@ body.fs-open .noma-toast {
   0%   { transform: translateX(0); opacity: 1; }
   10%  { transform: translateX(0); opacity: 1; }
   72%  { transform: translateX(calc(-1 * var(--marquee-dist, 0px))); opacity: 1; }
-  86%  { transform: translateX(calc(-1 * var(--marquee-dist, 0px))); opacity: 0; }
-  87%  { transform: translateX(0); opacity: 0; }
+  84%  { transform: translateX(calc(-1 * var(--marquee-dist, 0px))); opacity: 0; }
+  85%  { transform: translateX(0); opacity: 0; }
   100% { transform: translateX(0); opacity: 1; }
 }
 

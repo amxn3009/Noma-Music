@@ -2,7 +2,7 @@ import { Bfstm } from './bfstm.js';
 import { Kawarp } from 'https://cdn.jsdelivr.net/npm/@kawarp/core@1.3.1/+esm';
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = "26.10.26, added inside of a playlist, fixed minimize issues with loops. fix stuff";
+const APP_VERSION = "26.10.26, added inside of a playlist, fixed minimize issues with loops. fix 2";
 
 let LIBRARY = [];
 
@@ -4213,14 +4213,20 @@ function exitPlaylistEditMode(discard) {
   $("#pl-multi-wrap")?.classList.add("hidden");
   const editBtn = $("#pl-edit-btn");
   const addChip = $("#pl-add-songs-chip");
-  editBtn?.classList.remove("hidden");
-  if (pl?.id !== FAVORITES_ID) addChip?.classList.remove("hidden");
-  // re-appear anim
-  editBtn?.classList.remove("chip-enter");
-  addChip?.classList.remove("chip-enter");
-  void editBtn?.offsetWidth;
-  editBtn?.classList.add("chip-enter");
-  addChip?.classList.add("chip-enter");
+  // Only show playlist chrome when we still are on a (non-favorites) playlist.
+  // `pl?.id !== FAVORITES_ID` is TRUE when pl is null → that was re-showing + on games.
+  if (pl && pl.id !== FAVORITES_ID) {
+    editBtn?.classList.remove("hidden");
+    addChip?.classList.remove("hidden");
+    editBtn?.classList.remove("chip-enter");
+    addChip?.classList.remove("chip-enter");
+    void editBtn?.offsetWidth;
+    editBtn?.classList.add("chip-enter");
+    addChip?.classList.add("chip-enter");
+  } else {
+    editBtn?.classList.add("hidden");
+    addChip?.classList.add("hidden");
+  }
   // move chrome back into action bar (next to ⋯)
   const albumMenu = $("#album-menu-btn");
   const bar = albumMenu?.parentElement;
@@ -6083,9 +6089,14 @@ function openGame(id) {
   tabPlaylists.classList.remove("active");
   gameDetail.classList.remove("hidden");
   gameDetail.classList.add("active");
-  $("#pl-add-songs-chip")?.classList.add("hidden");
-  $("#pl-edit-chrome")?.classList.add("hidden");
   exitPlaylistEditMode?.(true);
+  // Hide AFTER exit — exit used to un-hide + when pl was null
+  $("#pl-add-songs-chip")?.classList.add("hidden");
+  $("#pl-add-songs-btn")?.classList.add("hidden");
+  $("#pl-edit-btn")?.classList.add("hidden");
+  $("#pl-edit-chrome")?.classList.add("hidden");
+  $("#pl-multi-btn")?.classList.add("hidden");
+  $("#pl-multi-trash")?.classList.add("hidden");
 
   const coverEl = $("#game-cover");
   if (coverEl) coverEl.src = game.cover || PLACEHOLDER;
@@ -8534,6 +8545,9 @@ function setFsQueueOpen(open) {
   const wasOpen = document.body.classList.contains("fs-queue-open");
   document.body.classList.toggle("fs-queue-open", !!open);
 
+  const fs = $("#fs-title");
+  if (fs) setMarqueeText(fs, fs.textContent);
+
   const expandBtn = $("#queue-fs-expand");
   if (expandBtn) {
     expandBtn.setAttribute("aria-expanded", open ? "true" : "false");
@@ -9217,9 +9231,7 @@ function showContextMenu(x, y, payload, anchorEl = null) {
     }
   });
 
-  contextMenu?.querySelectorAll(".ctx-playlist-only").forEach((el) => {
-    el.classList.toggle("hidden", !payload.playlist);
-  });
+  // Do NOT blanket-toggle .ctx-playlist-only again — that undoes pin/delete hides for favorites.
   // hide edit for favorites
   const editBtn = contextMenu?.querySelector('[data-action="edit-playlist"]');
   if (editBtn) {
@@ -9801,47 +9813,55 @@ function setMarqueeText(el, text) {
     }
   }
 
+  // Fullscreen title: only marquee while the FS queue is open.
+  // Normal FS / short titles stay static (no fake scroll).
+  const isFsTitle = el.id === "fs-title";
+  const fsQueueOpen = document.body.classList.contains("fs-queue-open");
+  if (isFsTitle && !fsQueueOpen) {
+    return;
+  }
+
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       if (!wrap || !el) return;
       const overflow = el.scrollWidth - wrap.clientWidth;
-      if (overflow <= 2) return; // fits — no scroll
+      if (overflow <= 4) return; // fits — no scroll
       wrap.classList.add("is-overflowing");
-      // Only as far as needed so the last characters sit fully in the frame
+      // Exact overflow only (fades are narrow so we don't need extra pad)
       const dist = Math.max(0, overflow);
-      const dur = Math.max(8, Math.min(20, dist / 28));
+      const dur = Math.max(8, Math.min(18, dist / 30));
       el.style.setProperty("--marquee-dist", `${dist}px`);
       el.style.setProperty("--marquee-dur", `${dur}s`);
 
       const ms = dur * 1000;
       const beat = () => {
-        // hold at start: no left fade, soft right fade
+        // hold at start
         wrap.classList.remove("is-scrolling", "mq-end", "mq-cross");
         wrap.style.setProperty("--mq-left", "1");
         wrap.style.setProperty("--mq-right", "0");
-        // start moving — fade left in only after motion begins
         setTimeout(() => {
           wrap.classList.add("is-scrolling");
           wrap.style.setProperty("--mq-left", "0");
           wrap.style.setProperty("--mq-right", "0");
         }, ms * 0.12);
-        // near end — drop right fade so last letters are solid
+        // end of travel — solid right edge so last letters aren't masked
         setTimeout(() => {
           wrap.classList.add("mq-end");
           wrap.style.setProperty("--mq-left", "0");
           wrap.style.setProperty("--mq-right", "1");
         }, ms * 0.72);
-        // crossfade: both edges solid while text is opacity 0 (no pop)
+        // crossfade while opacity is 0 — both edges solid (no pop)
         setTimeout(() => {
           wrap.classList.add("mq-cross");
           wrap.style.setProperty("--mq-left", "1");
           wrap.style.setProperty("--mq-right", "1");
-        }, ms * 0.86);
+        }, ms * 0.84);
+        // still opacity 0 here — arm start fades before text comes back
         setTimeout(() => {
           wrap.classList.remove("is-scrolling", "mq-end", "mq-cross");
           wrap.style.setProperty("--mq-left", "1");
           wrap.style.setProperty("--mq-right", "0");
-        }, ms * 0.94);
+        }, ms * 0.90);
       };
       beat();
       wrap._mqTimer = setInterval(beat, ms);
