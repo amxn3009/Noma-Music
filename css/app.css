@@ -6914,10 +6914,37 @@ body:not(.pl-editing) #pl-loops-btn.hidden,
   padding: 6px 6px !important;
   font-size: 0.85rem !important;
 }
+/* Match normal playlist rows on the left (num + cover + meta) */
 body.pl-editing .track-list.is-playlist .track-row {
-  grid-template-columns: 32px 56px minmax(0, 1fr) auto auto auto 36px;
-  gap: 10px 12px;
+  grid-template-columns: 28px 56px minmax(0, 1fr) auto auto 32px;
+  gap: 12px;
+  padding: 10px 12px;
+  min-height: 72px;
   align-items: center;
+}
+body.pl-editing .track-list.is-playlist .track-num {
+  width: 28px;
+  height: 40px;
+  justify-self: start;
+}
+body.pl-editing .track-list.is-playlist .track-row .pl-track-cover {
+  width: 56px;
+  height: 56px;
+  margin-right: 4px;
+  border-radius: 8px;
+  object-fit: cover;
+  justify-self: start;
+}
+body.pl-editing .track-list.is-playlist .track-meta {
+  min-width: 0;
+  overflow: hidden;
+}
+body.pl-editing .track-list.is-playlist .track-meta .track-name,
+body.pl-editing .track-list.is-playlist .track-meta .track-sub {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
 }
 body.pl-editing .track-list.is-playlist .track-row .pl-track-cover {
   width: 56px;

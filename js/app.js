@@ -10196,6 +10196,9 @@ window.addEventListener(
 let settingsReturn = null; // { type: "games"|"playlists"|"game"|"playlist", gameId?, playlistId? }
 
 function openSettings() {
+  // Discard playlist edit so multi-select chrome is gone when we come back
+  if (typeof cancelEditIfNeeded === "function") cancelEditIfNeeded();
+
   // remember where we were (detail first, then tabs)
   if (!gameDetail.classList.contains("hidden") && state.currentPlaylist) {
     settingsReturn = {
@@ -10210,7 +10213,7 @@ function openSettings() {
     settingsReturn = { type: "games" };
   }
 
-  // hide main panels, show settings (do NOT clear state.current*)
+  // hide main panels, show settings (do not clear state.current*)
   document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
   gameDetail.classList.add("hidden");
   gameDetail.classList.remove("active");
@@ -10250,13 +10253,13 @@ function closeSettings() {
     document.querySelector('.tab[data-tab="playlists"]')?.classList.add("active");
     document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
     $("#tab-playlists")?.classList.add("active");
-    renderLibrary?.({ animate: false });
+    if (typeof renderLibrary === "function") renderLibrary({ animate: false });
   } else {
     document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
     document.querySelector('.tab[data-tab="games"]')?.classList.add("active");
     document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
     $("#tab-games")?.classList.add("active");
-    renderGames?.({ animate: false });
+    if (typeof renderGames === "function") renderGames({ animate: false });
   }
 }
 
