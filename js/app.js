@@ -144,7 +144,11 @@ function applyCoverToEl(el, pl) {
     if (el.tagName === "IMG") {
       // replace img with mosaic div of same size
       const mosaic = document.createElement("div");
-      mosaic.className = el.className.replace("pl-card-cover", "pl-cover-mosaic") || "pl-cover-mosaic";
+      // keep game-cover-lg / size classes AND force pl-cover-mosaic
+      const base = String(el.className || "")
+        .replace(/\bpl-card-cover\b/g, "")
+        .trim();
+      mosaic.className = [base, "pl-cover-mosaic"].filter(Boolean).join(" ");
       if (el.id) mosaic.id = el.id;
       mosaic.innerHTML = src
         .map((u) => `<img src="${escapeHtml(u)}" alt="" draggable="false">`)
@@ -4593,7 +4597,11 @@ function openPlaylistEditMetaModal(pl) {
       pendingMode === "auto"
         ? ""
         : pendingSrc
-          ? `<div class="pl-meta-preview"><img src="${escapeHtml(pendingSrc)}" alt=""><span>${escapeHtml(modeLabel())}</span></div>`
+          ? `<div class="pl-meta-preview">${
+            pendingMode === "auto"
+              ? playlistThumbHtml(pl, "pl-thumb-mosaic")
+              : `<img src="${escapeHtml(pendingSrc || playlistThumbUrl(pl))}" alt="">`
+          }<span>${escapeHtml(modeLabel())}</span></div>`
           : "";
     modesEl.innerHTML =
       modes
@@ -9109,6 +9117,20 @@ function setupGameTrackSearch() {
   applyFilter();
 }
 
+/** True if collapsing the header would still leave scrollable track content. */
+function headerCanCollapse() {
+  const sc = document.querySelector(".track-list-scroll");
+  const sticky = document.querySelector(".game-sticky-top");
+  if (!sc || !sticky) return false;
+  if (sticky.classList.contains("is-collapsed")) return true; // already collapsed
+  const overflow = sc.scrollHeight - sc.clientHeight;
+  const expandedH = sticky.offsetHeight || 0;
+  const collapsedH = 72; // matches compact sticky height
+  const delta = Math.max(0, expandedH - collapsedH);
+  // Need leftover overflow after the scroller gains `delta` height
+  return overflow > delta + 24;
+}
+
 function toggleGameHeaderCollapse(force) {
   const sticky = document.querySelector(".game-sticky-top");
   const scroller = document.querySelector(".track-list-scroll");
@@ -9119,6 +9141,13 @@ function toggleGameHeaderCollapse(force) {
 
   // Already in that state
   if (willCollapse === sticky.classList.contains("is-collapsed")) return;
+
+  // No room to collapse → never start the anim (avoids expand flash)
+  if (willCollapse && !headerCanCollapse()) {
+    const btn = $("#game-header-toggle");
+    if (btn) btn.setAttribute("aria-expanded", "true");
+    return;
+  }
 
   sticky.classList.toggle("is-collapsed", willCollapse);
   sticky.classList.add("is-animating-header");
@@ -9144,7 +9173,6 @@ function toggleGameHeaderCollapse(force) {
     scroller.dataset.scrollLocked = "1";
     scroller.style.overflowY = "hidden";
     scroller.style.touchAction = "none";
-    // Kill residual inertia (WebKit)
     scroller.scrollTop = lockedY;
     void scroller.offsetHeight;
     scroller.scrollTop = lockedY;
@@ -9158,7 +9186,6 @@ function toggleGameHeaderCollapse(force) {
       sticky.classList.remove("is-animating-header");
     };
 
-    // Prefer transitionend on the sticky; fallback timeout
     let done = false;
     const finish = () => {
       if (done) return;
@@ -9168,38 +9195,27 @@ function toggleGameHeaderCollapse(force) {
     };
     const onEnd = (e) => {
       if (e.target !== sticky && !sticky.contains(e.target)) return;
-      // one property is enough
       finish();
     };
     sticky.addEventListener("transitionend", onEnd);
-    setTimeout(finish, 480); // safety = anim length + a bit
+    setTimeout(finish, 480);
   } else {
     setTimeout(() => sticky.classList.remove("is-animating-header"), 450);
   }
-  // If collapsed but content can’t scroll, snap back open
-  if (willCollapse) {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        const sc = document.querySelector(".track-list-scroll");
-        const stickyEl = document.querySelector(".game-sticky-top");
-        if (!sc || !stickyEl) return;
-        if (sc.scrollHeight <= sc.clientHeight + 24) {
-          // collapsing removed scroll room → reopen
-          stickyEl.classList.remove("is-collapsed");
-          const titleEl = $("#game-title");
-          if (titleEl) titleEl.textContent = titleEl.dataset.full || titleEl.textContent;
-          document.querySelector(".header-toggle-btn")?.setAttribute("aria-expanded", "true");
-        }
-    });
-    });
-  }
+  // (removed snap-back RAF — that caused the flash)
 }
 
 function bindGameHeaderToggle() {
   const btn = $("#game-header-toggle");
   if (!btn || btn.dataset.bound) return;
   btn.dataset.bound = "1";
-  btn.addEventListener("click", () => toggleGameHeaderCollapse());
+    btn.addEventListener("click", () => {
+    const sticky = document.querySelector(".game-sticky-top");
+    const collapsed = sticky?.classList.contains("is-collapsed");
+    // Expanding is always ok; collapsing only when there’s room
+    if (!collapsed && !headerCanCollapse()) return;
+    toggleGameHeaderCollapse();
+  });
 }
 
 
@@ -9273,7 +9289,7 @@ function bindTrackListFade() {
         ((ignoreDir > 0 && goingDown) || (ignoreDir < 0 && goingUp));
 
       if (!animating && !locked) {
-        const canScroll = scroller.scrollHeight > scroller.clientHeight + 24;
+        const canScroll = headerCanCollapse();
         if (!collapsed && canScroll && y >= COLLAPSE_AT && goingDown) {
           lastY = y;
           toggleGameHeaderCollapse(true);
@@ -10271,6 +10287,23 @@ function playlistThumbUrl(pl) {
   return src || PLACEHOLDER;
 }
 
+/** HTML thumb: single <img> or 2×2 mosaic */
+function playlistThumbHtml(pl, className = "pl-thumb-mosaic") {
+  if (!pl) {
+    return `<img class="${className}" src="${escapeHtml(PLACEHOLDER)}" alt="">`;
+  }
+  if (pl.id === FAVORITES_ID) {
+    return `<img class="${className}" src="Assets/PlaylistCovers/FavSongsCover.png" alt="">`;
+  }
+  const src = playlistCoverSrc(pl);
+  if (Array.isArray(src)) {
+    return `<div class="pl-cover-mosaic ${className}">${src
+      .map((u) => `<img src="${escapeHtml(u)}" alt="" draggable="false">`)
+      .join("")}</div>`;
+  }
+  return `<img class="${className}" src="${escapeHtml(src || PLACEHOLDER)}" alt="">`;
+}
+
 function rebuildQuickPlMenu(filter = "") {
   const list = document.getElementById("setting-quick-pl-list");
   if (!list) return;
@@ -10290,9 +10323,8 @@ function rebuildQuickPlMenu(filter = "") {
     if (settings.quickAddPlaylistId === pl.id) {
       li.setAttribute("aria-selected", "true");
     }
-    const coverSrc = playlistThumbUrl(pl);
     li.innerHTML = `
-      <img src="${escapeHtml(coverSrc)}" alt="" onerror="this.src='${PLACEHOLDER}'">
+      ${playlistThumbHtml(pl, "pl-thumb-mosaic")}
       <span>${escapeHtml(pl.name || "Playlist")}</span>
     `;
     li.addEventListener("click", (e) => {
@@ -10311,11 +10343,32 @@ function updateQuickPlButtonLabel() {
   const cover = document.getElementById("setting-quick-pl-cover");
   const pl = getPlaylist(settings.quickAddPlaylistId || FAVORITES_ID);
   if (label) label.textContent = pl?.name || "Lieblingssongs";
-  if (cover) {
-    cover.src = playlistThumbUrl(pl);
-    cover.hidden = false;
-    cover.onerror = () => {
-      cover.src = PLACEHOLDER;
+  if (!cover) return;
+
+  const src = playlistCoverSrc(pl);
+  // If parent isn’t a wrap yet, keep simple img for non-mosaic
+  if (Array.isArray(src) && src.length > 1) {
+    const wrap =
+      cover.closest("#setting-quick-pl-cover-wrap") ||
+      (() => {
+        const w = document.createElement("span");
+        w.id = "setting-quick-pl-cover-wrap";
+        cover.replaceWith(w);
+        return w;
+      })();
+    wrap.innerHTML = playlistThumbHtml(pl, "pl-thumb-mosaic");
+  } else {
+    // ensure we have an <img id="setting-quick-pl-cover">
+    let img = cover;
+    if (img.tagName !== "IMG") {
+      img = document.createElement("img");
+      img.id = "setting-quick-pl-cover";
+      cover.replaceWith(img);
+    }
+    img.src = playlistThumbUrl(pl);
+    img.hidden = false;
+    img.onerror = () => {
+      img.src = PLACEHOLDER;
     };
   }
 }
