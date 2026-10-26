@@ -476,6 +476,8 @@ body.search-mode #global-search-results {
 #game-cover.pl-cover-mosaic {
   width: 200px;
   height: 200px;
+  min-width: 200px;
+  min-height: 200px;
   max-width: 200px;
   max-height: 200px;
   border-radius: var(--radius);
@@ -485,11 +487,15 @@ body.search-mode #global-search-results {
   background: #222;
   flex-shrink: 0;
   overflow: hidden;
-  /* prevent layout thrash */
-  will-change: width, height;
+  /* animate mosaic the same as a single cover */
+  will-change: width, height, min-width, min-height, max-width, max-height, border-radius;
   transition:
     width 0.45s cubic-bezier(0.22, 1, 0.36, 1),
     height 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    min-width 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    min-height 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    max-width 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    max-height 0.45s cubic-bezier(0.22, 1, 0.36, 1),
     border-radius 0.4s ease,
     box-shadow 0.35s ease;
 }
@@ -593,14 +599,14 @@ body.search-mode #global-search-results {
 .game-sticky-top.is-collapsed .game-cover-lg,
 .game-sticky-top.is-collapsed #game-cover.game-cover-lg,
 .game-sticky-top.is-collapsed #game-cover.pl-cover-mosaic {
-  width: 48px;
-  height: 48px;
-  min-width: 48px;
-  min-height: 48px;
-  max-width: 48px;
-  max-height: 48px;
-  border-radius: 8px;
-  overflow: hidden;
+  width: 48px !important;
+  height: 48px !important;
+  min-width: 48px !important;
+  min-height: 48px !important;
+  max-width: 48px !important;
+  max-height: 48px !important;
+  border-radius: 8px !important;
+  overflow: hidden !important;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
 }
 
@@ -627,6 +633,7 @@ body.search-mode #global-search-results {
   height: 100%;
   object-fit: cover;
   display: block;
+  border-radius: 0 !important;
 }
 .pl-meta-preview {
   display: flex;
@@ -2682,13 +2689,39 @@ body.fs-open .progress-row {
   color: var(--accent);
   font-weight: 600;
 }
-.custom-select-list li img {
+/* Single cover img in the dropdown */
+.custom-select-list li > img {
   width: 28px;
   height: 28px;
   border-radius: 6px;
   object-fit: cover;
   flex-shrink: 0;
   background: #222;
+}
+/* One combined mosaic tile (not 4 separate rounded imgs) */
+.custom-select-list li > .pl-cover-mosaic,
+.custom-select-list li > .pl-thumb-mosaic,
+#setting-quick-pl-list li > .pl-cover-mosaic,
+#setting-quick-pl-list li > .pl-thumb-mosaic {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  flex-shrink: 0;
+  background: #222;
+}
+.custom-select-list li .pl-cover-mosaic img,
+.custom-select-list li .pl-thumb-mosaic img,
+#setting-quick-pl-list li .pl-cover-mosaic img,
+#setting-quick-pl-list li .pl-thumb-mosaic img {
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 0 !important;
+  object-fit: cover;
+  display: block;
 }
 .custom-select-list li span {
   min-width: 0;
@@ -5844,22 +5877,28 @@ body.fs-open .noma-toast {
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
 }
 
-.pl-card-cover,
-.pl-cover-mosaic {
+.pl-card-cover {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
 }
-.pl-cover-mosaic {
+/* card/list mosaics only — NOT #game-cover */
+.pl-cover-mosaic:not(#game-cover):not(.game-cover-lg) {
+  width: 100%;
+  height: 100%;
   display: grid;
   grid-template-columns: 1fr 1fr;
   grid-template-rows: 1fr 1fr;
+  overflow: hidden;
+  border-radius: inherit;
 }
 .pl-cover-mosaic img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
+  border-radius: 0 !important; /* only the outer tile is rounded */
 }
 
 .pl-pin {
@@ -6264,11 +6303,30 @@ body.fs-open .noma-toast {
 .add-to-pl-item:hover {
   background: rgba(255, 255, 255, 0.06);
 }
-.add-to-pl-item img {
+.add-to-pl-item > img,
+.add-to-pl-item > .pl-cover-mosaic,
+.add-to-pl-item > .add-to-pl-cover {
   width: 44px;
   height: 44px;
   border-radius: 8px;
   object-fit: cover;
+  flex-shrink: 0;
+  overflow: hidden;
+  background: #222;
+}
+.add-to-pl-item > .pl-cover-mosaic,
+.add-to-pl-item > .add-to-pl-cover.pl-cover-mosaic {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+}
+.add-to-pl-item .pl-cover-mosaic img,
+.add-to-pl-item .add-to-pl-cover img {
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 0 !important;
+  object-fit: cover;
+  display: block;
 }
 .add-to-pl-item .pl-check {
   width: 22px;

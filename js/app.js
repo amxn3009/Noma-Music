@@ -5314,15 +5314,13 @@ function renderAddToPlList() {
   );
     list.innerHTML = ordered
     .map((pl) => {
-      const cover = playlistCoverSrc(pl);
-      const url = Array.isArray(cover) ? cover[0] || PLACEHOLDER : cover;
       const sel = addToPlSelected.has(pl.id) ? "is-selected" : "";
       const pin = pl.pinned
         ? `<span class="add-to-pl-pin" title="Angepinnt"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg></span>`
         : "";
       return `<li>
         <button type="button" class="add-to-pl-item ${sel}" data-pl-id="${escapeHtml(pl.id)}">
-          <img src="${escapeHtml(url)}" alt="">
+          ${playlistThumbHtml(pl, "add-to-pl-cover")}
           <span class="add-to-pl-name">${escapeHtml(pl.name)}${pin}</span>
           <span class="pl-check"></span>
         </button>
