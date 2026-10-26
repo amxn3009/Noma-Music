@@ -2,7 +2,7 @@ import { Bfstm } from './bfstm.js';
 import { Kawarp } from 'https://cdn.jsdelivr.net/npm/@kawarp/core@1.3.1/+esm';
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = "22.10.26, fix scroll jump try #2";
+const APP_VERSION = "26.10.26, added inside of a playlist, fixed minimize issues with loops.";
 
 let LIBRARY = [];
 
@@ -1154,40 +1154,108 @@ async function getTrackDuration(url, track) {
 
 function rescheduleSoftEndAfterResume() {
   if (!audioCtx || !decodedBuffer || softEndFadeAt <= 0) return;
-  const now = audioCtx.currentTime;
-  const fadeSec = softEndFadeSec;
-  const timeToFadeStart = Math.max(0, softEndFadeAt - now);
+  if (!state.playing || transitioning) return;
 
-  clearSoftEndTimers();
-  softEndFadeAt = now + timeToFadeStart;
-  softEndFadeSec = fadeSec;
+  const now = audioCtx.currentTime;
+  const fadeSec = Math.max(0, softEndFadeSec);
+  const fadeAt = softEndFadeAt;
+  const fadeEnd = fadeAt + fadeSec;
+
+  // Already past the end on the audio clock → finish now
+  if (now >= fadeEnd) {
+    if (state.loopMode === "count") {
+      state.loopsRemaining = 0;
+      updatePlayerUI();
+    }
+    finishTransition();
+    return;
+  }
+
+  // Mid-fade on the audio clock → snap into transitioning, arm finish only
+  if (now >= fadeAt) {
+    transitioning = true;
+    transitionStartedAt = fadeAt;
+    document.body.classList.add("is-transitioning");
+    if (state.loopMode === "count") {
+      state.loopsRemaining = 0;
+      updatePlayerUI();
+    }
+    if (currentGain) {
+      const left = Math.max(0.05, fadeEnd - now);
+      currentGain.gain.cancelScheduledValues(now);
+      currentGain.gain.setValueAtTime(currentGain.gain.value, now);
+      currentGain.gain.linearRampToValueAtTime(0, now + left);
+    }
+    clearSoftEndTimeoutsOnly();
+    softEndTimer = setTimeout(() => {
+      softEndTimer = null;
+      if (!state.playing) return;
+      // Re-check audio clock in case context stalled again
+      if (audioCtx && audioCtx.currentTime < softEndFadeAt + softEndFadeSec - 0.05) {
+        rescheduleSoftEndAfterResume();
+        return;
+      }
+      finishTransition();
+    }, (fadeEnd - now) * 1000 + 40);
+    updateProgressUI();
+    return;
+  }
+
+  // Still before fade — re-arm both timers from audio clock
+  const timeToFadeStart = fadeAt - now;
+  clearSoftEndTimeoutsOnly();
 
   if (currentGain) {
     currentGain.gain.cancelScheduledValues(now);
     currentGain.gain.setValueAtTime(effectiveVolume(), now);
     if (fadeSec <= 0) {
-      currentGain.gain.setValueAtTime(0, softEndFadeAt);
+      currentGain.gain.setValueAtTime(0, fadeAt);
     } else {
-      currentGain.gain.setValueAtTime(effectiveVolume(), softEndFadeAt);
-      currentGain.gain.linearRampToValueAtTime(0, softEndFadeAt + fadeSec);
+      currentGain.gain.setValueAtTime(effectiveVolume(), fadeAt);
+      currentGain.gain.linearRampToValueAtTime(0, fadeEnd);
     }
   }
 
   softEndStartTimer = setTimeout(() => {
     softEndStartTimer = null;
     if (!state.playing || !currentGain) return;
+    // Context lagged behind wall clock → reschedule instead of faking a fade
+    if (audioCtx && audioCtx.currentTime < softEndFadeAt - 0.05) {
+      rescheduleSoftEndAfterResume();
+      return;
+    }
     transitioning = true;
     transitionStartedAt = softEndFadeAt;
     document.body.classList.add("is-transitioning");
     lastLoopCycle = Math.max(0, lastLoopCycle);
+    if (state.loopMode === "count") {
+      state.loopsRemaining = 0;
+      updatePlayerUI();
+    }
     updateProgressUI();
   }, timeToFadeStart * 1000);
 
   softEndTimer = setTimeout(() => {
     softEndTimer = null;
     if (!state.playing) return;
+    if (audioCtx && audioCtx.currentTime < softEndFadeAt + softEndFadeSec - 0.05) {
+      rescheduleSoftEndAfterResume();
+      return;
+    }
     finishTransition();
-  }, (timeToFadeStart + Math.max(0, fadeSec)) * 1000 + 40);
+  }, (timeToFadeStart + fadeSec) * 1000 + 40);
+}
+
+/** Clear only the wall-clock timers — keep softEndFadeAt / softEndFadeSec. */
+function clearSoftEndTimeoutsOnly() {
+  if (softEndTimer) {
+    clearTimeout(softEndTimer);
+    softEndTimer = null;
+  }
+  if (softEndStartTimer) {
+    clearTimeout(softEndStartTimer);
+    softEndStartTimer = null;
+  }
 }
 
 function clearSoftEndTimers() {
@@ -1853,11 +1921,10 @@ function updateProgressUI() {
           startTransition();
         } else if (state.loopMode === "count") {
           if (state.loopsRemaining > 0) {
-            // Still have loops left — count down, keep playing
             state.loopsRemaining -= 1;
             updatePlayerUI();
           } else {
-            // Already at 0: this end is the last one → outro
+            // Last end → outro (startTransition also zeros the badge)
             startTransition();
           }
         }
@@ -1977,10 +2044,18 @@ function playBuffer(audioBuffer, offsetSeconds = 0) {
       softEndStartTimer = null;
       if (!state.playing || !currentGain) return;
       if (sourceGen !== playGen) return;
+      if (audioCtx && audioCtx.currentTime < softEndFadeAt - 0.05) {
+        rescheduleSoftEndAfterResume();
+        return;
+      }
       transitioning = true;
       transitionStartedAt = softEndFadeAt;
       document.body.classList.add("is-transitioning");
       lastLoopCycle = Math.max(0, lastLoopCycle);
+      if (state.loopMode === "count") {
+        state.loopsRemaining = 0;
+        updatePlayerUI();
+      }
       updateProgressUI();
     }, timeToFadeStart * 1000);
 
@@ -1988,6 +2063,10 @@ function playBuffer(audioBuffer, offsetSeconds = 0) {
       softEndTimer = null;
       if (!state.playing) return;
       if (sourceGen !== playGen) return;
+      if (audioCtx && audioCtx.currentTime < softEndFadeAt + softEndFadeSec - 0.05) {
+        rescheduleSoftEndAfterResume();
+        return;
+      }
       finishTransition();
     }, (timeToFadeStart + Math.max(0, fadeSec)) * 1000 + 40);
   }
@@ -2007,6 +2086,11 @@ function startTransition() {
   if (transitioning || !audioCtx || !currentGain) return;
 
   clearSoftEndTimers();
+  // Outro = this track is done — never leave a stale loop badge
+  if (state.loopMode === "count") {
+    state.loopsRemaining = 0;
+    updatePlayerUI();
+  }
 
   const sec = getTransitionSec();
   if (sec <= 0) {
@@ -2679,6 +2763,11 @@ async function init() {
   mountDurationDevTool();
    document.addEventListener("visibilitychange", () => {
     if (document.visibilityState !== "visible") {
+      // Freeze wall-clock soft-end timers — audioCtx may stall in background
+      // while setTimeout keeps running (that was the desync).
+      if (softEndFadeAt > 0 && !useMediaEl) {
+        clearSoftEndTimeoutsOnly();
+      }
       syncSoftEndFromClock();
       try {
         kawarp?.stop();
@@ -2696,7 +2785,19 @@ async function init() {
     // ── Foreground ──
     clearBgSessionKeepAlive();
     ensurePlaybackAudioSession();
+    // Resume audio context first so currentTime is live again
+    if (audioCtx && audioCtx.state === "suspended") {
+      audioCtx.resume().catch(() => {});
+    }
     syncSoftEndFromClock();
+    // Re-arm soft-end from the audio clock (timers were frozen while hidden)
+    if (state.playing && !useMediaEl && softEndFadeAt > 0) {
+      rescheduleSoftEndAfterResume();
+    }
+    if (transitioning && state.loopMode === "count" && state.loopsRemaining !== 0) {
+      state.loopsRemaining = 0;
+      updatePlayerUI();
+    }
 
     // App was killed / reloaded while audio was "ghosting": force idle UI + session
     if (!state.playing) {
@@ -3975,9 +4076,17 @@ function enterPlaylistEditMode() {
 
   $("#pl-edit-btn")?.classList.add("hidden");
   $("#pl-add-songs-chip")?.classList.add("hidden");
-  $("#pl-edit-mode-icon")?.classList.remove("hidden");
-  $("#pl-edit-cancel")?.classList.remove("hidden");
-  $("#pl-edit-save")?.classList.remove("hidden");
+  $("#pl-edit-mode-icon")?.classList.add("hidden");
+
+  const popIn = (el) => {
+    if (!el) return;
+    el.classList.remove("hidden");
+    el.classList.remove("chip-enter");
+    void el.offsetWidth;
+    el.classList.add("chip-enter");
+  };
+  popIn(document.getElementById("pl-edit-cancel"));
+  popIn(document.getElementById("pl-edit-save"));
 
   // Put edit chrome exactly where play / shuffle / ⋯ live
   const actions = document.querySelector(".game-play-actions");
@@ -3989,11 +4098,35 @@ function enterPlaylistEditMode() {
   // hide leftover host from older builds
   document.getElementById("pl-edit-by-cover")?.classList.add("hidden");
 
-  // Pencil overlay = child of cover → follows collapse animation, zero lag
-  document.querySelectorAll(".pl-cover-edit-hit").forEach((n) => n.remove());
-  const coverEl = document.getElementById("game-cover");
+  // Cover hit via wrapper so it always tracks size (img + mosaic)
+  document.querySelectorAll(".pl-cover-edit-hit, .pl-cover-hit-wrap").forEach((n) => {
+    if (n.classList.contains("pl-cover-hit-wrap")) {
+      const img = n.querySelector("#game-cover, .game-cover-lg, .pl-cover-mosaic");
+      if (img && n.parentNode) n.parentNode.insertBefore(img, n);
+    }
+    if (n.classList.contains("pl-cover-edit-hit")) n.remove();
+  });
+  // unwrap leftover empty wraps
+  document.querySelectorAll(".pl-cover-hit-wrap").forEach((n) => {
+    if (!n.querySelector("#game-cover") && n.parentNode) {
+      while (n.firstChild) n.parentNode.insertBefore(n.firstChild, n);
+      n.remove();
+    }
+  });
+
+  let coverEl = document.getElementById("game-cover");
   if (pl.id !== FAVORITES_ID && coverEl) {
+    let wrap = coverEl.closest(".pl-cover-hit-wrap");
+    if (!wrap) {
+      wrap = document.createElement("div");
+      wrap.className = "pl-cover-hit-wrap";
+      coverEl.parentNode.insertBefore(wrap, coverEl);
+      wrap.appendChild(coverEl);
+    }
     coverEl.classList.add("pl-cover-editable");
+    coverEl.querySelectorAll("img").forEach((img) => {
+      img.style.pointerEvents = "none";
+    });
     const hit = document.createElement("button");
     hit.type = "button";
     hit.className = "pl-cover-edit-hit";
@@ -4004,14 +4137,25 @@ function enterPlaylistEditMode() {
       e.stopPropagation();
       openPlaylistEditMetaModal(pl);
     });
-    // cover must be positioning context
-    if (getComputedStyle(coverEl).position === "static") {
-      coverEl.style.position = "relative";
-    }
-    coverEl.appendChild(hit);
+    wrap.appendChild(hit);
   }
 
   ensureMultiSelectChrome();
+  popIn(document.getElementById("pl-multi-btn"));
+  // multi wrap must be visible
+  document.getElementById("pl-multi-wrap")?.classList.remove("hidden");
+  const multiBtn = document.getElementById("pl-multi-btn");
+  if (multiBtn) {
+    multiBtn.classList.remove("chip-enter");
+    void multiBtn.offsetWidth;
+    multiBtn.classList.add("chip-enter");
+  }
+  const trash = document.getElementById("pl-multi-trash");
+  if (trash && !trash.classList.contains("hidden")) {
+    trash.classList.remove("chip-enter");
+    void trash.offsetWidth;
+    trash.classList.add("chip-enter");
+  }
   renderPlaylistEditUI();
 }
 
@@ -4029,6 +4173,12 @@ function exitPlaylistEditMode(discard) {
   plEdit.multi = false;
   document.body.classList.remove("pl-editing");
   document.querySelectorAll(".pl-cover-edit-hit").forEach((n) => n.remove());
+  document.querySelectorAll(".pl-cover-hit-wrap").forEach((wrap) => {
+    const parent = wrap.parentNode;
+    if (!parent) return;
+    while (wrap.firstChild) parent.insertBefore(wrap.firstChild, wrap);
+    wrap.remove();
+  });
   $("#game-cover")?.classList.remove("pl-cover-editable");
   document.getElementById("pl-edit-by-cover")?.classList.add("hidden");
   window.__plPlaceCoverHit = null;
@@ -4060,7 +4210,22 @@ function exitPlaylistEditMode(discard) {
     bar.insertBefore(chrome, albumMenu);
     if (addChip) bar.insertBefore(addChip, chrome);
   }
-  if (pl) openPlaylistDetail(pl.id);
+  // soft restore — keep collapse state / scroll, no header jump
+  if (pl) {
+    const scroller = document.querySelector(".track-list-scroll");
+    const y = scroller?.scrollTop ?? 0;
+    const collapsed = document.querySelector(".game-sticky-top")?.classList.contains("is-collapsed");
+    // re-render normal (non-edit) track list only
+    state.currentPlaylist = getPlaylist(pl.id) || pl;
+    openPlaylistDetail(pl.id);
+    requestAnimationFrame(() => {
+      const sticky = document.querySelector(".game-sticky-top");
+      if (collapsed && sticky && !sticky.classList.contains("is-collapsed")) {
+        sticky.classList.add("is-collapsed");
+      }
+      if (scroller) scroller.scrollTop = y;
+    });
+  }
 }
 
 function cancelEditIfNeeded() {
@@ -7027,16 +7192,28 @@ function toggleLoop() {
     softEndStartTimer = setTimeout(() => {
       softEndStartTimer = null;
       if (!state.playing || !currentGain) return;
+      if (audioCtx && audioCtx.currentTime < softEndFadeAt - 0.05) {
+        rescheduleSoftEndAfterResume();
+        return;
+      }
       transitioning = true;
       transitionStartedAt = softEndFadeAt;
       document.body.classList.add("is-transitioning");
       lastLoopCycle = Math.max(0, lastLoopCycle);
+      if (state.loopMode === "count") {
+        state.loopsRemaining = 0;
+        updatePlayerUI();
+      }
       updateProgressUI();
     }, timeToFadeStart * 1000);
 
     softEndTimer = setTimeout(() => {
       softEndTimer = null;
       if (!state.playing) return;
+      if (audioCtx && audioCtx.currentTime < softEndFadeAt + softEndFadeSec - 0.05) {
+        rescheduleSoftEndAfterResume();
+        return;
+      }
       finishTransition();
     }, (timeToFadeStart + Math.max(0, fadeSec)) * 1000 + 40);
   }
@@ -7079,9 +7256,12 @@ function adjustLoopsRemaining(delta) {
   state.loopsRemaining = next;
   updatePlayerUI();
 
+  // Adding loops while already fading → cancel outro and keep playing
+  if (transitioning && next > 0) {
+    cancelTransition(true);
+  }
+
   // Soft-end was scheduled with the old count — rebuild from current position
-  // (works while playing; while paused the next playBuffer will use the new count)
-  if (transitioning) return;
   if (!decodedBuffer || !currentSource || useMediaEl) return;
 
   const duration = decodedBuffer.duration;
@@ -7093,6 +7273,7 @@ function adjustLoopsRemaining(delta) {
     currentGain &&
     !bufferCtxSuspended;
 
+  // Kill wall timers + any leftover pause remain
   if (softEndTimer) {
     clearTimeout(softEndTimer);
     softEndTimer = null;
@@ -7103,45 +7284,74 @@ function adjustLoopsRemaining(delta) {
   }
   softEndFadeAt = 0;
   softEndFadeSec = 0;
-  // Invalidate any leftover pause remain times so resume doesn't restore the old schedule
   softEndRemainMs = 0;
   softEndStartRemainMs = 0;
 
-  if (!wantSoftEnd) return;
+  // ALWAYS kill old AudioParam automation (this was the bug — old ramp kept firing)
+  if (audioCtx && currentGain) {
+    const now = audioCtx.currentTime;
+    currentGain.gain.cancelScheduledValues(now);
+    currentGain.gain.setValueAtTime(effectiveVolume(), now);
+  }
 
-  const offset = getPlaybackPosition();
-  const fadeSec = getTransitionSec();
-  const loopsAfterFirst = Math.max(0, state.loopsRemaining);
+  if (!wantSoftEnd) return;
+  if (transitioning) return; // still fading out with 0 loops left — let it finish
+
+  // Remaining time in the *current* cycle + full loops after that
+  const absoluteElapsed =
+    pauseOffset + (audioCtx.currentTime - startTime);
   const loopLen = forceFullLoop
     ? Math.max(0.001, duration)
     : Math.max(0.001, duration - loopStart);
-  const timeToFadeStart =
-    Math.max(0.01, duration - offset) + loopsAfterFirst * loopLen;
+
+  let remainInCycle;
+  if (absoluteElapsed < duration) {
+    // Still in first playthrough
+    remainInCycle = Math.max(0.01, duration - absoluteElapsed);
+  } else {
+    const intoLoop = (absoluteElapsed - duration) % loopLen;
+    remainInCycle = Math.max(0.01, loopLen - intoLoop);
+  }
+
+  const loopsAfter = Math.max(0, state.loopsRemaining);
+  const timeToFadeStart = remainInCycle + loopsAfter * loopLen;
+  const fadeSec = getTransitionSec();
 
   softEndFadeAt = audioCtx.currentTime + timeToFadeStart;
   softEndFadeSec = fadeSec;
 
-  const vol = effectiveVolume();
   if (fadeSec <= 0) {
     currentGain.gain.setValueAtTime(0, softEndFadeAt);
   } else {
-    currentGain.gain.setValueAtTime(vol, softEndFadeAt);
+    currentGain.gain.setValueAtTime(effectiveVolume(), softEndFadeAt);
     currentGain.gain.linearRampToValueAtTime(0, softEndFadeAt + fadeSec);
   }
 
   softEndStartTimer = setTimeout(() => {
     softEndStartTimer = null;
     if (!state.playing || !currentGain) return;
+    if (audioCtx && audioCtx.currentTime < softEndFadeAt - 0.05) {
+      rescheduleSoftEndAfterResume();
+      return;
+    }
     transitioning = true;
     transitionStartedAt = softEndFadeAt;
     document.body.classList.add("is-transitioning");
     lastLoopCycle = Math.max(0, lastLoopCycle);
+    if (state.loopMode === "count") {
+      state.loopsRemaining = 0;
+      updatePlayerUI();
+    }
     updateProgressUI();
   }, timeToFadeStart * 1000);
 
   softEndTimer = setTimeout(() => {
     softEndTimer = null;
     if (!state.playing) return;
+    if (audioCtx && audioCtx.currentTime < softEndFadeAt + softEndFadeSec - 0.05) {
+      rescheduleSoftEndAfterResume();
+      return;
+    }
     finishTransition();
   }, (timeToFadeStart + Math.max(0, fadeSec)) * 1000 + 40);
 }

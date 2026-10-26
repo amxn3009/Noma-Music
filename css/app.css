@@ -2922,8 +2922,7 @@ body.fs-open .progress-row {
   align-items: center !important;
   gap: 8px !important;
   flex: 0 0 auto !important;
-  margin: 0 0 0 6px !important;
-  margin-left: 20px !important;
+  margin: 0 0 0 8px !important;
   margin-top: 0 !important;
 }
 
@@ -6228,12 +6227,19 @@ body.pl-editing #shuffle-all-btn,
 body.pl-editing #album-lib-btn,
 body.pl-editing #album-menu-btn,
 body.pl-editing #pl-add-songs-chip {
-  display: none !important;
+  display: none !important; /* must leave the flex flow or gap creates empty space */
 }
 body.pl-editing .game-play-actions {
   display: flex !important;
   align-items: center;
   gap: 8px;
+  margin-top: 14px; /* same as normal — no extra jump */
+}
+/* collapsed: no extra left gap beside title */
+.game-sticky-top.is-collapsed body.pl-editing .game-play-actions,
+body.pl-editing .game-sticky-top.is-collapsed .game-play-actions {
+  margin-left: 6px !important;
+  margin-top: 0 !important;
 }
 #play-all-btn, #shuffle-all-btn, #album-lib-btn, #album-menu-btn, #pl-add-songs-chip {
   transition: opacity 0.25s, transform 0.25s;
@@ -6319,7 +6325,12 @@ body.pl-editing .pl-cover-edit-hit:hover { background: rgba(0,0,0,0.55); }
   min-width: 40px !important;
 }
 #pl-add-songs-chip.chip-enter,
-#pl-edit-btn.chip-enter {
+#pl-edit-btn.chip-enter,
+#pl-edit-cancel.chip-enter,
+#pl-edit-save.chip-enter,
+#pl-multi-btn.chip-enter,
+#pl-multi-trash.chip-enter,
+#pl-edit-chrome .circle-btn.chip-enter {
   animation: chipIn 0.28s var(--ease) both;
 }
 @keyframes chipIn {
@@ -6593,56 +6604,121 @@ body.pl-editing .pl-cover-edit-hit:hover { background: rgba(0,0,0,0.55); }
 .game-sticky-top.is-collapsed .pl-edit-by-cover #pl-edit-chrome {
   flex-direction: row;
 }
-.pl-cover-edit-hit {
-  position: absolute;
-  z-index: 6;
-  border: 0;
-  padding: 0;
-  margin: 0;
-  cursor: pointer;
-  display: grid;
-  place-items: center;
-  background: rgba(0,0,0,0.45);
-  color: #fff;
-  opacity: 0;
-  transition: opacity 0.15s;
-  touch-action: manipulation;
-}
-body.pl-editing .pl-cover-edit-hit {
-  opacity: 1;
-}
-/* NEVER let the hit sit on track rows */
-.track-list .pl-cover-edit-hit {
-  display: none !important;
-}
-#game-cover + .pl-edit-by-cover,
-.game-cover-wrap .pl-edit-by-cover {
-  margin-left: 0;
-}
-
 #game-cover.pl-cover-editable,
-.game-cover-lg.pl-cover-editable {
+.game-cover-lg.pl-cover-editable,
+#game-cover.pl-cover-mosaic.pl-cover-editable {
   position: relative !important;
   overflow: hidden;
+  cursor: pointer;
+}
+#game-cover.pl-cover-editable > img,
+#game-cover.pl-cover-mosaic.pl-cover-editable > img {
+  pointer-events: none;
 }
 #game-cover .pl-cover-edit-hit,
-.game-cover-lg .pl-cover-edit-hit {
+.game-cover-lg .pl-cover-edit-hit,
+.pl-cover-mosaic .pl-cover-edit-hit {
   position: absolute !important;
   inset: 0 !important;
-  left: 0 !important;
-  top: 0 !important;
   width: 100% !important;
   height: 100% !important;
-  border: 0;
+  border: 0 !important;
   border-radius: inherit;
   margin: 0;
   padding: 0;
-  display: grid;
+  display: grid !important;
   place-items: center;
-  background: rgba(0, 0, 0, 0.45);
-  color: #fff;
-  opacity: 1;
-  z-index: 3;
+  background: rgba(0, 0, 0, 0.5) !important;
+  color: #fff !important;
+  opacity: 1 !important;
+  z-index: 20 !important;
   cursor: pointer;
-  transition: none; /* no lag — tied to cover size */
+  pointer-events: auto !important;
+  transition: background 0.15s;
+}
+#game-cover .pl-cover-edit-hit:hover {
+  background: rgba(0, 0, 0, 0.62) !important;
+}
+#game-cover .pl-cover-edit-hit svg {
+  width: 28px;
+  height: 28px;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5));
+}
+
+#pl-edit-cancel.chip-enter,
+#pl-edit-save.chip-enter,
+#pl-multi-btn.chip-enter,
+#pl-multi-trash.chip-enter,
+#pl-edit-btn.chip-enter,
+#pl-add-songs-chip.chip-enter {
+  animation: chipIn 0.28s var(--ease) both;
+}
+@keyframes chipIn {
+  from { opacity: 0; transform: scale(0.7); }
+  to   { opacity: 1; transform: scale(1); }
+}
+/* chrome stays one row — same height as play/shuffle */
+#pl-edit-chrome {
+  display: inline-flex !important;
+  flex-direction: row !important;
+  align-items: center;
+  gap: 8px;
+}
+
+.pl-cover-hit-wrap {
+  position: relative;
+  flex-shrink: 0;
+  line-height: 0;
+  display: block;
+  border-radius: var(--radius);
+  overflow: hidden; /* clips overlay only */
+  /* shadow lives here so it isn’t clipped */
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  transition:
+    width 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    height 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    border-radius 0.35s ease,
+    box-shadow 0.35s ease;
+}
+.game-sticky-top.is-collapsed .pl-cover-hit-wrap {
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+}
+.pl-cover-hit-wrap > #game-cover,
+.pl-cover-hit-wrap > .game-cover-lg,
+.pl-cover-hit-wrap > .pl-cover-mosaic {
+  display: block;
+  box-shadow: none !important; /* avoid double shadow */
+  border-radius: inherit;
+}
+.pl-cover-hit-wrap .pl-cover-edit-hit {
+  position: absolute !important;
+  inset: 0 !important;
+  width: auto !important;
+  height: auto !important;
+  border: 0 !important;
+  border-radius: inherit;
+  margin: 0;
+  padding: 0;
+  display: grid !important;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.5) !important;
+  color: #fff !important;
+  opacity: 1 !important;
+  z-index: 20 !important;
+  cursor: pointer;
+  pointer-events: auto !important;
+}
+.pl-cover-hit-wrap .pl-cover-edit-hit svg {
+  width: 28px;
+  height: 28px;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5));
+}
+/* collapsed: wrap follows 48px cover automatically */
+.game-sticky-top.is-collapsed .pl-cover-hit-wrap .pl-cover-edit-hit svg {
+  width: 18px;
+  height: 18px;
+}
+.game-sticky-top.is-collapsed .pl-cover-hit-wrap {
+  border-radius: 8px; /* same as collapsed cover */
 }
