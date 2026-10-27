@@ -7407,3 +7407,55 @@ body.pl-editing .header-toggle-btn {
   grid-template-columns: 1fr;
   grid-template-rows: 1fr;
 }
+
+.lib-create-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+#lib-create-panel {
+  min-width: 200px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+#lib-create-panel .lib-create-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  justify-content: flex-start;
+  text-align: left;
+  padding: 10px 12px;
+}
+#lib-create-panel .lib-create-option svg {
+  flex-shrink: 0;
+  opacity: 0.9;
+}
+
+.lib-create-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  overflow: visible;
+  z-index: 50;
+}
+/* Don’t inherit the sort-panel “right: 0” anchor */
+#lib-create-panel.gs-pop-panel {
+  left: 0;
+  right: auto;
+  top: calc(100% + 6px);
+  min-width: 200px;
+  width: max-content;
+  max-width: min(280px, calc(100vw - 16px));
+  transform-origin: top left;
+  flex-direction: column;
+  flex-wrap: nowrap;
+}
+/* If the sticky/lib top clips popovers */
+.lib-page-sticky,
+.lib-title-actions,
+.lib-title-block {
+  overflow: visible;
+}

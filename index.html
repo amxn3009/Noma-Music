@@ -209,10 +209,23 @@
       <div class="lib-title-block">
         <h1 class="page-title" id="lib-page-title">Bibliothek</h1>
         <div class="lib-title-actions">
-          <button type="button" id="lib-create-btn" class="lib-create-chip" title="Playlist erstellen">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-            Erstellen
-          </button>
+          <div class="lib-create-wrap">
+            <button type="button" id="lib-create-btn" class="lib-create-chip" title="Playlist" aria-haspopup="true" aria-expanded="false">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+              Erstellen
+            </button>
+            <div id="lib-create-panel" class="gs-pop-panel hidden" role="menu" aria-hidden="true">
+              <button type="button" class="gs-chip lib-create-option" data-lib-create="new" role="menuitem">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                Neue Playlist
+              </button>
+              <button type="button" class="gs-chip lib-create-option" data-lib-create="import" role="menuitem">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z"/></svg>
+                Playlist importieren
+              </button>
+            </div>
+            <input id="lib-import-file" type="file" accept="application/json,.json" hidden>
+          </div>  
           <div class="lib-filter-toggle games-view-toggle" id="lib-filter-toggle">
             <button type="button" class="lib-filter-btn games-view-btn active" data-lib-filter="playlists">Playlists</button>
             <button type="button" class="lib-filter-btn games-view-btn" data-lib-filter="games">Spiele</button>
@@ -839,6 +852,12 @@
         <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
       </svg>
       Playlist bearbeiten
+    </button>
+    <button data-action="export-playlist" type="button" class="ctx-playlist-only hidden">
+      <svg class="menu-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6 .67l2.59-2.58L17 11.5l-5 5-5-5 1.41-1.41L11 12.67V3h2v9.67z"/>
+      </svg>
+      Playlist exportieren
     </button>
     <button data-action="remove-from-playlist" type="button" class="ctx-pl-track-only hidden" style="color:#ff6b6b">
       <svg class="menu-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>

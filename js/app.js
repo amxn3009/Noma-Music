@@ -384,6 +384,13 @@ async function syncNow() {
       hint: err?.message || "Sync fehlgeschlagen",
     });
     showToast?.("Sync fehlgeschlagen");
+    // refresh profile UI if that screen is open
+    if (
+      typeof syncProfileForm === "function" &&
+      !$("#profile-view")?.classList.contains("hidden")
+    ) {
+      syncProfileForm();
+    }
   } finally {
     btn?.classList.remove("is-busy");
     if (btn) btn.disabled = false;
@@ -405,6 +412,12 @@ function scheduleCloudSync() {
         hint: "Automatisch synchronisiert",
         last: formatSyncTime(Date.now()),
       });
+      if (
+        typeof syncProfileForm === "function" &&
+        !$("#profile-view")?.classList.contains("hidden")
+      ) {
+        syncProfileForm();
+      }
     } catch (e) {
       console.warn("[Noma auto-sync]", e);
     }
@@ -599,6 +612,171 @@ function createPlaylist(name = "Neue Playlist") {
   saveUserLibrary();
   return pl;
 }
+
+function sanitizeFilename(name) {
+  return String(name || "playlist")
+    .replace(/[<>:"/\\|?*\u0000-\u001f]/g, "_")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 80) || "playlist";
+}
+
+/** Download a portable playlist JSON file */
+function exportPlaylistToFile(pl) {
+  if (!pl) return;
+  const payload = {
+    format: "noma-playlist-v1",
+    exportedAt: Date.now(),
+    playlist: {
+      name: pl.name,
+      coverMode: pl.coverMode || "auto",
+      coverSrc: pl.coverSrc ?? null,
+      tracks: (pl.tracks || []).map((t) => ({
+        gameId: t.gameId,
+        trackId: t.trackId,
+      })),
+    },
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {
+    type: "application/json",
+  });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${sanitizeFilename(pl.name)}.noma.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  showToast?.(`„${pl.name}“ exportiert`);
+}
+
+/** Import from a noma-playlist-v1 (or loose) JSON file → new playlist */
+async function importPlaylistFromFile(file) {
+  if (!file) return null;
+  let data;
+  try {
+    data = JSON.parse(await file.text());
+  } catch {
+    showToast?.("Ungültige Datei");
+    return null;
+  }
+
+  const src =
+    data?.format === "noma-playlist-v1" && data.playlist
+      ? data.playlist
+      : data?.tracks
+        ? data
+        : null;
+  if (!src || !Array.isArray(src.tracks)) {
+    showToast?.("Keine gültige Noma-Playlist");
+    return null;
+  }
+
+  const name = (src.name || file.name.replace(/\.noma\.json$/i, "").replace(/\.json$/i, "") || "Import").slice(0, 80);
+  const pl = createPlaylist(name);
+  if (!pl) return null;
+
+  // optional cover
+  if (src.coverMode) pl.coverMode = src.coverMode;
+  if (src.coverSrc != null) pl.coverSrc = src.coverSrc;
+
+  let kept = 0;
+  let skipped = 0;
+  for (const t of src.tracks) {
+    const gameId = t.gameId;
+    const trackId = t.trackId || t.id;
+    if (!gameId || !trackId) {
+      skipped++;
+      continue;
+    }
+    const game = LIBRARY.find((g) => g.id === gameId);
+    const track = game?.tracks?.find((x) => x.id === trackId);
+    if (!game || !track) {
+      skipped++;
+      continue;
+    }
+    pl.tracks.push({ gameId, trackId });
+    kept++;
+  }
+  pl.updatedAt = Date.now();
+  saveUserLibrary();
+  renderLibrary?.({ animate: true });
+
+  const skipMsg = skipped ? ` · ${skipped} übersprungen` : "";
+  showToast?.(`„${pl.name}“ importiert (${kept} Songs${skipMsg})`);
+  return pl;
+}
+
+function closeLibCreatePanel() {
+  const panel = $("#lib-create-panel");
+  const btn = $("#lib-create-btn");
+  if (!panel || panel.classList.contains("hidden")) return;
+  panel.classList.add("hidden");
+  panel.setAttribute("aria-hidden", "true");
+  btn?.setAttribute("aria-expanded", "false");
+}
+
+function positionLibCreatePanel() {
+  const panel = $("#lib-create-panel");
+  const btn = $("#lib-create-btn");
+  if (!panel || !btn || panel.classList.contains("hidden")) return;
+
+  // fixed so nothing in the library header can clip it
+  panel.style.position = "fixed";
+  panel.style.right = "auto";
+
+  const r = btn.getBoundingClientRect();
+  const pad = 8;
+  const prev = panel.style.visibility;
+  panel.style.visibility = "hidden";
+  panel.classList.remove("hidden");
+  const pw = panel.offsetWidth || 220;
+  const ph = panel.offsetHeight || 120;
+  panel.style.visibility = prev || "";
+
+  let left = r.left;
+  let top = r.bottom + 6;
+
+  if (left + pw > window.innerWidth - pad) {
+    left = Math.max(pad, window.innerWidth - pw - pad);
+  }
+  if (left < pad) left = pad;
+
+  // flip above if not enough room below
+  if (top + ph > window.innerHeight - pad && r.top > ph + pad) {
+    top = r.top - ph - 6;
+  }
+
+  panel.style.left = `${Math.round(left)}px`;
+  panel.style.top = `${Math.round(top)}px`;
+}
+
+
+function toggleLibCreatePanel() {
+  const panel = $("#lib-create-panel");
+  const btn = $("#lib-create-btn");
+  if (!panel) return;
+  const willOpen = panel.classList.contains("hidden");
+  $("#lib-sort-panel")?.classList.add("hidden");
+  if (willOpen) {
+    panel.classList.remove("hidden");
+    panel.setAttribute("aria-hidden", "false");
+    btn?.setAttribute("aria-expanded", "true");
+    positionLibCreatePanel();
+  } else {
+    closeLibCreatePanel();
+  }
+}
+
+window.addEventListener("resize", () => positionLibCreatePanel(), { passive: true });
+document.addEventListener(
+  "scroll",
+  () => {
+    if (!$("#lib-create-panel")?.classList.contains("hidden")) positionLibCreatePanel();
+  },
+  { passive: true, capture: true }
+);
 
 function togglePinPlaylist(id) {
   const pl = getPlaylist(id);
@@ -5979,11 +6157,37 @@ function closeAllPopovers(except) {
 }
 
 function bindLibraryUI() {
-  $("#lib-create-btn")?.addEventListener("click", () => {
-    const pl = createPlaylist();
-    if (!pl) return;
-    renderLibrary({ animate: true });
-    if (typeof showToast === "function") showToast(`„${pl.name}“ erstellt`);
+  $("#lib-create-btn")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    toggleLibCreatePanel();
+  });
+
+  $("#lib-create-panel")?.addEventListener("click", (e) => {
+    const opt = e.target.closest("[data-lib-create]");
+    if (!opt) return;
+    e.stopPropagation();
+    const mode = opt.getAttribute("data-lib-create");
+    closeLibCreatePanel();
+    if (mode === "new") {
+      const pl = createPlaylist();
+      if (!pl) return;
+      renderLibrary({ animate: true });
+      showToast?.(`„${pl.name}“ erstellt`);
+    } else if (mode === "import") {
+      $("#lib-import-file")?.click();
+    }
+  });
+
+  $("#lib-import-file")?.addEventListener("change", async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    await importPlaylistFromFile(file);
+  });
+
+  document.addEventListener("click", (e) => {
+    if (e.target.closest(".lib-create-wrap")) return;
+    closeLibCreatePanel();
   });
 
   const search = $("#lib-local-search");
@@ -10622,6 +10826,12 @@ function bindContextMenu() {
           if (!pl || pl.id === FAVORITES_ID) return;
           if (state.currentPlaylist?.id !== pl.id) openPlaylistDetail(pl.id);
           openPlaylistEditMetaModal(pl);
+          return;
+        }
+        if (action === "export-playlist") {
+          hideContextMenu();
+          if (!pl) return;
+          exportPlaylistToFile(pl);
           return;
         }
         if (action === "delete-playlist") {
