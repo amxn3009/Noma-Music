@@ -4560,16 +4560,49 @@ function exitPlaylistEditMode(discard) {
   if (pl) {
     const scroller = document.querySelector(".track-list-scroll");
     const y = scroller?.scrollTop ?? 0;
-    const collapsed = document.querySelector(".game-sticky-top")?.classList.contains("is-collapsed");
-    // re-render normal (non-edit) track list only
+    // re-render normal track list
     state.currentPlaylist = getPlaylist(pl.id) || pl;
+    // Rebuild queue from playlist so order/loops match after edit
+    if (state.playingPlaylistId === pl.id) {
+      const items = resolvePlaylistTracks(pl);
+      const curId = state.queue[state.queueIndex]?.track?.id;
+      const curGame = state.queue[state.queueIndex]?.gameId;
+      state.queue = items.map((it) => ({
+        gameId: it.gameId,
+        track: it.track,
+        insert: null,
+      }));
+      let idx = state.queue.findIndex(
+        (q) => q.track?.id === curId && q.gameId === curGame
+      );
+      if (idx < 0) idx = 0;
+      state.queueIndex = Math.min(idx, Math.max(0, state.queue.length - 1));
+      unshuffledQueue = null;
+      renderQueue?.();
+      updatePlayerUI?.();
+    }
     openPlaylistDetail(pl.id);
     requestAnimationFrame(() => {
       const sticky = document.querySelector(".game-sticky-top");
-      if (collapsed && sticky && !sticky.classList.contains("is-collapsed")) {
-        sticky.classList.add("is-collapsed");
+      const sc = document.querySelector(".track-list-scroll");
+      if (sticky) {
+        // Expand only when there isn’t room to stay collapsed
+        const canStayCollapsed =
+          typeof headerCanCollapse === "function" ? headerCanCollapse() : true;
+        if (!canStayCollapsed) {
+          sticky.classList.remove("is-collapsed");
+          const titleEl = $("#game-title");
+          if (titleEl) titleEl.textContent = titleEl.dataset.full || titleEl.textContent;
+          $("#game-header-toggle")?.setAttribute("aria-expanded", "true");
+        } else {
+          sticky.classList.add("is-collapsed");
+          const titleEl = $("#game-title");
+          if (titleEl) titleEl.textContent = titleEl.dataset.short || titleEl.textContent;
+          $("#game-header-toggle")?.setAttribute("aria-expanded", "false");
+        }
       }
       if (scroller) scroller.scrollTop = y;
+      else if (sc) sc.scrollTop = y;
     });
   }
 }
@@ -4866,6 +4899,15 @@ function renderPlaylistEditUI() {
     })
     .join("");
 
+  // pop trash ↔ checkboxes
+  requestAnimationFrame(() => {
+    trackListEl.querySelectorAll(".pl-row-trash, .pl-ms-check").forEach((el) => {
+      el.classList.remove("chip-enter");
+      void el.offsetWidth;
+      el.classList.add("chip-enter");
+    });
+  });
+
   trackListEl.querySelectorAll(".pl-ms-check").forEach((btn) => {
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -4913,6 +4955,39 @@ function renderPlaylistEditUI() {
     });
   });
 
+  // Row body: multi → toggle select; else → play
+  trackListEl.querySelectorAll(".track-row").forEach((row) => {
+    row.addEventListener("click", (e) => {
+      if (e.target.closest("button, input, label, .pl-edit-drag, .q-drag, .pl-track-loops")) {
+        return;
+      }
+      if (row.dataset.suppressClick === "1") {
+        delete row.dataset.suppressClick;
+        return;
+      }
+      const key = row.dataset.key;
+      if (plEdit.multi) {
+        if (plEdit.selected.has(key)) plEdit.selected.delete(key);
+        else plEdit.selected.add(key);
+        row.classList.toggle("is-selected", plEdit.selected.has(key));
+        row.querySelector(".pl-ms-check")?.classList.toggle(
+          "is-selected",
+          plEdit.selected.has(key)
+        );
+        syncMultiTrash();
+        return;
+      }
+      const idx = +row.dataset.index;
+      const it = items[idx];
+      if (!it) return;
+      playFromPlaylist(pl, items, idx);
+    });
+  });
+
+  // Keep playing indicator / EQ in sync after re-render
+  const curId = typeof getCurrentTrackId === "function" ? getCurrentTrackId() : null;
+  if (curId && typeof markPlayingTrack === "function") markPlayingTrack(curId);
+
   bindPlaylistTrackDrag(pl);
   ensureMultiSelectChrome();
   syncMultiTrash();
@@ -4925,10 +5000,10 @@ function ensureMultiSelectChrome() {
     ms.id = "pl-multi-wrap";
     ms.className = "pl-multi-wrap";
     ms.innerHTML = `
-      <button type="button" id="pl-clear-loops-btn" class="circle-btn" title="Alle Song-Loops löschen" aria-label="Alle Song-Loops löschen">
+      <button type="button" id="pl-clear-loops-btn" class="circle-btn pl-clear-loops-btn" title="Alle Song-Loops zurücksetzen" aria-label="Alle Song-Loops zurücksetzen">
         <span class="pl-track-loops-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>
-          <span class="pl-track-loops-badge">×</span>
+          <span class="pl-track-loops-badge pl-clear-loops-x">×</span>
         </span>
       </button>
       <button type="button" id="pl-multi-btn" class="circle-btn" title="Mehrfachauswahl" aria-label="Mehrfachauswahl">
@@ -5009,13 +5084,27 @@ function ensureMultiSelectChrome() {
   syncMultiTrash();
 }
 
+function popChip(el) {
+  if (!el) return;
+  el.classList.remove("hidden");
+  el.classList.remove("chip-enter");
+  void el.offsetWidth;
+  el.classList.add("chip-enter");
+}
+
 function syncMultiTrash() {
   const trash = document.getElementById("pl-multi-trash");
   const loopsWrap = document.getElementById("pl-multi-loops");
   const n = plEdit.selected?.size || 0;
   const show = !!(plEdit.multi && n > 0);
-  trash?.classList.toggle("hidden", !show);
-  loopsWrap?.classList.toggle("hidden", !show);
+
+  if (show) {
+    if (trash?.classList.contains("hidden")) popChip(trash);
+    if (loopsWrap?.classList.contains("hidden")) popChip(loopsWrap);
+  } else {
+    trash?.classList.add("hidden");
+    loopsWrap?.classList.add("hidden");
+  }
 }
 
 /** Queue-like pointer drag with ghost + drop gap */
@@ -6273,7 +6362,11 @@ function bindGlobalSearchUI() {
   });
   input?.addEventListener("input", (e) => {
     if (!globalSearchOpen) openGlobalSearch(false);
-    runGlobalSearch(e.target.value);
+    const q = e.target.value;
+    if (searchReturn?.type === "playlist" && searchReturn.stayInSearch) {
+      searchReturn.query = q;
+    }
+    runGlobalSearch(q);
   });
 
   $("#global-search-clear")?.addEventListener("click", () => {
@@ -6516,31 +6609,21 @@ function openGame(id) {
   if (libBtn0) libBtn0.style.display = "";
   const labelEl0 = document.querySelector(".game-label");
   if (labelEl0) labelEl0.textContent = "Spiel";
-  // Keep global search query so “back” can restore results
-    // only override searchReturn for search / category; keep library/playlist
+
+  // Preserve where search should return (do NOT open search here)
   const gsInput = $("#global-search-input");
   const savedSearch = gsInput?.value?.trim() || "";
-    // Playlist + search drill-in: restore playlist search, not games page
-    if (searchReturn?.type === "playlist" && searchReturn.playlistId && searchReturn.stayInSearch) {
-      const pid = searchReturn.playlistId;
-      const q = searchReturn.query || "";
-      searchReturn = { type: "playlist", playlistId: pid, stayInSearch: true, query: q };
-      window.__forcePlaylistSelectId = pid;
-      openGlobalSearch(false);
-      const input = $("#global-search-input");
-      if (input) {
-        input.value = q;
-        $("#global-search-clear")?.classList.toggle("hidden", !q.trim());
-        runGlobalSearch(q);
-        requestAnimationFrame(() => input.focus());
-      }
-      return;
+  if (globalSearchOpen && savedSearch) {
+    if (searchReturn?.type === "playlist" || searchReturn?.type === "library") {
+      searchReturn = {
+        ...searchReturn,
+        query: savedSearch,
+        stayInSearch: true,
+      };
+    } else {
+      searchReturn = { type: "search", query: savedSearch };
     }
-
-    if (searchReturn?.type === "search" && searchReturn.query) {
-      const q = searchReturn.query;
-      searchReturn = null;
-      openGlobalSearch(false);
+  } else if (document.body.classList.contains("games-cat-open")) {
     const browse = $("#games-browse");
     searchReturn = {
       type: "category",
@@ -6550,7 +6633,7 @@ function openGame(id) {
   }
   // else: leave existing searchReturn (library / playlist) alone
 
-    // Remember previous album (scroll + its own search), not a global one
+  // Remember previous album (scroll + its own search), not a global one
   if (state.currentGame && state.currentGame.id !== id) {
     saveAlbumViewState();
   }
@@ -6932,6 +7015,29 @@ document.querySelectorAll(".tab").forEach((tab) => {
     state.currentGame = null;
     gameDetail.classList.add("hidden");
     gameDetail.classList.remove("active");
+
+    // + Songs → search → open game → back: stay in search for that playlist
+    if (searchReturn?.type === "playlist" && searchReturn.playlistId && searchReturn.stayInSearch) {
+      const pid = searchReturn.playlistId;
+      const q = searchReturn.query || $("#global-search-input")?.value?.trim() || "";
+      searchReturn = {
+        type: "playlist",
+        playlistId: pid,
+        stayInSearch: true,
+        query: q,
+      };
+      window.__forcePlaylistSelectId = pid;
+      openGlobalSearch(false);
+      const input = $("#global-search-input");
+      if (input) {
+        input.value = q;
+        $("#global-search-clear")?.classList.toggle("hidden", !q.trim());
+        runGlobalSearch(q);
+        requestAnimationFrame(() => input.focus());
+      }
+      return;
+    }
+
     tabGames.classList.add("active");
     document.querySelector('.tab[data-tab="games"]')?.classList.add("active");
     $("#tab-games")?.classList.add("active");
@@ -6960,10 +7066,24 @@ document.querySelectorAll(".tab").forEach((tab) => {
 
     if (searchReturn?.type === "playlist" && searchReturn.playlistId) {
       const pid = searchReturn.playlistId;
-      searchReturn = null;
-      // already handled in back handler above via openPlaylistDetail
-      window.__forcePlaylistSelectId = null;
-      openPlaylistDetail(pid);
+      const stay = !!searchReturn.stayInSearch;
+      const q = searchReturn.query || "";
+      searchReturn = stay
+        ? { type: "playlist", playlistId: pid, stayInSearch: true, query: q }
+        : null;
+      window.__forcePlaylistSelectId = stay ? pid : null;
+      if (stay) {
+        openGlobalSearch(false);
+        const input = $("#global-search-input");
+        if (input) {
+          input.value = q;
+          $("#global-search-clear")?.classList.toggle("hidden", !q.trim());
+          runGlobalSearch(q);
+          requestAnimationFrame(() => input.focus());
+        }
+      } else {
+        openPlaylistDetail(pid);
+      }
       return;
     }
 

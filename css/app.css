@@ -6928,7 +6928,11 @@ body.pl-editing .pl-cover-edit-hit:hover { background: rgba(0,0,0,0.55); }
 #pl-multi-btn.chip-enter,
 #pl-multi-trash.chip-enter,
 #pl-edit-btn.chip-enter,
-#pl-add-songs-chip.chip-enter {
+#pl-add-songs-chip.chip-enter
+#pl-multi-loops.chip-enter,
+#pl-clear-loops-btn.chip-enter,
+.pl-row-trash.chip-enter,
+.pl-ms-check.chip-enter {
   animation: chipIn 0.28s var(--ease) both;
 }
 @keyframes chipIn {
@@ -7075,7 +7079,7 @@ body:not(.pl-editing) #pl-loops-btn.hidden,
 }
 /* Match normal playlist rows on the left (num + cover + meta) */
 body.pl-editing .track-list.is-playlist .track-row {
-  grid-template-columns: 20px 28px 56px minmax(0, 1fr) auto auto 36px;
+  grid-template-columns: 36px 28px 56px minmax(0, 1fr) auto auto 36px;
   gap: 12px;
   padding: 10px 12px;
   min-height: 72px;
@@ -7085,11 +7089,19 @@ body.pl-editing .pl-edit-drag,
 body.pl-editing .track-row .q-drag {
   display: grid;
   place-items: center;
-  width: 20px;
-  height: 40px;
+  width: 36px;
+  height: 48px;
+  margin-left: -4px;
   color: var(--muted);
   cursor: grab;
   touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+body.pl-editing .pl-edit-drag svg,
+body.pl-editing .track-row .q-drag svg {
+  width: 20px;
+  height: 20px;
 }
 body.pl-editing .pl-edit-drag:active {
   cursor: grabbing;
@@ -7155,4 +7167,17 @@ body.pl-editing .track-list.is-playlist .track-meta .track-sub {
   text-overflow: ellipsis;
   white-space: nowrap;
   max-width: 100%;
+}
+
+#pl-clear-loops-btn.pl-clear-loops-btn {
+  color: #ff6b6b !important;
+  background: rgba(255, 80, 80, 0.12);
+}
+#pl-clear-loops-btn.pl-clear-loops-btn:hover {
+  background: rgba(255, 80, 80, 0.22);
+}
+#pl-clear-loops-btn .pl-clear-loops-x {
+  background: #ff4d4d !important;
+  color: #fff !important;
+  font-weight: 900;
 }
