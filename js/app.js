@@ -11,7 +11,7 @@ const supabase =
     : null;
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = "27.10.26, added sync + Profiles and Stats, added export/import Playlists";
+const APP_VERSION = "27.10.26, added sync + Profiles and Stats, added export/import Playlists, fix clear loops";
 
 let LIBRARY = [];
 
@@ -5114,6 +5114,75 @@ function openDeletePlaylistConfirm(plId) {
   cancel?.addEventListener("click", onCancel);
 }
 
+function openClearPlaylistLoopsConfirm(plId) {
+  const pl = getPlaylist(plId);
+  if (!pl) return;
+
+  const overlay = $("#confirm-overlay");
+  const title = $("#confirm-title");
+  const body = overlay?.querySelector(".confirm-text");
+  const ok = $("#confirm-ok");
+  const cancel = $("#confirm-cancel");
+  if (!overlay || !ok) return;
+
+  if (title) title.textContent = "Song-Loops löschen?";
+  if (body) {
+    body.textContent = `Willst du wirklich alle Song-Loops in „${pl.name}“ zurücksetzen?`;
+  }
+  ok.textContent = "Zurücksetzen";
+
+  overlay.classList.remove("hidden");
+  overlay.setAttribute("aria-hidden", "false");
+
+  const cleanup = () => {
+    overlay.classList.add("hidden");
+    overlay.setAttribute("aria-hidden", "true");
+    ok.textContent = "Leeren";
+    if (title) title.textContent = "Warteschlange leeren?";
+    if (body) {
+      body.textContent =
+        "Alle Songs werden entfernt und die Wiedergabe gestoppt.";
+    }
+    ok.removeEventListener("click", onOk);
+    cancel?.removeEventListener("click", onCancel);
+    overlay.removeEventListener("click", onBackdrop);
+    document.removeEventListener("keydown", onKey, true);
+  };
+
+  const onOk = () => {
+    const live = getPlaylist(plId);
+    if (live) {
+      for (const ref of live.tracks || []) delete ref.loops;
+      live.updatedAt = Date.now();
+      saveUserLibrary();
+      // Stay in edit mode — rebuild rows so inputs bind again
+      if (plEdit.active && state.currentPlaylist?.id === plId) {
+        state.currentPlaylist = live;
+        renderPlaylistEditUI();
+      }
+      showToast?.("Alle Song-Loops gelöscht");
+    }
+    cleanup();
+  };
+
+  const onCancel = () => cleanup();
+  const onBackdrop = (e) => {
+    if (e.target === overlay) cleanup();
+  };
+  // Capture phase so ESC hits this before other handlers
+  const onKey = (e) => {
+    if (e.key !== "Escape") return;
+    e.preventDefault();
+    e.stopPropagation();
+    cleanup();
+  };
+
+  ok.addEventListener("click", onOk);
+  cancel?.addEventListener("click", onCancel);
+  overlay.addEventListener("click", onBackdrop);
+  document.addEventListener("keydown", onKey, true);
+}
+
 /** Add all tracks of an album or playlist into chosen playlists (reuse add-to-pl UI). */
 let addCollectionTarget = null; // { type: "album"|"playlist", game?, playlist? }
 
@@ -5721,21 +5790,36 @@ function renderPlaylistEditUI() {
 
   trackListEl.querySelectorAll(".pl-track-loops-input").forEach((inp) => {
     const commit = () => {
+      // Always resolve current playlist — stale `pl` after clear broke writes
+      const live =
+        (state.currentPlaylist && getPlaylist(state.currentPlaylist.id)) || pl;
+      if (!live) return;
+
+      const gameId = inp.dataset.gameId;
+      const trackId = inp.dataset.trackId;
       const raw = String(inp.value || "").replace(/[^\d]/g, "").slice(0, 2);
+
       if (!raw) {
         inp.value = "";
-        setPlaylistTrackLoops(pl, inp.dataset.gameId, inp.dataset.trackId, null);
+        setPlaylistTrackLoops(live, gameId, trackId, null);
         saveUserLibrary();
         return;
       }
       const n = clampInt(raw, 0, 99, settings.loopTimes);
       inp.value = String(n);
-      setPlaylistTrackLoops(pl, inp.dataset.gameId, inp.dataset.trackId, n);
+      setPlaylistTrackLoops(live, gameId, trackId, n);
+      // Keep playlist-level X-loops enabled when user sets a value
+      if (!live.useTrackLoops) {
+        live.useTrackLoops = true;
+        document.getElementById("pl-loops-btn")?.classList.add("is-active");
+      }
+      live.updatedAt = Date.now();
       saveUserLibrary();
     };
     inp.addEventListener("click", (e) => e.stopPropagation());
     inp.addEventListener("pointerdown", (e) => e.stopPropagation());
     inp.addEventListener("change", commit);
+    inp.addEventListener("blur", commit);
     inp.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         e.preventDefault();
@@ -5816,13 +5900,8 @@ function ensureMultiSelectChrome() {
       e.stopPropagation();
       const pl = state.currentPlaylist && getPlaylist(state.currentPlaylist.id);
       if (!pl) return;
-      for (const ref of pl.tracks || []) delete ref.loops;
-      pl.updatedAt = Date.now();
-      saveUserLibrary();
-      renderPlaylistEditUI();
-      showToast?.("Alle Song-Loops gelöscht");
+      openClearPlaylistLoopsConfirm(pl.id);
     });
-
     document.getElementById("pl-multi-btn")?.addEventListener("click", (e) => {
       e.stopPropagation();
       plEdit.multi = !plEdit.multi;
