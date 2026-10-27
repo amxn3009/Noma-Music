@@ -11,7 +11,7 @@ const supabase =
     : null;
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = "27.10.26, added sync + profiles";
+const APP_VERSION = "27.10.26, added sync + Profiles and Stats";
 
 let LIBRARY = [];
 
@@ -198,6 +198,9 @@ function applySyncedLibrary(remoteLib) {
     localStorage.setItem(LIBRARY_KEY, JSON.stringify(userLib));
   } catch {}
   if (typeof renderLibrary === "function") renderLibrary({ animate: false });
+  if (remoteLib.listenStats) {
+    saveListenStats(remoteLib.listenStats);
+  }
 }
 
 function applySyncedProfile(remoteProfile) {
@@ -271,6 +274,7 @@ async function pushCloudSync() {
       version: userLib.version || 1,
       playlists: userLib.playlists,
       libraryAlbums: userLib.libraryAlbums || [],
+      listenStats: loadListenStats(),
     },
     settings: settingsForSync(),
     profile: loadProfile(),
@@ -1981,6 +1985,130 @@ function formatAlbumDuration(sec) {
   return "0min";
 }
 
+/* ── Listening stats ───────────────────────────────────────── */
+const LISTEN_STATS_KEY = "noma-listen-stats-v1";
+
+function loadListenStats() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(LISTEN_STATS_KEY) || "{}") || {};
+    return {
+      totalSec: Number(raw.totalSec) || 0,
+      weeks: raw.weeks && typeof raw.weeks === "object" ? raw.weeks : {},
+      tracks: raw.tracks && typeof raw.tracks === "object" ? raw.tracks : {},
+      games: raw.games && typeof raw.games === "object" ? raw.games : {},
+      playlists: raw.playlists && typeof raw.playlists === "object" ? raw.playlists : {},
+    };
+  } catch {
+    return { totalSec: 0, weeks: {}, tracks: {}, games: {}, playlists: {} };
+  }
+}
+
+function saveListenStats(stats) {
+  try {
+    localStorage.setItem(LISTEN_STATS_KEY, JSON.stringify(stats));
+  } catch {}
+}
+
+/** Like album duration, but supports days for long totals: "2d 3h 12min" */
+function formatListenDuration(sec) {
+  if (!Number.isFinite(sec) || sec < 0) return "0min";
+  const total = Math.floor(sec);
+  const d = Math.floor(total / 86400);
+  const h = Math.floor((total % 86400) / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const parts = [];
+  if (d > 0) parts.push(`${d}d`);
+  if (h > 0) parts.push(`${h}h`);
+  if (m > 0 || parts.length === 0) parts.push(`${m}min`);
+  return parts.join(" ");
+}
+
+function isoWeekKey(date = new Date()) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const day = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  const week = Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
+  return `${d.getUTCFullYear()}-W${String(week).padStart(2, "0")}`;
+}
+
+const listenClock = {
+  lastTs: 0,
+  trackKey: null,
+  gameId: null,
+  playlistId: null,
+  playCounted: false,
+};
+
+function listenTrackKey(gameId, trackId) {
+  return `${gameId}::${trackId}`;
+}
+
+function beginListenSession() {
+  const item = state.queue[state.queueIndex];
+  if (!item?.track) {
+    listenClock.lastTs = 0;
+    listenClock.trackKey = null;
+    return;
+  }
+  listenClock.lastTs = Date.now();
+  listenClock.trackKey = listenTrackKey(item.gameId, item.track.id);
+  listenClock.gameId = item.gameId;
+  listenClock.playlistId = state.playingPlaylistId || null;
+  listenClock.playCounted = false;
+}
+
+function flushListenTime() {
+  if (!listenClock.lastTs || !listenClock.trackKey) return;
+  const now = Date.now();
+  let delta = (now - listenClock.lastTs) / 1000;
+  listenClock.lastTs = now;
+  // Ignore huge gaps (tab sleep / background for minutes)
+  if (!Number.isFinite(delta) || delta <= 0) return;
+  if (delta > 30) delta = 0; // don't credit offline time in one chunk
+  if (delta <= 0) return;
+
+  const stats = loadListenStats();
+  stats.totalSec = (stats.totalSec || 0) + delta;
+
+  const wk = isoWeekKey();
+  stats.weeks[wk] = (stats.weeks[wk] || 0) + delta;
+
+  const tk = listenClock.trackKey;
+  if (!stats.tracks[tk]) {
+    stats.tracks[tk] = { sec: 0, plays: 0, gameId: listenClock.gameId };
+  }
+  stats.tracks[tk].sec += delta;
+  stats.tracks[tk].gameId = listenClock.gameId;
+
+  const gid = listenClock.gameId;
+  if (gid) {
+    if (!stats.games[gid]) stats.games[gid] = { sec: 0, plays: 0 };
+    stats.games[gid].sec += delta;
+  }
+
+  const pid = listenClock.playlistId;
+  if (pid) {
+    if (!stats.playlists[pid]) stats.playlists[pid] = { sec: 0, plays: 0 };
+    stats.playlists[pid].sec += delta;
+  }
+
+  // Count a play once per session after ~5s listened
+  if (!listenClock.playCounted && stats.tracks[tk].sec >= 5) {
+    listenClock.playCounted = true;
+    stats.tracks[tk].plays = (stats.tracks[tk].plays || 0) + 1;
+    if (gid) stats.games[gid].plays = (stats.games[gid].plays || 0) + 1;
+    if (pid) stats.playlists[pid].plays = (stats.playlists[pid].plays || 0) + 1;
+  }
+
+  saveListenStats(stats);
+}
+
+function endListenSession() {
+  flushListenTime();
+  listenClock.lastTs = 0;
+}
+
 function getLoopStartSec() {
   if (forceFullLoop) return 0;
   return loopStartSample > 0 ? loopStartSample / sampleRate : 0;
@@ -2419,6 +2547,8 @@ async function playMediaUrlStreamLoop(url, track, offsetSec = 0) {
 }
 
 function updateProgressUI() {
+  if (state.playing && listenClock.trackKey) flushListenTime();
+  else if (!state.playing) listenClock.lastTs = 0;
   if (!decodedBuffer) return;
 
   if (scrubbing) {
@@ -7683,6 +7813,8 @@ async function playCurrent() {
   document.body.classList.add("is-playing");
   markPlayingTrack(track.id);
 
+  beginListenSession();
+
   releaseDecodedBuffer();
   state.playing = false;
   pauseOffset = 0;
@@ -7911,6 +8043,7 @@ async function togglePlay() {
       }
       state.playing = false;
       document.body.classList.remove("is-playing");
+      endListenSession();
       clearBgSessionKeepAlive();
       markPlayingTrack(getCurrentTrackId());
       updatePlayerUI();
@@ -7936,6 +8069,7 @@ async function togglePlay() {
       stopSource();
       state.playing = false;
       document.body.classList.remove("is-playing");
+      endListenSession();
       clearBgSessionKeepAlive();
       markPlayingTrack(getCurrentTrackId());
       updatePlayerUI();
@@ -7988,6 +8122,7 @@ async function togglePlay() {
 
     state.playing = false;
     document.body.classList.remove("is-playing");
+    endListenSession();
     clearBgSessionKeepAlive();
     stopSilentShield();
     markPlayingTrack(getCurrentTrackId());
@@ -11017,35 +11152,148 @@ function syncProfileForm() {
   if (input) input.value = p.displayName || "";
   updateProfileAvatar(p.displayName || "");
 
-  // stats
-  const games =
-    typeof userLib !== "undefined" && Array.isArray(userLib?.albums)
-      ? userLib.albums.length
-      : 0;
-  const playlists =
-    typeof userLib !== "undefined" && Array.isArray(userLib?.playlists)
-      ? userLib.playlists.length
-      : 0;
-  const fav =
-    typeof getPlaylist === "function"
-      ? getPlaylist(FAVORITES_ID)?.tracks?.length || 0
-      : 0;
-  const set = (id, n) => {
+  // Library counts — libraryAlbums (NOT .albums)
+  const games = Array.isArray(userLib?.libraryAlbums) ? userLib.libraryAlbums.length : 0;
+  const playlists = Array.isArray(userLib?.playlists) ? userLib.playlists.length : 0;
+  const fav = getPlaylist(FAVORITES_ID)?.tracks?.length || 0;
+
+  const setText = (id, n) => {
     const el = document.getElementById(id);
     if (el) el.textContent = String(n);
   };
-  set("profile-stat-games", games);
-  set("profile-stat-playlists", playlists);
-  set("profile-stat-favs", fav);
+  setText("profile-stat-games", games);
+  setText("profile-stat-playlists", playlists);
+  setText("profile-stat-favs", fav);
 
-    getAuthUser().then((u) => {
-    updateAuthPanels(u);
-    const meta = loadSyncMeta();
+  // Listening stats
+  flushListenTime();
+  const ls = loadListenStats();
+  setText("profile-stat-listen-total", formatListenDuration(ls.totalSec || 0));
+  setText("profile-stat-listen-week", formatListenDuration(ls.weeks?.[isoWeekKey()] || 0));
+
+  // Top track by seconds
+  let topTrack = null;
+  let topTrackSec = 0;
+  for (const [key, v] of Object.entries(ls.tracks || {})) {
+    if ((v.sec || 0) > topTrackSec) {
+      topTrackSec = v.sec || 0;
+      topTrack = { key, ...v };
+    }
+  }
+  const trackTitleEl = $("#profile-top-track-title");
+  const trackSubEl = $("#profile-top-track-sub");
+  const trackCoverEl = $("#profile-top-track-cover");
+  if (topTrack && topTrackSec > 0) {
+    const [gameId, trackId] = topTrack.key.split("::");
+    const game = LIBRARY.find((g) => g.id === gameId);
+    const track = game?.tracks?.find((t) => t.id === trackId);
+    if (trackTitleEl) trackTitleEl.textContent = track?.title || "Unbekannt";
+    if (trackSubEl) {
+      trackSubEl.textContent = [
+        game?.title || game?.short || "",
+        formatListenDuration(topTrackSec),
+      ]
+        .filter(Boolean)
+        .join(" · ");
+    }
+    if (trackCoverEl) {
+      trackCoverEl.src = game?.cover || PLACEHOLDER;
+      trackCoverEl.hidden = false;
+    }
+  } else {
+    if (trackTitleEl) trackTitleEl.textContent = "—";
+    if (trackSubEl) trackSubEl.textContent = "Noch nichts gehört";
+    if (trackCoverEl) trackCoverEl.hidden = true;
+  }
+
+  // Top game
+  let topGameId = null;
+  let topGameSec = 0;
+  for (const [gid, v] of Object.entries(ls.games || {})) {
+    if ((v.sec || 0) > topGameSec) {
+      topGameSec = v.sec || 0;
+      topGameId = gid;
+    }
+  }
+  const gameTitleEl = $("#profile-top-game-title");
+  const gameSubEl = $("#profile-top-game-sub");
+  const gameCoverEl = $("#profile-top-game-cover");
+  if (topGameId && topGameSec > 0) {
+    const game = LIBRARY.find((g) => g.id === topGameId);
+    if (gameTitleEl) gameTitleEl.textContent = game?.title || game?.short || topGameId;
+    if (gameSubEl) {
+      gameSubEl.textContent = [
+        game?.composer || "",
+        formatListenDuration(topGameSec),
+      ]
+        .filter(Boolean)
+        .join(" · ");
+    }
+    if (gameCoverEl) {
+      gameCoverEl.src = game?.cover || PLACEHOLDER;
+      gameCoverEl.hidden = false;
+    }
+  } else {
+    if (gameTitleEl) gameTitleEl.textContent = "—";
+    if (gameSubEl) gameSubEl.textContent = "Noch nichts gehört";
+    if (gameCoverEl) gameCoverEl.hidden = true;
+  }
+
+  // Top playlist
+  let topPlId = null;
+  let topPlSec = 0;
+  for (const [pid, v] of Object.entries(ls.playlists || {})) {
+    if ((v.sec || 0) > topPlSec) {
+      topPlSec = v.sec || 0;
+      topPlId = pid;
+    }
+  }
+  const plTitleEl = $("#profile-top-pl-title");
+  const plSubEl = $("#profile-top-pl-sub");
+  const plCoverEl = $("#profile-top-pl-cover");
+  if (topPlId && topPlSec > 0) {
+    const pl = getPlaylist(topPlId);
+    if (plTitleEl) plTitleEl.textContent = pl?.name || topPlId;
+    if (plSubEl) plSubEl.textContent = formatListenDuration(topPlSec);
+    if (plCoverEl) {
+      plCoverEl.hidden = false;
+      plCoverEl.classList.remove("is-single");
+      plCoverEl.innerHTML = "";
+      const src = typeof playlistCoverSrc === "function" ? playlistCoverSrc(pl) : null;
+      if (Array.isArray(src)) {
+        src.slice(0, 4).forEach((u) => {
+          const img = document.createElement("img");
+          img.src = u || PLACEHOLDER;
+          img.alt = "";
+          img.draggable = false;
+          plCoverEl.appendChild(img);
+        });
+      } else {
+        plCoverEl.classList.add("is-single");
+        const img = document.createElement("img");
+        img.src = src || (pl?.id === FAVORITES_ID ? "Assets/PlaylistCovers/FavSongsCover.png" : PLACEHOLDER);
+        img.alt = "";
+        img.draggable = false;
+        plCoverEl.appendChild(img);
+      }
+    }
+  } else {
+    if (plTitleEl) plTitleEl.textContent = "—";
+    if (plSubEl) plSubEl.textContent = "Noch nichts gehört";
+    if (plCoverEl) {
+      plCoverEl.hidden = true;
+      plCoverEl.innerHTML = "";
+    }
+  }
+
+  getAuthUser?.().then((u) => {
+    updateAuthPanels?.(u);
+    const meta = loadSyncMeta?.() || {};
     if (u) {
-      setProfileSyncUI({
+      setProfileSyncUI?.({
         status: "Bereit",
         hint: "Bibliothek & Einstellungen (ohne Lautstärke)",
-        last: formatSyncTime(meta.lastPushAt || meta.lastPullAt),
+        last: formatSyncTime?.(meta.lastPushAt || meta.lastPullAt),
       });
     }
   });
