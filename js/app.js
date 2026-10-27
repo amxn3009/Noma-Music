@@ -11,7 +11,7 @@ const supabase =
     : null;
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = "27.10.26, added sync + Profiles and Stats";
+const APP_VERSION = "27.10.26, added sync + Profiles and Stats, added export/import Playlists";
 
 let LIBRARY = [];
 
@@ -377,6 +377,13 @@ async function syncNow() {
       showToast?.("Cloud-Sync: gespeichert");
     }
     saveSyncMeta({ localDirtyAt: 0 });
+
+    if (
+      typeof syncProfileForm === "function" &&
+      !$("#profile-view")?.classList.contains("hidden")
+    ) {
+      syncProfileForm();
+    }
   } catch (err) {
     console.warn("[Noma sync]", err);
     setProfileSyncUI({
@@ -494,6 +501,9 @@ function bindProfileAuth() {
     await supabase.auth.signOut();
     showToast?.("Abgemeldet");
     setProfileSyncUI({ status: "Lokal", hint: "Nicht angemeldet", last: "—" });
+    // repaint stats/covers (handles missing cloud playlists cleanly)
+    if (typeof syncProfileForm === "function") syncProfileForm();
+    updateAuthPanels?.(null);
   });
 
   $("#profile-sync-now")?.addEventListener("click", () => syncNow());
@@ -508,6 +518,7 @@ function getPlaylist(id) {
 }
 
 function playlistCoverSrc(pl) {
+  if (!pl) return PLACEHOLDER;
   if (pl.id === FAVORITES_ID) {
     return "Assets/PlaylistCovers/FavSongsCover.png";
   }
@@ -711,10 +722,20 @@ async function importPlaylistFromFile(file) {
 function closeLibCreatePanel() {
   const panel = $("#lib-create-panel");
   const btn = $("#lib-create-btn");
-  if (!panel || panel.classList.contains("hidden")) return;
-  panel.classList.add("hidden");
+  if (!panel || panel.classList.contains("hidden") || panel.classList.contains("is-closing")) {
+    return;
+  }
+  panel.classList.add("is-closing");
   panel.setAttribute("aria-hidden", "true");
   btn?.setAttribute("aria-expanded", "false");
+  const done = () => {
+    panel.classList.add("hidden");
+    panel.classList.remove("is-closing");
+    panel.removeEventListener("animationend", done);
+  };
+  panel.addEventListener("animationend", done);
+  // fallback if animation missing / reduced-motion
+  setTimeout(done, 220);
 }
 
 function positionLibCreatePanel() {
@@ -760,6 +781,7 @@ function toggleLibCreatePanel() {
   const willOpen = panel.classList.contains("hidden");
   $("#lib-sort-panel")?.classList.add("hidden");
   if (willOpen) {
+    panel.classList.remove("is-closing");
     panel.classList.remove("hidden");
     panel.setAttribute("aria-hidden", "false");
     btn?.setAttribute("aria-expanded", "true");
@@ -11463,7 +11485,16 @@ function syncProfileForm() {
   const plCoverEl = $("#profile-top-pl-cover");
   if (topPlId && topPlSec > 0) {
     const pl = getPlaylist(topPlId);
-    if (plTitleEl) plTitleEl.textContent = pl?.name || topPlId;
+    // Playlist may be gone (deleted / other account) — don't call cover helpers with null
+    if (!pl) {
+      if (plTitleEl) plTitleEl.textContent = "—";
+      if (plSubEl) plSubEl.textContent = "Noch nichts gehört";
+      if (plCoverEl) {
+        plCoverEl.hidden = true;
+        plCoverEl.innerHTML = "";
+      }
+    } else {
+    if (plTitleEl) plTitleEl.textContent = pl.name || topPlId;
     if (plSubEl) plSubEl.textContent = formatListenDuration(topPlSec);
     if (plCoverEl) {
       plCoverEl.hidden = false;
@@ -11487,6 +11518,7 @@ function syncProfileForm() {
         plCoverEl.appendChild(img);
       }
     }
+  }  // end else (pl exists)
   } else {
     if (plTitleEl) plTitleEl.textContent = "—";
     if (plSubEl) plSubEl.textContent = "Noch nichts gehört";
