@@ -11,7 +11,7 @@ const supabase =
     : null;
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = "27.10.26, added sync + Profiles and Stats, added export/import Playlists, fix clear loops";
+const APP_VERSION = "27.10.26, added sync + Profiles and Stats, added export/import Playlists, fixed clear loops, fixed game count";
 
 let LIBRARY = [];
 
@@ -98,6 +98,9 @@ function loadUserLibrary() {
     userLib.libraryAlbums = Array.isArray(parsed.libraryAlbums)
       ? parsed.libraryAlbums
       : [];
+    userLib.libraryAlbums = (userLib.libraryAlbums || []).filter((gid) =>
+    LIBRARY.some((g) => g.id === gid)
+    );
     // Ensure favorites exists
     if (!userLib.playlists.some((p) => p.id === FAVORITES_ID)) {
       userLib.playlists.unshift({ ...DEFAULT_LIBRARY.playlists[0] });
@@ -3765,6 +3768,13 @@ async function init() {
   document.addEventListener("freeze", () => {
     teardownOnAppKill();
   });
+  if (Array.isArray(userLib.libraryAlbums) && LIBRARY.length) {
+    const before = userLib.libraryAlbums.length;
+    userLib.libraryAlbums = userLib.libraryAlbums.filter((gid) =>
+      LIBRARY.some((g) => g.id === gid)
+    );
+    if (userLib.libraryAlbums.length !== before) saveUserLibrary();
+  }
 }
 
 function gameCardHtml(g) {
@@ -11463,8 +11473,10 @@ function syncProfileForm() {
   if (input) input.value = p.displayName || "";
   updateProfileAvatar(p.displayName || "");
 
-  // Library counts — libraryAlbums (NOT .albums)
-  const games = Array.isArray(userLib?.libraryAlbums) ? userLib.libraryAlbums.length : 0;
+  // Only real games that exist in LIBRARY (ignore stray / playlist ids)
+  const games = (userLib.libraryAlbums || []).filter((gid) =>
+    LIBRARY.some((g) => g.id === gid)
+  ).length;
   const playlists = Array.isArray(userLib?.playlists) ? userLib.playlists.length : 0;
   const fav = getPlaylist(FAVORITES_ID)?.tracks?.length || 0;
 
