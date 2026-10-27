@@ -5888,7 +5888,17 @@ function openGlobalSearch(clearInput = true) {
   cancelEditIfNeeded();
 
   // Prefer explicit context over tab heuristics
-  if (state.currentPlaylist) {
+  // If we're returning into search from a game (+ Songs flow), keep existing playlist return
+  const keepPlaylistSearch =
+    searchReturn?.type === "playlist" &&
+    searchReturn.playlistId &&
+    searchReturn.stayInSearch;
+
+  if (keepPlaylistSearch) {
+    // leave searchReturn as-is (playlistId + query + stayInSearch)
+    window.__forcePlaylistSelectId =
+      window.__forcePlaylistSelectId || searchReturn.playlistId;
+  } else if (state.currentPlaylist) {
     searchReturn = {
       type: "playlist",
       playlistId: state.currentPlaylist.id,
@@ -6250,14 +6260,14 @@ function bindGlobalSearchResults(box) {
       if (e.target.closest(".gs-menu")) return;
       const kind = row.dataset.kind;
       const gameId = row.dataset.gameId;
-       if (kind === "game") {
+      if (kind === "game") {
         const q = $("#global-search-input")?.value?.trim() || "";
-        // From + Songs: remember playlist, but do NOT stay in search on album back
+        // + Songs flow: back from game returns to search; search back returns to playlist
         if (searchReturn?.type === "playlist" && searchReturn.playlistId) {
           searchReturn = {
             type: "playlist",
             playlistId: searchReturn.playlistId,
-            stayInSearch: false,
+            stayInSearch: true,
             fromPlaylistAdd: true,
             query: q,
           };
@@ -6644,8 +6654,8 @@ function openGame(id) {
     searchReturn = {
       type: "playlist",
       playlistId: searchReturn.playlistId,
-      stayInSearch: false,
-      fromPlaylistAdd: !!searchReturn.fromPlaylistAdd,
+      stayInSearch: true,
+      fromPlaylistAdd: true,
       query: savedSearch || searchReturn.query || "",
     };
     window.__forcePlaylistSelectId = searchReturn.playlistId;
@@ -7050,11 +7060,40 @@ document.querySelectorAll(".tab").forEach((tab) => {
     gameDetail.classList.add("hidden");
     gameDetail.classList.remove("active");
 
-    // + Songs → search → open game → back: return to THAT playlist (not search, not games)
+    // + Songs → search → open game → back: return to SEARCH (playlist is under that)
+    if (
+      searchReturn?.type === "playlist" &&
+      searchReturn.playlistId &&
+      (searchReturn.stayInSearch || searchReturn.fromPlaylistAdd)
+    ) {
+      const pid = searchReturn.playlistId;
+      const q =
+        searchReturn.query ||
+        $("#global-search-input")?.value?.trim() ||
+        "";
+      searchReturn = {
+        type: "playlist",
+        playlistId: pid,
+        stayInSearch: true,
+        fromPlaylistAdd: true,
+        query: q,
+      };
+      window.__forcePlaylistSelectId = pid;
+      openGlobalSearch(false); // keepPlaylistSearch path preserves searchReturn
+      const input = $("#global-search-input");
+      if (input) {
+        input.value = q;
+        $("#global-search-clear")?.classList.toggle("hidden", !q.trim());
+        runGlobalSearch(q);
+        requestAnimationFrame(() => input.focus());
+      }
+      return;
+    }
+
+    // Playlist origin without stay-in-search → straight back to playlist
     if (searchReturn?.type === "playlist" && searchReturn.playlistId) {
       const pid = searchReturn.playlistId;
       searchReturn = null;
-      // keep force target only while user stays in add-flow; clear on back to detail
       window.__forcePlaylistSelectId = null;
       document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
       document.querySelector('.tab[data-tab="playlists"]')?.classList.add("active");
