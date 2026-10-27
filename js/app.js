@@ -11,7 +11,7 @@ const supabase =
     : null;
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = "27.10.26, added sync + Profiles and Stats, added export/import Playlists, fixed clear loops, fixed game count";
+const APP_VERSION = "27.10.26, added sync + Profiles and Stats, added export/import Playlists, fixed clear loops, fixed game count, added consistent eye";
 
 let LIBRARY = [];
 
@@ -458,6 +458,22 @@ async function initCloudAuth() {
 }
 
 function bindProfileAuth() {
+    $("#profile-password-toggle")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const input = $("#profile-password");
+    const btn = $("#profile-password-toggle");
+    if (!input || !btn) return;
+
+    const show = input.type === "password";
+    input.type = show ? "text" : "password";
+    btn.setAttribute("aria-pressed", show ? "true" : "false");
+    btn.title = show ? "Passwort verbergen" : "Passwort anzeigen";
+    btn.setAttribute("aria-label", show ? "Passwort verbergen" : "Passwort anzeigen");
+    btn.querySelector(".pw-eye")?.classList.toggle("hidden", show);
+    btn.querySelector(".pw-eye-off")?.classList.toggle("hidden", !show);
+  });
+
   $("#profile-signin-btn")?.addEventListener("click", async () => {
     const email = ($("#profile-email")?.value || "").trim();
     const password = $("#profile-password")?.value || "";

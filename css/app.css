@@ -7459,3 +7459,43 @@ body.pl-editing .header-toggle-btn {
 .lib-title-block {
   overflow: visible;
 }
+
+
+.password-field {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
+.password-field .settings-text {
+  width: min(220px, 46vw);
+  padding-right: 40px; /* room for the eye */
+}
+/* Hide inconsistent native reveal (Edge/Chrome) */
+.password-field input[type="password"]::-ms-reveal,
+.password-field input[type="password"]::-ms-clear {
+  display: none;
+}
+.password-toggle {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  padding: 0;
+}
+.password-toggle:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.06);
+}
+.password-toggle .hidden {
+  display: none !important;
+}
