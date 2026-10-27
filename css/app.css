@@ -7075,11 +7075,45 @@ body:not(.pl-editing) #pl-loops-btn.hidden,
 }
 /* Match normal playlist rows on the left (num + cover + meta) */
 body.pl-editing .track-list.is-playlist .track-row {
-  grid-template-columns: 28px 56px minmax(0, 1fr) auto auto 32px;
+  grid-template-columns: 20px 28px 56px minmax(0, 1fr) auto auto 36px;
   gap: 12px;
   padding: 10px 12px;
   min-height: 72px;
   align-items: center;
+}
+body.pl-editing .pl-edit-drag,
+body.pl-editing .track-row .q-drag {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 40px;
+  color: var(--muted);
+  cursor: grab;
+  touch-action: none;
+}
+body.pl-editing .pl-edit-drag:active {
+  cursor: grabbing;
+}
+body.pl-editing .track-list.is-playlist .track-row.playing {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+body.pl-editing .track-list.is-playlist .track-row.playing .track-num .num {
+  opacity: 0;
+}
+body.pl-editing .track-list.is-playlist .track-row.playing .track-num .eq {
+  opacity: 1;
+}
+.pl-multi-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.pl-multi-loops.hidden {
+  display: none !important;
+}
+#pl-clear-loops-btn .pl-track-loops-icon {
+  pointer-events: none;
 }
 body.pl-editing .track-list.is-playlist .track-num {
   width: 28px;

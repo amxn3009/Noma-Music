@@ -415,13 +415,14 @@ function handleTrackPlusClick(gameId, trackId) {
   const game = LIBRARY.find((g) => g.id === gameId);
   const track = game?.tracks?.find((t) => t.id === trackId);
   const inAny = isTrackInAnyPlaylist(gameId, trackId);
+  // + inside a playlist always wins over settings quick-add
   const targetId = window.__forcePlaylistSelectId || getEffectiveQuickTarget();
 
   // Already in any playlist → open menu (never auto-remove on +)
-  // Only exception: quickAdd ON and not yet in the goal playlist → add to goal
+  // Exception: forced target or quickAdd ON and not yet in the goal → add to goal
   if (inAny) {
     if (
-      settings.quickAddEnabled &&
+      (window.__forcePlaylistSelectId || settings.quickAddEnabled) &&
       !isTrackInPlaylist(targetId, gameId, trackId)
     ) {
       setTrackInPlaylist(targetId, gameId, trackId, true);
@@ -3443,7 +3444,7 @@ function renderLibrary({ animate = true } = {}) {
               0
             );
             const dur = formatAlbumDuration(totalSec);
-            const sub = dur ? `${n} Songs · ${dur}` : `${n} Songs`;
+            const sub = dur ? `${n} Titel · ${dur}` : `${n} Titel`;
             const pin = pl.pinned
               ? `<span class="pl-pin-inline" title="Angepinnt" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg></span>`
               : "";
@@ -3488,7 +3489,7 @@ function renderLibrary({ animate = true } = {}) {
               0
             );
             const dur = formatAlbumDuration(totalSec);
-            const sub = dur ? `${n} Songs · ${dur}` : `${n} Songs`;
+            const sub = dur ? `${n} Titel · ${dur}` : `${n} Titel`;
             return `<div class="pl-card" data-pl-id="${escapeHtml(pl.id)}" data-kind="playlist" role="button" tabindex="0">
               <div class="pl-card-cover-wrap">
                 ${renderPlaylistCoverHTML(pl)}
@@ -3724,9 +3725,12 @@ function getPlaylistTrackLoops(pl, gameId, trackId) {
   const ref = (pl.tracks || []).find(
     (t) => t.gameId === gameId && t.trackId === trackId
   );
-  const n = Number(ref?.loops);
-  if (!Number.isFinite(n) || n < 1) return null;
-  return Math.min(99, Math.max(1, Math.floor(n)));
+  if (!ref || ref.loops === undefined || ref.loops === null || ref.loops === "") {
+    return null; // use settings default
+  }
+  const n = Number(ref.loops);
+  if (!Number.isFinite(n) || n < 0) return null;
+  return Math.min(99, Math.max(0, Math.floor(n))); // 0 = play once, no re-loop
 }
 
 function setPlaylistTrackLoops(pl, gameId, trackId, value) {
@@ -3738,7 +3742,7 @@ function setPlaylistTrackLoops(pl, gameId, trackId, value) {
   if (value == null || value === "") {
     delete ref.loops;
   } else {
-    ref.loops = clampInt(value, 1, 99, settings.loopTimes);
+    ref.loops = clampInt(value, 0, 99, 0); // 0 allowed
   }
   pl.updatedAt = Date.now();
 }
@@ -3819,8 +3823,15 @@ function openPlaylistDetail(id) {
     if (plEdit.active) exitPlaylistEditMode(true);
     searchReturn = { type: "playlist", playlistId: pl.id, stayInSearch: true };
     sessionQuickAddId = pl.id;
-    window.__forcePlaylistSelectId = pl.id;
+    window.__forcePlaylistSelectId = pl.id; // always add into THIS playlist
     openGlobalSearch(true);
+    requestAnimationFrame(() => {
+      const input = $("#global-search-input");
+      if (input) {
+        input.focus();
+        input.select?.();
+      }
+    });
   };
 
   // ── Edit chrome (create SECOND) ──
@@ -3949,27 +3960,17 @@ function openPlaylistDetail(id) {
   // row interactions
   trackListEl.querySelectorAll(".track-row").forEach((row) => {
     row.addEventListener("click", (e) => {
-      if (e.target.closest(".track-actions, .track-fav-btn")) {
-        if (e.target.closest(".track-actions")) {
-          e.preventDefault();
-          e.stopPropagation();
-          const idx = +row.dataset.index;
-          const it = items[idx];
-          if (!it) return;
-          const rect = e.target.closest(".track-actions").getBoundingClientRect();
-          showContextMenu(rect.left, rect.bottom + 4, {
-            game: it.game,
-            track: it.track,
-            fromPlaylistId: pl.id,
-            fromQueue: false,
-          });
-        }
+      if (e.target.closest("button, input, label, .pl-edit-drag, .q-drag, .pl-track-loops")) return;
+      if (row.dataset.suppressClick === "1") {
+        delete row.dataset.suppressClick;
         return;
       }
       const idx = +row.dataset.index;
+      const it = items[idx];
+      if (!it) return;
       playFromPlaylist(pl, items, idx);
     });
-      row.addEventListener("contextmenu", (e) => {
+    row.addEventListener("contextmenu", (e) => {
       e.preventDefault();
       const it = items[+row.dataset.index];
       if (!it) return;
@@ -3980,7 +3981,44 @@ function openPlaylistDetail(id) {
         fromQueue: false,
       });
     });
+    // long-press menu (mobile)
+    let lpTimer = null, lpMoved = false;
+    row.addEventListener("pointerdown", (e) => {
+      if (e.pointerType === "mouse") return;
+      if (e.target.closest("button, input, label, .pl-edit-drag, .q-drag")) return;
+      lpMoved = false;
+      const x = e.clientX, y = e.clientY;
+      lpTimer = setTimeout(() => {
+        lpTimer = null;
+        if (lpMoved) return;
+        const it = items[+row.dataset.index];
+        if (!it) return;
+        row.dataset.suppressClick = "1";
+        armClickSuppress?.(600);
+        showContextMenu(x, y, {
+          game: it.game,
+          track: it.track,
+          fromPlaylistId: pl.id,
+          fromQueue: false,
+        });
+      }, 480);
+    }, { passive: true });
+    row.addEventListener("pointermove", (e) => {
+      if (!lpTimer) return;
+      if (Math.abs(e.movementX) + Math.abs(e.movementY) > 6) {
+        lpMoved = true;
+        clearTimeout(lpTimer);
+        lpTimer = null;
+      }
+    }, { passive: true });
+    const cancelLp = () => { clearTimeout(lpTimer); lpTimer = null; };
+    row.addEventListener("pointerup", cancelLp);
+    row.addEventListener("pointercancel", cancelLp);
   });
+
+  // Show current playing row EQ immediately
+  const curId = getCurrentTrackId?.();
+  if (curId && typeof markPlayingTrack === "function") markPlayingTrack(curId);
 
   // Play all / shuffle
   const playAllBtn = $("#play-all-btn");
@@ -4369,6 +4407,12 @@ function enterPlaylistEditMode() {
     tracks: structuredClone(pl.tracks || []),
   };
   document.body.classList.add("pl-editing");
+
+    // Always collapse header in edit mode
+  const sticky = document.querySelector(".game-sticky-top");
+  if (sticky && !sticky.classList.contains("is-collapsed")) {
+    toggleGameHeaderCollapse(true);
+  }
 
   $("#pl-edit-btn")?.classList.add("hidden");
   $("#pl-add-songs-chip")?.classList.add("hidden");
@@ -4768,23 +4812,28 @@ function renderPlaylistEditUI() {
       const key = `${g.id}::${t.id}`;
       const sel = plEdit.selected.has(key) ? "is-selected" : "";
       const ref = (pl.tracks || [])[i];
-      const loopsVal =
-        ref && Number.isFinite(Number(ref.loops)) && Number(ref.loops) >= 1
-          ? String(Math.min(99, Math.floor(Number(ref.loops))))
-          : "";
+      const hasLoops = ref && ref.loops !== undefined && ref.loops !== null && ref.loops !== "";
+      const loopsVal = hasLoops
+        ? String(Math.min(99, Math.max(0, Math.floor(Number(ref.loops)))))
+        : "";
+      const playingId = getCurrentTrackId?.();
+      const isPlaying = playingId && t.id === playingId;
+      const audioOn = isPlaying && state.playing;
       return `
-    <div class="track-row ${sel}" data-track-id="${escapeHtml(t.id)}" data-game-id="${escapeHtml(g.id)}" data-index="${i}" data-key="${escapeHtml(key)}">
-      ${
-        plEdit.multi
-          ? `<button type="button" class="pl-ms-check ${plEdit.selected.has(key) ? "is-selected" : ""}" data-ms="${escapeHtml(key)}" aria-label="Auswählen"></button>`
-          : `<span class="track-num"><span class="num">${i + 1}</span></span>`
-      }
+    <div class="track-row ${sel}${isPlaying ? " playing" : ""}${audioOn ? " audio-on" : ""}" data-track-id="${escapeHtml(t.id)}" data-game-id="${escapeHtml(g.id)}" data-index="${i}" data-key="${escapeHtml(key)}">
+      <span class="pl-edit-drag q-drag" title="Ziehen" data-drag-handle="1">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M9 5h2v2H9V5zm0 6h2v2H9v-2zm0 6h2v2H9v-2zm4-12h2v2h-2V5zm0 6h2v2h-2v-2zm0 6h2v2h-2v-2z"/></svg>
+      </span>
+      <span class="track-num">
+        <span class="num">${i + 1}</span>
+        <span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
+      </span>
       <img class="pl-track-cover" src="${escapeHtml(g.cover || PLACEHOLDER)}" alt="" draggable="false">
       <div class="track-meta">
         <span class="track-name">${escapeHtml(t.title)}</span>
         <span class="track-sub">${escapeHtml(gameLabel)}</span>
       </div>
-      <label class="pl-track-loops" title="Loops für diesen Song (X-Modus)">
+      <label class="pl-track-loops" title="Loops für diesen Song (X-Modus, 0 = einmal)">
         <span class="pl-track-loops-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
             <path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/>
@@ -4794,7 +4843,7 @@ function renderPlaylistEditUI() {
         <input
           type="number"
           class="settings-number pl-track-loops-input"
-          min="1"
+          min="0"
           max="99"
           step="1"
           inputmode="numeric"
@@ -4806,9 +4855,13 @@ function renderPlaylistEditUI() {
         >
       </label>
       <span class="track-duration">${dur}</span>
-      <button type="button" class="pl-row-trash" data-index="${i}" title="Entfernen" aria-label="Entfernen">
+      ${
+        plEdit.multi
+          ? `<button type="button" class="pl-ms-check ${plEdit.selected.has(key) ? "is-selected" : ""}" data-ms="${escapeHtml(key)}" aria-label="Auswählen"></button>`
+          : `<button type="button" class="pl-row-trash" data-index="${i}" title="Entfernen" aria-label="Entfernen">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
-      </button>
+      </button>`
+      }
     </div>`;
     })
     .join("");
@@ -4834,7 +4887,7 @@ function renderPlaylistEditUI() {
     });
   });
 
-    trackListEl.querySelectorAll(".pl-track-loops-input").forEach((inp) => {
+  trackListEl.querySelectorAll(".pl-track-loops-input").forEach((inp) => {
     const commit = () => {
       const raw = String(inp.value || "").replace(/[^\d]/g, "").slice(0, 2);
       if (!raw) {
@@ -4843,7 +4896,7 @@ function renderPlaylistEditUI() {
         saveUserLibrary();
         return;
       }
-      const n = clampInt(raw, 1, 99, settings.loopTimes);
+      const n = clampInt(raw, 0, 99, settings.loopTimes);
       inp.value = String(n);
       setPlaylistTrackLoops(pl, inp.dataset.gameId, inp.dataset.trackId, n);
       saveUserLibrary();
@@ -4872,14 +4925,38 @@ function ensureMultiSelectChrome() {
     ms.id = "pl-multi-wrap";
     ms.className = "pl-multi-wrap";
     ms.innerHTML = `
+      <button type="button" id="pl-clear-loops-btn" class="circle-btn" title="Alle Song-Loops löschen" aria-label="Alle Song-Loops löschen">
+        <span class="pl-track-loops-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>
+          <span class="pl-track-loops-badge">×</span>
+        </span>
+      </button>
       <button type="button" id="pl-multi-btn" class="circle-btn" title="Mehrfachauswahl" aria-label="Mehrfachauswahl">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M4 7h4v2H4V7zm6 0h10v2H10V7zM4 11h4v2H4v-2zm6 0h10v2H10v-2zM4 15h4v2H4v-2zm6 0h10v2H10v-2z"/></svg>
       </button>
+      <label id="pl-multi-loops" class="pl-track-loops pl-multi-loops hidden" title="Loops für Auswahl">
+        <span class="pl-track-loops-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>
+          <span class="pl-track-loops-badge">×</span>
+        </span>
+        <input type="number" id="pl-multi-loops-input" class="settings-number pl-track-loops-input" min="0" max="99" step="1" inputmode="numeric" placeholder="0–99" aria-label="Loops für Auswahl">
+      </label>
       <button type="button" id="pl-multi-trash" class="circle-btn pl-edit-cancel hidden" title="Auswahl löschen" aria-label="Auswahl löschen">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
       </button>`;
     const chrome = document.getElementById("pl-edit-chrome");
     chrome?.appendChild(ms);
+
+    document.getElementById("pl-clear-loops-btn")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const pl = state.currentPlaylist && getPlaylist(state.currentPlaylist.id);
+      if (!pl) return;
+      for (const ref of pl.tracks || []) delete ref.loops;
+      pl.updatedAt = Date.now();
+      saveUserLibrary();
+      renderPlaylistEditUI();
+      showToast?.("Alle Song-Loops gelöscht");
+    });
 
     document.getElementById("pl-multi-btn")?.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -4887,14 +4964,44 @@ function ensureMultiSelectChrome() {
       if (!plEdit.multi) plEdit.selected = new Set();
       document.getElementById("pl-multi-btn")?.classList.toggle("is-active", plEdit.multi);
       renderPlaylistEditUI();
+      syncMultiTrash();
     });
+
     document.getElementById("pl-multi-trash")?.addEventListener("click", (e) => {
       e.stopPropagation();
       const pl = state.currentPlaylist && getPlaylist(state.currentPlaylist.id);
       if (!pl || !plEdit.selected?.size) return;
-      pl.tracks = (pl.tracks || []).filter((ref) => !plEdit.selected.has(`${ref.gameId}::${ref.trackId}`));
+      pl.tracks = (pl.tracks || []).filter(
+        (ref) => !plEdit.selected.has(`${ref.gameId}::${ref.trackId}`)
+      );
       plEdit.selected = new Set();
       renderPlaylistEditUI();
+      syncMultiTrash();
+    });
+
+    const bulk = document.getElementById("pl-multi-loops-input");
+    const commitBulk = () => {
+      const pl = state.currentPlaylist && getPlaylist(state.currentPlaylist.id);
+      if (!pl || !plEdit.selected?.size) return;
+      const raw = String(bulk.value || "").replace(/[^\d]/g, "").slice(0, 2);
+      if (raw === "") return;
+      const n = clampInt(raw, 0, 99, 0);
+      bulk.value = String(n);
+      for (const key of plEdit.selected) {
+        const [gameId, trackId] = key.split("::");
+        setPlaylistTrackLoops(pl, gameId, trackId, n);
+      }
+      saveUserLibrary();
+      renderPlaylistEditUI();
+    };
+    bulk?.addEventListener("click", (e) => e.stopPropagation());
+    bulk?.addEventListener("change", commitBulk);
+    bulk?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        commitBulk();
+        bulk.blur();
+      }
     });
   }
   ms.classList.remove("hidden");
@@ -4904,9 +5011,11 @@ function ensureMultiSelectChrome() {
 
 function syncMultiTrash() {
   const trash = document.getElementById("pl-multi-trash");
-  if (!trash) return;
+  const loopsWrap = document.getElementById("pl-multi-loops");
   const n = plEdit.selected?.size || 0;
-  trash.classList.toggle("hidden", !(plEdit.multi && n > 0));
+  const show = !!(plEdit.multi && n > 0);
+  trash?.classList.toggle("hidden", !show);
+  loopsWrap?.classList.toggle("hidden", !show);
 }
 
 /** Queue-like pointer drag with ghost + drop gap */
@@ -5029,16 +5138,20 @@ function bindPlaylistTrackDrag(pl) {
   }
 
   function onUp() {
-    if (dragFrom < 0) return;
+    if (dragFrom < 0) {
+      document.querySelectorAll(".queue-drag-ghost").forEach((g) => g.remove());
+      return;
+    }
     const froms = [...dragIndices].sort((a, b) => a - b);
     let to = dropIndex;
-    ghost?.remove();
+    document.querySelectorAll(".queue-drag-ghost").forEach((g) => g.remove());
     ghost = null;
     stopAutoScroll();
     removeSlot();
     list.querySelectorAll(".track-row").forEach((r) => r.classList.remove("dragging"));
     window.removeEventListener("pointermove", onMove);
     window.removeEventListener("pointerup", onUp);
+    window.removeEventListener("pointercancel", onUp);
     dragFrom = -1;
     dragIndices = [];
     lastDropIndex = -2;
@@ -5062,10 +5175,15 @@ function bindPlaylistTrackDrag(pl) {
     });
   }
 
-  list.querySelectorAll(".track-row").forEach((row) => {
-    row.addEventListener("pointerdown", (e) => {
+  list.querySelectorAll(".pl-edit-drag, .track-row .q-drag").forEach((handle) => {
+    handle.addEventListener("pointerdown", (e) => {
       if (e.button != null && e.button !== 0) return;
-      if (e.target.closest("button, .pl-row-trash, .pl-ms-check")) return;
+      document.querySelectorAll(".queue-drag-ghost").forEach((g) => g.remove());
+      ghost = null;
+      e.preventDefault();
+      e.stopPropagation();
+      const row = handle.closest(".track-row");
+      if (!row) return;
       const idx = +row.dataset.index;
       const sel = selectedIndices();
       dragIndices = sel.length && sel.includes(idx) ? sel : [idx];
@@ -5094,6 +5212,7 @@ function bindPlaylistTrackDrag(pl) {
       startAutoScroll();
       window.addEventListener("pointermove", onMove);
       window.addEventListener("pointerup", onUp);
+      window.addEventListener("pointercancel", onUp);
     });
   });
 }
@@ -5278,6 +5397,10 @@ function openAddToPlaylistMenu(gameId, trackId) {
       .filter((p) => isTrackInPlaylist(p.id, gameId, trackId))
       .map((p) => p.id)
   );
+  // Always preselect the playlist we came from via +
+  if (window.__forcePlaylistSelectId) {
+    addToPlSelected.add(window.__forcePlaylistSelectId);
+  }
   const search = $("#add-to-pl-search");
   if (search) search.value = "";
   renderAddToPlList();
@@ -6397,9 +6520,27 @@ function openGame(id) {
     // only override searchReturn for search / category; keep library/playlist
   const gsInput = $("#global-search-input");
   const savedSearch = gsInput?.value?.trim() || "";
-  if (globalSearchOpen && savedSearch) {
-    searchReturn = { type: "search", query: savedSearch };
-  } else if (document.body.classList.contains("games-cat-open")) {
+    // Playlist + search drill-in: restore playlist search, not games page
+    if (searchReturn?.type === "playlist" && searchReturn.playlistId && searchReturn.stayInSearch) {
+      const pid = searchReturn.playlistId;
+      const q = searchReturn.query || "";
+      searchReturn = { type: "playlist", playlistId: pid, stayInSearch: true, query: q };
+      window.__forcePlaylistSelectId = pid;
+      openGlobalSearch(false);
+      const input = $("#global-search-input");
+      if (input) {
+        input.value = q;
+        $("#global-search-clear")?.classList.toggle("hidden", !q.trim());
+        runGlobalSearch(q);
+        requestAnimationFrame(() => input.focus());
+      }
+      return;
+    }
+
+    if (searchReturn?.type === "search" && searchReturn.query) {
+      const q = searchReturn.query;
+      searchReturn = null;
+      openGlobalSearch(false);
     const browse = $("#games-browse");
     searchReturn = {
       type: "category",
