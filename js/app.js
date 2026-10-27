@@ -5088,6 +5088,7 @@ function popChip(el) {
   if (!el) return;
   el.classList.remove("hidden");
   el.classList.remove("chip-enter");
+  // force reflow so animation restarts every time it appears
   void el.offsetWidth;
   el.classList.add("chip-enter");
 }
@@ -5103,7 +5104,9 @@ function syncMultiTrash() {
     if (loopsWrap?.classList.contains("hidden")) popChip(loopsWrap);
   } else {
     trash?.classList.add("hidden");
+    trash?.classList.remove("chip-enter");
     loopsWrap?.classList.add("hidden");
+    loopsWrap?.classList.remove("chip-enter");
   }
 }
 
@@ -6240,7 +6243,40 @@ function bindGlobalSearchResults(box) {
       const gameId = row.dataset.gameId;
       if (kind === "game") {
         const q = $("#global-search-input")?.value?.trim() || "";
-        searchReturn = q ? { type: "search", query: q } : null;
+        // Keep playlist/library origin from “+ Songs” / library — do NOT wipe to type:"search"
+        if (searchReturn?.type === "playlist" && searchReturn.playlistId) {
+          searchReturn = {
+            type: "playlist",
+            playlistId: searchReturn.playlistId,
+            stayInSearch: true,
+            query: q,
+          };
+          if (searchReturn.playlistId) {
+            window.__forcePlaylistSelectId = searchReturn.playlistId;
+          }
+        } else if (searchReturn?.type === "library") {
+          searchReturn = { type: "library", query: q };
+        } else {
+          if (searchReturn?.type === "playlist" && searchReturn.playlistId) {
+          searchReturn = {
+            type: "playlist",
+            playlistId: searchReturn.playlistId,
+            stayInSearch: true,
+            query: q,
+          };
+          if (searchReturn.playlistId) {
+            window.__forcePlaylistSelectId = searchReturn.playlistId;
+          }
+        } else if (searchReturn?.type === "library") {
+          searchReturn = { type: "library", query: q };
+        } else {
+          searchReturn = q ? { type: "search", query: q } : null;
+        }
+        globalSearchOpen = false;
+        document.body.classList.remove("search-open", "search-mode");
+        $("#global-search-results")?.classList.add("hidden");
+        openGame(gameId);
+        }
         globalSearchOpen = false;
         document.body.classList.remove("search-open", "search-mode");
         $("#global-search-results")?.classList.add("hidden");
@@ -6613,16 +6649,23 @@ function openGame(id) {
   // Preserve where search should return (do NOT open search here)
   const gsInput = $("#global-search-input");
   const savedSearch = gsInput?.value?.trim() || "";
-  if (globalSearchOpen && savedSearch) {
-    if (searchReturn?.type === "playlist" || searchReturn?.type === "library") {
-      searchReturn = {
-        ...searchReturn,
-        query: savedSearch,
-        stayInSearch: true,
-      };
-    } else {
-      searchReturn = { type: "search", query: savedSearch };
-    }
+  // Preserve playlist/library even if search UI was just closed by the result click
+  if (searchReturn?.type === "playlist" && searchReturn.playlistId) {
+    searchReturn = {
+      type: "playlist",
+      playlistId: searchReturn.playlistId,
+      stayInSearch: true,
+      query: savedSearch || searchReturn.query || "",
+    };
+    window.__forcePlaylistSelectId = searchReturn.playlistId;
+  } else if (searchReturn?.type === "library") {
+    searchReturn = {
+      type: "library",
+      gameId: searchReturn.gameId,
+      query: savedSearch || searchReturn.query || "",
+    };
+  } else if (globalSearchOpen && savedSearch) {
+    searchReturn = { type: "search", query: savedSearch };
   } else if (document.body.classList.contains("games-cat-open")) {
     const browse = $("#games-browse");
     searchReturn = {
@@ -9404,6 +9447,11 @@ function toggleGameHeaderCollapse(force) {
   // Already in that state
   if (willCollapse === sticky.classList.contains("is-collapsed")) return;
 
+  // Edit mode: never expand (stay collapsed until exit)
+  if (document.body.classList.contains("pl-editing") && !willCollapse) {
+    return;
+  }
+
   // No room to collapse → never start the anim (avoids expand flash)
   if (willCollapse && !headerCanCollapse()) {
     const btn = $("#game-header-toggle");
@@ -9472,9 +9520,9 @@ function bindGameHeaderToggle() {
   if (!btn || btn.dataset.bound) return;
   btn.dataset.bound = "1";
     btn.addEventListener("click", () => {
+    if (document.body.classList.contains("pl-editing")) return; // locked collapsed
     const sticky = document.querySelector(".game-sticky-top");
     const collapsed = sticky?.classList.contains("is-collapsed");
-    // Expanding is always ok; collapsing only when there’s room
     if (!collapsed && !headerCanCollapse()) return;
     toggleGameHeaderCollapse();
   });
@@ -9559,7 +9607,12 @@ function bindTrackListFade() {
           ignoreDir = 1;
           return;
         }
-        if (collapsed && y <= EXPAND_AT && (goingUp || y <= 1)) {
+        if (
+          collapsed &&
+          y <= EXPAND_AT &&
+          (goingUp || y <= 1) &&
+          !document.body.classList.contains("pl-editing")
+        ) {
           lastY = y;
           toggleGameHeaderCollapse(false);
           ignoreUntil = now + 500;
@@ -9591,6 +9644,7 @@ function bindTrackListFade() {
       if (!sticky?.classList.contains("is-collapsed")) return;
       if (sticky.classList.contains("is-animating-header")) return;
       if (scroller.scrollTop > EXPAND_AT) return;
+      if (document.body.classList.contains("pl-editing")) return;
       if (performance.now() < ignoreUntil && ignoreDir < 0) return;
       toggleGameHeaderCollapse(false);
       ignoreUntil = performance.now() + 500;

@@ -7124,6 +7124,16 @@ body.pl-editing .track-list.is-playlist .track-row.playing .track-num .eq {
 .pl-multi-loops.hidden {
   display: none !important;
 }
+#pl-multi-loops:not(.hidden),
+#pl-multi-trash:not(.hidden) {
+  display: inline-flex;
+  align-items: center;
+}
+#pl-multi-loops.chip-enter,
+#pl-multi-trash.chip-enter,
+#pl-clear-loops-btn.chip-enter {
+  animation: chipIn 0.28s var(--ease) both;
+}
 #pl-clear-loops-btn .pl-track-loops-icon {
   pointer-events: none;
 }
@@ -7180,4 +7190,10 @@ body.pl-editing .track-list.is-playlist .track-meta .track-sub {
   background: #ff4d4d !important;
   color: #fff !important;
   font-weight: 900;
+}
+
+body.pl-editing #game-header-toggle,
+body.pl-editing .header-toggle-btn {
+  pointer-events: none;
+  opacity: 0.35;
 }
