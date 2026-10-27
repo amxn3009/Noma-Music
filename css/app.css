@@ -7219,3 +7219,72 @@ body.pl-editing .header-toggle-btn {
   pointer-events: none;
   opacity: 0.35;
 }
+
+
+/* Profile reuses .settings-view / .settings-top / .settings-row entirely */
+
+.profile-hero {
+  align-items: center;
+  text-align: center;
+  gap: 16px;
+}
+.profile-avatar-wrap {
+  display: flex;
+  justify-content: center;
+  padding: 12px 0 4px;
+}
+.profile-avatar {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  border: 2px solid var(--border);
+  display: grid;
+  place-items: center;
+  color: var(--text);
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  user-select: none;
+}
+.settings-text {
+  width: min(220px, 46vw);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  padding: 8px 12px;
+  outline: none;
+}
+.settings-text:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.settings-value {
+  color: var(--muted);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+.settings-value.muted {
+  color: var(--muted);
+  opacity: 0.85;
+}
+
+.profile-sync-actions { flex-wrap: wrap; gap: 8px; justify-content: flex-start; }
+.settings-action-btn {
+  appearance: none; border: 1px solid var(--border); background: var(--surface-2);
+  color: var(--text); font: inherit; font-size: 13px; font-weight: 500;
+  padding: 8px 14px; border-radius: 10px; cursor: pointer;
+}
+.settings-action-btn:hover { background: var(--accent-soft); border-color: var(--accent); }
+.settings-action-btn:disabled, .settings-action-btn.is-busy { opacity: 0.55; pointer-events: none; }
+.settings-text {
+  width: min(220px, 46vw); background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: 10px; color: var(--text); font: inherit; font-size: 14px; padding: 8px 12px; outline: none;
+}
+.settings-text:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.settings-value { color: var(--muted); font-size: 14px; flex-shrink: 0; }
+.settings-value.muted { opacity: 0.85; }

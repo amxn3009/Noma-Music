@@ -1,8 +1,17 @@
 import { Bfstm } from './bfstm.js';
 import { Kawarp } from 'https://cdn.jsdelivr.net/npm/@kawarp/core@1.3.1/+esm';
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+
+const SUPABASE_URL = "https://wzllacffejidrxyaebhc.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_m-5kLd5u8UOezLAMxanf4g_-zwRZMYO"; // from Project Settings → API
+
+const supabase =
+  SUPABASE_URL && SUPABASE_ANON_KEY && !SUPABASE_ANON_KEY.includes("PASTE_")
+    ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+    : null;
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = "27.10.26, Fixed more issues and added some more QOL + fix delete bugs";
+const APP_VERSION = "27.10.26, added sync + profiles";
 
 let LIBRARY = [];
 
@@ -102,7 +111,375 @@ function saveUserLibrary() {
   try {
     localStorage.setItem(LIBRARY_KEY, JSON.stringify(userLib));
   } catch (_) {}
-  // Future: if (account) syncLibrary(userLib)
+  if (typeof scheduleCloudSync === "function") scheduleCloudSync();
+}
+
+/* ═══════════════ Supabase auth + cloud sync ═══════════════ */
+const PROFILE_KEY = "noma-profile-v1";
+const SYNC_META_KEY = "noma-sync-meta-v1";
+
+const DEFAULT_PROFILE = { displayName: "" };
+
+function loadProfile() {
+  try {
+    return { ...DEFAULT_PROFILE, ...(JSON.parse(localStorage.getItem(PROFILE_KEY) || "{}") || {}) };
+  } catch {
+    return { ...DEFAULT_PROFILE };
+  }
+}
+function saveProfile(patch) {
+  const next = { ...loadProfile(), ...patch };
+  try {
+    localStorage.setItem(PROFILE_KEY, JSON.stringify(next));
+  } catch {}
+  return next;
+}
+
+function loadSyncMeta() {
+  try {
+    return JSON.parse(localStorage.getItem(SYNC_META_KEY) || "{}") || {};
+  } catch {
+    return {};
+  }
+}
+function saveSyncMeta(patch) {
+  const next = { ...loadSyncMeta(), ...patch };
+  try {
+    localStorage.setItem(SYNC_META_KEY, JSON.stringify(next));
+  } catch {}
+  return next;
+}
+
+function getDeviceId() {
+  let id = loadSyncMeta().deviceId;
+  if (!id) {
+    id = `dev_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+    saveSyncMeta({ deviceId: id });
+  }
+  return id;
+}
+
+/** Settings blob for cloud — never includes volume */
+function settingsForSync() {
+  const s = { ...(typeof settings !== "undefined" ? settings : {}) };
+  delete s.volume;
+  return s;
+}
+
+/** Apply remote settings but keep local volume */
+function applySyncedSettings(remoteSettings) {
+  if (!remoteSettings || typeof remoteSettings !== "object") return;
+  const localVol =
+    typeof settings !== "undefined" && typeof settings.volume === "number"
+      ? settings.volume
+      : undefined;
+  Object.assign(settings, remoteSettings);
+  if (localVol !== undefined) settings.volume = localVol;
+  if (typeof saveSettings === "function") saveSettings();
+  else {
+    try {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    } catch {}
+  }
+  if (typeof syncSettingsForm === "function") syncSettingsForm();
+}
+
+function applySyncedLibrary(remoteLib) {
+  if (!remoteLib || !Array.isArray(remoteLib.playlists)) return;
+  userLib.version = remoteLib.version || 1;
+  userLib.playlists = remoteLib.playlists;
+  userLib.libraryAlbums = Array.isArray(remoteLib.libraryAlbums)
+    ? remoteLib.libraryAlbums
+    : [];
+  if (!userLib.playlists.some((p) => p.id === FAVORITES_ID)) {
+    userLib.playlists.unshift({ ...DEFAULT_LIBRARY.playlists[0] });
+  }
+  try {
+    localStorage.setItem(LIBRARY_KEY, JSON.stringify(userLib));
+  } catch {}
+  if (typeof renderLibrary === "function") renderLibrary({ animate: false });
+}
+
+function applySyncedProfile(remoteProfile) {
+  if (!remoteProfile || typeof remoteProfile !== "object") return;
+  saveProfile(remoteProfile);
+  const input = $("#profile-display-name");
+  if (input && remoteProfile.displayName != null) {
+    input.value = remoteProfile.displayName;
+  }
+  if (typeof updateProfileAvatar === "function") {
+    updateProfileAvatar(remoteProfile.displayName || "");
+  }
+}
+
+function formatSyncTime(ts) {
+  if (!ts) return "—";
+  const d = typeof ts === "number" ? new Date(ts) : new Date(ts);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleString("de-DE", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function setProfileSyncUI({ status, hint, last } = {}) {
+  const st = $("#profile-sync-status");
+  const hi = $("#profile-sync-hint");
+  const la = $("#profile-sync-last");
+  if (st && status != null) st.textContent = status;
+  if (hi && hint != null) hi.textContent = hint;
+  if (la && last != null) la.textContent = last;
+}
+
+async function getAuthUser() {
+  if (!supabase) return null;
+  const { data } = await supabase.auth.getUser();
+  return data?.user || null;
+}
+
+function updateAuthPanels(user) {
+  const guest = $("#profile-auth-guest");
+  const authed = $("#profile-auth-user");
+  if (!guest || !authed) return;
+  if (user) {
+    guest.classList.add("hidden");
+    authed.classList.remove("hidden");
+    const em = $("#profile-user-email");
+    if (em) em.textContent = user.email || user.id;
+  } else {
+    guest.classList.remove("hidden");
+    authed.classList.add("hidden");
+    setProfileSyncUI({
+      status: "Lokal",
+      hint: "Melde dich an, um Bibliothek & Einstellungen zu syncen",
+      last: "—",
+    });
+  }
+}
+
+/** Push local → cloud */
+async function pushCloudSync() {
+  if (!supabase) throw new Error("Supabase nicht konfiguriert");
+  const user = await getAuthUser();
+  if (!user) throw new Error("Nicht angemeldet");
+
+  const row = {
+    user_id: user.id,
+    library: {
+      version: userLib.version || 1,
+      playlists: userLib.playlists,
+      libraryAlbums: userLib.libraryAlbums || [],
+    },
+    settings: settingsForSync(),
+    profile: loadProfile(),
+    device_id: getDeviceId(),
+    updated_at: new Date().toISOString(),
+  };
+
+  const { error } = await supabase.from("user_sync").upsert(row, {
+    onConflict: "user_id",
+  });
+  if (error) throw error;
+
+  saveSyncMeta({ lastPushAt: Date.now(), lastCloudUpdatedAt: row.updated_at });
+  return row.updated_at;
+}
+
+/** Pull cloud → local (keeps volume) */
+async function pullCloudSync() {
+  if (!supabase) throw new Error("Supabase nicht konfiguriert");
+  const user = await getAuthUser();
+  if (!user) throw new Error("Nicht angemeldet");
+
+  const { data, error } = await supabase
+    .from("user_sync")
+    .select("library, settings, profile, updated_at, device_id")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) return null;
+
+  applySyncedLibrary(data.library);
+  applySyncedSettings(data.settings);
+  applySyncedProfile(data.profile);
+
+  saveSyncMeta({
+    lastPullAt: Date.now(),
+    lastCloudUpdatedAt: data.updated_at,
+  });
+  return data;
+}
+
+/**
+ * Smart sync:
+ * - no cloud row → push
+ * - cloud newer than last local pull/push → pull
+ * - else → push local
+ */
+async function syncNow() {
+  if (!supabase) {
+    showToast?.("Supabase nicht konfiguriert");
+    return;
+  }
+  const user = await getAuthUser();
+  if (!user) {
+    showToast?.("Bitte zuerst anmelden");
+    return;
+  }
+
+  setProfileSyncUI({ status: "Sync…", hint: "Bitte warten" });
+  const btn = $("#profile-sync-now");
+  btn?.classList.add("is-busy");
+  btn && (btn.disabled = true);
+
+  try {
+    const { data, error } = await supabase
+      .from("user_sync")
+      .select("updated_at")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (error) throw error;
+
+    const meta = loadSyncMeta();
+    const cloudUpdated = data?.updated_at ? new Date(data.updated_at).getTime() : 0;
+    const localMark = Math.max(meta.lastPushAt || 0, meta.lastPullAt || 0, meta.localDirtyAt || 0);
+
+    if (!data) {
+      await pushCloudSync();
+      setProfileSyncUI({
+        status: "Hochgeladen",
+        hint: "Erster Cloud-Stand angelegt",
+        last: formatSyncTime(Date.now()),
+      });
+      showToast?.("Cloud-Sync: hochgeladen");
+    } else if (cloudUpdated > localMark + 500) {
+      await pullCloudSync();
+      setProfileSyncUI({
+        status: "Aktualisiert",
+        hint: "Cloud → Gerät",
+        last: formatSyncTime(Date.now()),
+      });
+      showToast?.("Cloud-Sync: heruntergeladen");
+    } else {
+      await pushCloudSync();
+      setProfileSyncUI({
+        status: "Gespeichert",
+        hint: "Gerät → Cloud",
+        last: formatSyncTime(Date.now()),
+      });
+      showToast?.("Cloud-Sync: gespeichert");
+    }
+    saveSyncMeta({ localDirtyAt: 0 });
+  } catch (err) {
+    console.warn("[Noma sync]", err);
+    setProfileSyncUI({
+      status: "Fehler",
+      hint: err?.message || "Sync fehlgeschlagen",
+    });
+    showToast?.("Sync fehlgeschlagen");
+  } finally {
+    btn?.classList.remove("is-busy");
+    if (btn) btn.disabled = false;
+  }
+}
+
+let _syncDebounce = null;
+function scheduleCloudSync() {
+  if (!supabase) return;
+  saveSyncMeta({ localDirtyAt: Date.now() });
+  clearTimeout(_syncDebounce);
+  _syncDebounce = setTimeout(async () => {
+    const user = await getAuthUser();
+    if (!user) return;
+    try {
+      await pushCloudSync();
+      setProfileSyncUI({
+        status: "Gespeichert",
+        hint: "Automatisch synchronisiert",
+        last: formatSyncTime(Date.now()),
+      });
+    } catch (e) {
+      console.warn("[Noma auto-sync]", e);
+    }
+  }, 2000);
+}
+
+async function initCloudAuth() {
+  if (!supabase) return;
+
+  const { data } = await supabase.auth.getSession();
+  updateAuthPanels(data?.session?.user || null);
+
+  // After login: pull if cloud ahead, else push
+  if (data?.session?.user) {
+    try {
+      await syncNow();
+    } catch {}
+  }
+
+  supabase.auth.onAuthStateChange(async (event, session) => {
+    updateAuthPanels(session?.user || null);
+    if (event === "SIGNED_IN" && session?.user) {
+      try {
+        await syncNow();
+      } catch {}
+    }
+  });
+}
+
+function bindProfileAuth() {
+  $("#profile-signin-btn")?.addEventListener("click", async () => {
+    const email = ($("#profile-email")?.value || "").trim();
+    const password = $("#profile-password")?.value || "";
+    const errEl = $("#profile-auth-error");
+    if (errEl) errEl.textContent = "";
+    if (!email || password.length < 6) {
+      if (errEl) errEl.textContent = "E-Mail und Passwort (min. 6) nötig.";
+      return;
+    }
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      if (errEl) errEl.textContent = error.message;
+      return;
+    }
+    showToast?.("Angemeldet");
+    if ($("#profile-password")) $("#profile-password").value = "";
+  });
+
+  $("#profile-signup-btn")?.addEventListener("click", async () => {
+    const email = ($("#profile-email")?.value || "").trim();
+    const password = $("#profile-password")?.value || "";
+    const errEl = $("#profile-auth-error");
+    if (errEl) errEl.textContent = "";
+    if (!email || password.length < 6) {
+      if (errEl) errEl.textContent = "E-Mail und Passwort (min. 6) nötig.";
+      return;
+    }
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if (error) {
+      if (errEl) errEl.textContent = error.message;
+      return;
+    }
+    // If confirm-email is ON, session may be null
+    if (!data.session) {
+      if (errEl) errEl.textContent = "Konto erstellt – bitte E-Mail bestätigen, dann anmelden.";
+      showToast?.("Bitte E-Mail bestätigen");
+      return;
+    }
+    showToast?.("Konto erstellt");
+    if ($("#profile-password")) $("#profile-password").value = "";
+  });
+
+  $("#profile-signout-btn")?.addEventListener("click", async () => {
+    await supabase.auth.signOut();
+    showToast?.("Abgemeldet");
+    setProfileSyncUI({ status: "Lokal", hint: "Nicht angemeldet", last: "—" });
+  });
+
+  $("#profile-sync-now")?.addEventListener("click", () => syncNow());
 }
 
 function uid() {
@@ -676,6 +1053,7 @@ function loadSettings() {
 
 function saveSettings() {
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+  if (typeof scheduleCloudSync === "function") scheduleCloudSync();
 }
 
 function withGamesNavLock(fn, ms = 420) {
@@ -2570,6 +2948,11 @@ function bindHotkeys() {
           handled = true;
           break;
         }
+        if (!$("#profile-view")?.classList.contains("hidden")) {
+          closeProfile();
+          handled = true;
+          break;
+        }
         if (plEdit.active) {
           exitPlaylistEditMode(true);
           handled = true;
@@ -2663,6 +3046,9 @@ function toggleFullscreen() {
   if (open) {
     if (!$("#settings-view")?.classList.contains("hidden")) {
       closeSettings();
+    }
+    if (!$("#profile-view")?.classList.contains("hidden")) {
+      closeProfile();
     }
 
     const item = state.queue[state.queueIndex];
@@ -2931,6 +3317,8 @@ async function init() {
   bindPressMinHold();
   loadSettings();
   loadUserLibrary(); // BEFORE renderLibrary
+  bindProfileAuth();
+  initCloudAuth();
   bindLibraryUI();
   bindAddToPlaylistUI()
   renderLibrary({ animate: false });
@@ -5547,11 +5935,7 @@ const sortBtn = $("#lib-sort-btn");
     closeLibSortPanel();
   });
 
-  $("#btn-profile")?.addEventListener("click", () => {
-    if (typeof showToast === "function") {
-      showToast("Profil / Login kommt später");
-    }
-  });
+  $("#btn-profile")?.addEventListener("click", openProfile);
 
   document.querySelectorAll('.tab[data-tab="playlists"]').forEach((tab) => {
     tab.addEventListener("click", () => {
@@ -10611,9 +10995,149 @@ window.addEventListener(
   { passive: true }
 );
 
+function updateProfileAvatar(name) {
+  const el = $("#profile-avatar-initials");
+  if (!el) return;
+  const t = (name || "").trim();
+  if (!t) {
+    el.textContent = "?";
+    return;
+  }
+  const parts = t.split(/\s+/).filter(Boolean);
+  const initials =
+    parts.length >= 2
+      ? (parts[0][0] + parts[1][0]).toUpperCase()
+      : t.slice(0, 2).toUpperCase();
+  el.textContent = initials;
+}
+
+function syncProfileForm() {
+  const p = loadProfile();
+  const input = $("#profile-display-name");
+  if (input) input.value = p.displayName || "";
+  updateProfileAvatar(p.displayName || "");
+
+  // stats
+  const games =
+    typeof userLib !== "undefined" && Array.isArray(userLib?.albums)
+      ? userLib.albums.length
+      : 0;
+  const playlists =
+    typeof userLib !== "undefined" && Array.isArray(userLib?.playlists)
+      ? userLib.playlists.length
+      : 0;
+  const fav =
+    typeof getPlaylist === "function"
+      ? getPlaylist(FAVORITES_ID)?.tracks?.length || 0
+      : 0;
+  const set = (id, n) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = String(n);
+  };
+  set("profile-stat-games", games);
+  set("profile-stat-playlists", playlists);
+  set("profile-stat-favs", fav);
+
+    getAuthUser().then((u) => {
+    updateAuthPanels(u);
+    const meta = loadSyncMeta();
+    if (u) {
+      setProfileSyncUI({
+        status: "Bereit",
+        hint: "Bibliothek & Einstellungen (ohne Lautstärke)",
+        last: formatSyncTime(meta.lastPushAt || meta.lastPullAt),
+      });
+    }
+  });
+}
+
+let profileReturn = null;
+let profileCloseTimer = null;
+
+function openProfile() {
+  // only one panel
+  if (!$("#settings-view")?.classList.contains("hidden")) {
+    // close settings instantly (no return restore) then open profile
+    const sv = $("#settings-view");
+    clearTimeout(settingsCloseTimer);
+    sv?.classList.add("hidden");
+    sv?.classList.remove("is-closing");
+    document.body.classList.remove("settings-open");
+    settingsReturn = null;
+  }
+
+  if (typeof cancelEditIfNeeded === "function") cancelEditIfNeeded();
+
+  if (!gameDetail.classList.contains("hidden") && state.currentPlaylist) {
+    profileReturn = { type: "playlist", playlistId: state.currentPlaylist.id };
+  } else if (!gameDetail.classList.contains("hidden") && state.currentGame) {
+    profileReturn = { type: "game", gameId: state.currentGame.id };
+  } else if ($("#tab-playlists")?.classList.contains("active")) {
+    profileReturn = { type: "playlists" };
+  } else {
+    profileReturn = { type: "games" };
+  }
+
+  document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
+  gameDetail.classList.add("hidden");
+  gameDetail.classList.remove("active");
+  clearTimeout(profileCloseTimer);
+  $("#profile-view")?.classList.remove("is-closing");
+  $("#profile-view")?.classList.remove("hidden");
+  document.body.classList.add("profile-open");
+
+  if (typeof bindScrollFadeY === "function") {
+    bindScrollFadeY(document.getElementById("profile-scroll"));
+  }
+  syncProfileForm();
+}
+
+function closeProfile() {
+  const view = $("#profile-view");
+  if (!view || view.classList.contains("hidden") || view.classList.contains("is-closing")) return;
+
+  view.classList.add("is-closing");
+  clearTimeout(profileCloseTimer);
+  profileCloseTimer = setTimeout(() => {
+    view.classList.add("hidden");
+    view.classList.remove("is-closing");
+    document.body.classList.remove("profile-open");
+  }, 290);
+
+  const ret = profileReturn;
+  profileReturn = null;
+
+  if (ret?.type === "playlist" && ret.playlistId) {
+    openPlaylistDetail(ret.playlistId);
+  } else if (ret?.type === "game" && ret.gameId) {
+    openGame(ret.gameId);
+  } else if (ret?.type === "playlists") {
+    document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
+    document.querySelector('.tab[data-tab="playlists"]')?.classList.add("active");
+    document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
+    $("#tab-playlists")?.classList.add("active");
+    if (typeof renderLibrary === "function") renderLibrary({ animate: false });
+  } else {
+    document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
+    document.querySelector('.tab[data-tab="games"]')?.classList.add("active");
+    document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
+    $("#tab-games")?.classList.add("active");
+    if (typeof renderGames === "function") renderGames({ animate: false });
+  }
+}
+
 let settingsReturn = null; // { type: "games"|"playlists"|"game"|"playlist", gameId?, playlistId? }
 
 function openSettings() {
+    // only one panel
+  if (!$("#profile-view")?.classList.contains("hidden")) {
+    const pv = $("#profile-view");
+    clearTimeout(profileCloseTimer);
+    pv?.classList.add("hidden");
+    pv?.classList.remove("is-closing");
+    document.body.classList.remove("profile-open");
+    profileReturn = null;
+  }
   // Discard playlist edit so multi-select chrome is gone when we come back
   if (typeof cancelEditIfNeeded === "function") cancelEditIfNeeded();
 
@@ -10787,6 +11311,14 @@ function closeAllCustomSelects(except) {
 function bindSettings() {
   $("#btn-settings")?.addEventListener("click", openSettings);
   $("#settings-back")?.addEventListener("click", closeSettings);
+  $("#profile-back")?.addEventListener("click", closeProfile);
+
+  // persist name while typing
+  $("#profile-display-name")?.addEventListener("input", () => {
+    const name = ($("#profile-display-name")?.value || "").trim();
+    saveProfile({ displayName: name });
+    updateProfileAvatar(name);
+  });
 
   $("#setting-loop-times")?.addEventListener("change", (e) => {
     settings.loopTimes = clampInt(e.target.value, 1, 99, DEFAULT_SETTINGS.loopTimes);

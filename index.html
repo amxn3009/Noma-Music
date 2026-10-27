@@ -561,6 +561,121 @@
     </div>
 </section>
 
+<!-- Profile (same shell as settings) -->
+<section id="profile-view" class="settings-view hidden" aria-label="Profil">
+  <header class="settings-top">
+    <button id="profile-back" class="back-btn" type="button">
+      <img src="Assets/Common/Back1.png" alt="" class="back-icon">
+      Zurück
+    </button>
+    <h1 class="settings-title">Profil</h1>
+  </header>
+
+  <div class="settings-scroll" id="profile-scroll">
+    <div class="settings-inner">
+
+      <div class="settings-section profile-hero">
+        <div class="profile-avatar-wrap">
+          <div id="profile-avatar" class="profile-avatar" aria-hidden="true">
+            <span id="profile-avatar-initials">?</span>
+          </div>
+        </div>
+        <label class="settings-row" for="profile-display-name">
+          <div class="settings-row-text">
+            <span class="settings-label">Anzeigename</span>
+            <span class="settings-hint">Wird lokal auf diesem Gerät gespeichert</span>
+          </div>
+          <input
+            id="profile-display-name"
+            class="settings-text"
+            type="text"
+            maxlength="40"
+            placeholder="Dein Name"
+            autocomplete="nickname"
+            spellcheck="false"
+          >
+        </label>
+      </div>
+
+      <div class="settings-section">
+        <h2 class="settings-section-title">Übersicht</h2>
+        <div class="settings-row">
+          <div class="settings-row-text">
+            <span class="settings-label">Spiele in der Bibliothek</span>
+          </div>
+          <span id="profile-stat-games" class="settings-value">0</span>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row-text">
+            <span class="settings-label">Playlists</span>
+          </div>
+          <span id="profile-stat-playlists" class="settings-value">0</span>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row-text">
+            <span class="settings-label">Lieblingssongs</span>
+          </div>
+          <span id="profile-stat-favs" class="settings-value">0</span>
+        </div>
+      </div>
+
+            <div class="settings-section">
+        <h2 class="settings-section-title">Konto & Sync</h2>
+
+        <!-- Logged out -->
+        <div id="profile-auth-guest">
+          <label class="settings-row" for="profile-email">
+            <div class="settings-row-text">
+              <span class="settings-label">E-Mail</span>
+            </div>
+            <input id="profile-email" class="settings-text" type="email" autocomplete="email" spellcheck="false" placeholder="name@mail.com">
+          </label>
+          <label class="settings-row" for="profile-password">
+            <div class="settings-row-text">
+              <span class="settings-label">Passwort</span>
+              <span class="settings-hint">Min. 6 Zeichen</span>
+            </div>
+            <input id="profile-password" class="settings-text" type="password" autocomplete="current-password" placeholder="••••••••">
+          </label>
+          <div class="settings-row profile-sync-actions">
+            <button type="button" id="profile-signin-btn" class="settings-action-btn">Anmelden</button>
+            <button type="button" id="profile-signup-btn" class="settings-action-btn">Registrieren</button>
+          </div>
+          <p id="profile-auth-error" class="settings-hint" style="padding:0 4px 8px;color:#ff8a8a"></p>
+        </div>
+
+        <!-- Logged in -->
+        <div id="profile-auth-user" class="hidden">
+          <div class="settings-row">
+            <div class="settings-row-text">
+              <span class="settings-label">Angemeldet als</span>
+            </div>
+            <span id="profile-user-email" class="settings-value">—</span>
+          </div>
+          <div class="settings-row">
+            <div class="settings-row-text">
+              <span class="settings-label">Sync-Status</span>
+              <span class="settings-hint" id="profile-sync-hint">Cloud aktiv</span>
+            </div>
+            <span id="profile-sync-status" class="settings-value muted">—</span>
+          </div>
+          <div class="settings-row">
+            <div class="settings-row-text">
+              <span class="settings-label">Zuletzt synchronisiert</span>
+            </div>
+            <span id="profile-sync-last" class="settings-value muted">—</span>
+          </div>
+          <div class="settings-row profile-sync-actions">
+            <button type="button" id="profile-sync-now" class="settings-action-btn">Jetzt synchronisieren</button>
+            <button type="button" id="profile-signout-btn" class="settings-action-btn">Abmelden</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
   <!-- Queue panel -->
 <aside id="queue-panel" class="queue-panel hidden">
   <div class="queue-header">
