@@ -2,7 +2,7 @@ import { Bfstm } from './bfstm.js';
 import { Kawarp } from 'https://cdn.jsdelivr.net/npm/@kawarp/core@1.3.1/+esm';
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = "27.10.26, Fixed more issues and added some more QOL";
+const APP_VERSION = "27.10.26, Fixed more issues and added some more QOL + fix delete bugs";
 
 let LIBRARY = [];
 
@@ -270,6 +270,8 @@ function setTrackInPlaylist(plId, gameId, trackId, on) {
   // If this is the playlist currently driving playback, mirror into queue
   if (on && state.playingPlaylistId === plId) {
     insertIntoPlayingPlaylistQueue(plId, gameId, trackId);
+  } else if (!on && state.playingPlaylistId === plId) {
+    resyncQueueAfterPlaylistChange(plId);
   }
   return true;
 }
@@ -324,6 +326,53 @@ function setPlayingPlaylist(plId) {
 function clearPlayingPlaylist() {
   state.playingPlaylistId = null;
   markPlayingLibraryCards();
+}
+
+/** After playlist track list changes: keep live queue in sync / skip if current was removed. */
+function resyncQueueAfterPlaylistChange(plId) {
+  if (state.playingPlaylistId !== plId) return;
+  const pl = getPlaylist(plId);
+  if (!pl || !(pl.tracks || []).length) {
+    resetPlayerToIdle();
+    return;
+  }
+  const items = resolvePlaylistTracks(pl).map((it) => ({
+    gameId: it.gameId,
+    track: it.track,
+    insert: null,
+  }));
+  if (!items.length) {
+    resetPlayerToIdle();
+    return;
+  }
+
+  const cur = state.queue[state.queueIndex];
+  const curId = cur?.track?.id;
+  const curGame = cur?.gameId;
+  const stillThere = items.findIndex(
+    (q) => q.track?.id === curId && q.gameId === curGame
+  );
+
+  state.queue = items;
+  unshuffledQueue = null;
+
+  if (stillThere >= 0) {
+    // Same song still in playlist — only refresh chrome
+    state.queueIndex = stillThere;
+    renderQueue();
+    updatePlayerUI();
+    markPlayingTrack?.(curId);
+    return;
+  }
+
+  // Current track was removed → play the track now at this slot (or clamp)
+  state.queueIndex = Math.min(
+    Math.max(0, state.queueIndex),
+    state.queue.length - 1
+  );
+  playCurrent();
+  renderQueue();
+  updatePlayerUI();
 }
 
 function markPlayingLibraryCards() {
@@ -1165,8 +1214,8 @@ function resetPlayerToIdle() {
   $("#now-game").textContent = "Keinen Song ausgewählt";
 
   $("#fs-cover").src = PLACEHOLDER;
-  const _fsT = $("#fs-title"); 
-  if (_fsT) _fsT.textContent = nowTitle;
+  const _fsT = $("#fs-title");
+  if (_fsT) _fsT.textContent = "Nichts läuft";
   $("#fs-game").textContent = "Keinen Song ausgewählt";
 
   lastBgUrl = ""; // force clear old album
@@ -4314,9 +4363,16 @@ function openDeletePlaylistConfirm(plId) {
   };
 
   const onOk = () => {
+    const wasPlayingPl = state.playingPlaylistId === plId;
     userLib.playlists = userLib.playlists.filter((p) => p.id !== plId);
     saveUserLibrary();
     cleanup();
+
+    // Stop audio + reset play button, progress, kawarp, media session
+    if (wasPlayingPl) {
+      resetPlayerToIdle();
+    }
+
     if (state.currentPlaylist?.id === plId) {
       state.currentPlaylist = null;
       gameDetail.classList.add("hidden");
@@ -4938,7 +4994,10 @@ function renderPlaylistEditUI() {
       e.stopPropagation();
       const idx = +btn.dataset.index;
       pl.tracks.splice(idx, 1);
+      pl.updatedAt = Date.now();
+      saveUserLibrary();
       renderPlaylistEditUI();
+      resyncQueueAfterPlaylistChange(pl.id);
     });
   });
 
@@ -5062,9 +5121,12 @@ function ensureMultiSelectChrome() {
       pl.tracks = (pl.tracks || []).filter(
         (ref) => !plEdit.selected.has(`${ref.gameId}::${ref.trackId}`)
       );
+      pl.updatedAt = Date.now();
+      saveUserLibrary();
       plEdit.selected = new Set();
       renderPlaylistEditUI();
       syncMultiTrash();
+      resyncQueueAfterPlaylistChange(pl.id);
     });
 
     const bulk = document.getElementById("pl-multi-loops-input");
