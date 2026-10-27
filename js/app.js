@@ -2,7 +2,7 @@ import { Bfstm } from './bfstm.js';
 import { Kawarp } from 'https://cdn.jsdelivr.net/npm/@kawarp/core@1.3.1/+esm';
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = "26.10.26, Fixed many many issues and added X Loop button for playlists";
+const APP_VERSION = "27.10.26, Fixed more issues and added some more QOL";
 
 let LIBRARY = [];
 
@@ -191,7 +191,15 @@ function playlistCoverHtml(pl, className = "pl-card-cover") {
   return `<img class="${className}" src="${escapeHtml(src || PLACEHOLDER)}" alt="" draggable="false">`;
 }
 
+const MAX_PLAYLISTS = 100;
+const MAX_TRACKS_PER_PLAYLIST = 1000;
+
 function createPlaylist(name = "Neue Playlist") {
+  const count = (userLib.playlists || []).length;
+  if (count >= MAX_PLAYLISTS) {
+    showToast?.(`Maximal ${MAX_PLAYLISTS} Playlists`);
+    return null;
+  }
   const now = Date.now();
   const pl = {
     id: uid(),
@@ -244,11 +252,17 @@ function isInFavorites(gameId, trackId) {
 
 function setTrackInPlaylist(plId, gameId, trackId, on) {
   const pl = getPlaylist(plId);
-  if (!pl) return;
+  if (!pl) return false;
   const idx = (pl.tracks || []).findIndex(
     (t) => t.gameId === gameId && t.trackId === trackId
   );
-  if (on && idx < 0) pl.tracks.push({ gameId, trackId });
+  if (on && idx < 0) {
+    if ((pl.tracks || []).length >= MAX_TRACKS_PER_PLAYLIST) {
+      showToast?.(`Maximal ${MAX_TRACKS_PER_PLAYLIST} Titel pro Playlist`);
+      return false;
+    }
+    pl.tracks.push({ gameId, trackId });
+  }
   if (!on && idx >= 0) pl.tracks.splice(idx, 1);
   pl.updatedAt = Date.now();
   saveUserLibrary();
@@ -257,6 +271,7 @@ function setTrackInPlaylist(plId, gameId, trackId, on) {
   if (on && state.playingPlaylistId === plId) {
     insertIntoPlayingPlaylistQueue(plId, gameId, trackId);
   }
+  return true;
 }
 
 /** Insert a newly-added playlist track into the live queue at playlist order. */
@@ -5386,6 +5401,7 @@ function closeAllPopovers(except) {
 function bindLibraryUI() {
   $("#lib-create-btn")?.addEventListener("click", () => {
     const pl = createPlaylist();
+    if (!pl) return;
     renderLibrary({ animate: true });
     if (typeof showToast === "function") showToast(`„${pl.name}“ erstellt`);
   });
@@ -5572,6 +5588,7 @@ function bindAddToPlaylistUI() {
   $("#add-to-pl-search")?.addEventListener("input", renderAddToPlList);
   $("#add-to-pl-create")?.addEventListener("click", () => {
     const pl = createPlaylist();
+    if (!pl) return;
     addToPlSelected.add(pl.id);
     renderAddToPlList();
     renderLibrary();
@@ -7083,9 +7100,9 @@ document.querySelectorAll(".tab").forEach((tab) => {
       const input = $("#global-search-input");
       if (input) {
         input.value = q;
+        input.blur(); // stay on search results, do not open keyboard
         $("#global-search-clear")?.classList.toggle("hidden", !q.trim());
         runGlobalSearch(q);
-        requestAnimationFrame(() => input.focus());
       }
       return;
     }
