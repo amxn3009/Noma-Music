@@ -11,7 +11,7 @@ const supabase =
     : null;
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = "29.10.26, fix buttons fully, more changes.";
+const APP_VERSION = "29.10.26, fix buttons fully, fixed toast for editting playlists, fixed playlist exporting loops.";
 
 let LIBRARY = [];
 
@@ -661,10 +661,19 @@ function exportPlaylistToFile(pl) {
       name: pl.name,
       coverMode: pl.coverMode || "auto",
       coverSrc: pl.coverSrc ?? null,
-      tracks: (pl.tracks || []).map((t) => ({
-        gameId: t.gameId,
-        trackId: t.trackId,
-      })),
+      useTrackLoops: !!pl.useTrackLoops,
+      tracks: (pl.tracks || []).map((t) => {
+        const entry = {
+          gameId: t.gameId,
+          trackId: t.trackId,
+        };
+        // Preserve ×-loop amounts (0 is valid = play once)
+        if (t.loops !== undefined && t.loops !== null && t.loops !== "") {
+          const n = Math.min(99, Math.max(0, Math.floor(Number(t.loops))));
+          if (Number.isFinite(n)) entry.loops = n;
+        }
+        return entry;
+      }),
     },
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], {
@@ -711,6 +720,11 @@ async function importPlaylistFromFile(file) {
   if (src.coverMode) pl.coverMode = src.coverMode;
   if (src.coverSrc != null) pl.coverSrc = src.coverSrc;
 
+  // ×-loop mode for the whole playlist
+  if (src.useTrackLoops != null) {
+    pl.useTrackLoops = !!src.useTrackLoops;
+  }
+
   let kept = 0;
   let skipped = 0;
   for (const t of src.tracks) {
@@ -726,7 +740,13 @@ async function importPlaylistFromFile(file) {
       skipped++;
       continue;
     }
-    pl.tracks.push({ gameId, trackId });
+    const ref = { gameId, trackId };
+    // Restore per-track × loops (0 allowed)
+    if (t.loops !== undefined && t.loops !== null && t.loops !== "") {
+      const n = Math.min(99, Math.max(0, Math.floor(Number(t.loops))));
+      if (Number.isFinite(n)) ref.loops = n;
+    }
+    pl.tracks.push(ref);
     kept++;
   }
   pl.updatedAt = Date.now();
@@ -5305,7 +5325,6 @@ function bindPlaylistEditChrome() {
       e.preventDefault();
       e.stopPropagation();
       exitPlaylistEditMode(true);
-      showToast?.("Bearbeitung abgebrochen");
       return;
     }
     const saveBtn = e.target.closest("#pl-edit-save");
@@ -5318,11 +5337,6 @@ function bindPlaylistEditChrome() {
         saveUserLibrary();
       }
       exitPlaylistEditMode(false);
-      showToast?.({
-        title: pl?.name || "Playlist",
-        sub: "Änderungen gespeichert",
-        cover: pl ? playlistThumbUrl?.(pl) : undefined,
-      });
     }
   });
 }
@@ -5470,6 +5484,7 @@ function enterPlaylistEditMode() {
 }
 
 function exitPlaylistEditMode(discard) {
+  const wasActive = !!plEdit.active;
   const pl = state.currentPlaylist && getPlaylist(state.currentPlaylist.id);
   if (discard && pl && plEdit.snapshot) {
     pl.name = plEdit.snapshot.name;
@@ -5481,6 +5496,19 @@ function exitPlaylistEditMode(discard) {
   plEdit.active = false;
   plEdit.snapshot = null;
   plEdit.multi = false;
+
+  // Toast for every cancel / save exit (only if edit was actually open)
+  if (wasActive) {
+    if (discard) {
+      showToast?.("Bearbeitung abgebrochen");
+    } else {
+      showToast?.({
+        title: pl?.name || "Playlist",
+        sub: "Änderungen gespeichert",
+        cover: pl && typeof playlistThumbUrl === "function" ? playlistThumbUrl(pl) : undefined,
+      });
+    }
+  }
   document.body.classList.remove("pl-editing");
   document.querySelectorAll(".pl-cover-edit-hit").forEach((n) => n.remove());
   document.querySelectorAll(".pl-cover-hit-wrap").forEach((wrap) => {
@@ -8086,7 +8114,6 @@ document.querySelectorAll(".tab").forEach((tab) => {
       // In edit mode: back = cancel edit, stay on playlist
       if (plEdit?.active) {
         exitPlaylistEditMode(true);
-        showToast?.("Bearbeitung abgebrochen");
         return;
       }
       state.currentPlaylist = null;
