@@ -11343,9 +11343,16 @@ function bindPressMinHold(root = document) {
         minHold = pressMinMs(e);
         pointerId = e.pointerId;
         btn.classList.add("is-pressed");
-        try {
-          btn.setPointerCapture(e.pointerId);
-        } catch (_) {}
+        // No capture on toolbar chips — capture steals the click onto the view button under the panel on iPad
+        if (
+          !btn.matches(
+            ".gs-chip, .lib-filter-btn, [data-lib-sort], [data-lib-dir], [data-lib-filter]"
+          )
+        ) {
+          try {
+            btn.setPointerCapture(e.pointerId);
+          } catch (_) {}
+        }
       },
       { passive: true }
     );
