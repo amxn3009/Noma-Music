@@ -1196,10 +1196,25 @@ body.search-mode #global-search-results {
 
 .circle-btn.is-pressed,
 #shuffle-all-btn.is-pressed,
-#album-menu-btn.is-pressed {
+#album-menu-btn.is-pressed,
+#pl-edit-btn.is-pressed,
+#pl-edit-save.is-pressed,
+#pl-edit-cancel.is-pressed,
+#pl-multi-btn.is-pressed,
+#pl-clear-loops-btn.is-pressed,
+#pl-add-songs-chip.is-pressed,
+#pl-loops-btn.is-pressed,
+.settings-btn.is-pressed,
+.back-btn.is-pressed,
+.header-toggle-btn.is-pressed,
+.gs-tool-btn.is-pressed {
   transform: scale(0.92);
   background: rgba(255, 255, 255, 0.2);
   box-shadow: 0 0 16px rgba(255, 255, 255, 0.15);
+  transition:
+    transform 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+    background 0.18s ease,
+    box-shadow 0.18s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* FS back: disc only while pressed */
@@ -6105,17 +6120,21 @@ body.fs-open .noma-toast {
   display: none !important;
 }
 #album-lib-btn.is-in-lib {
-  background: rgba(124, 156, 255, 0.22);
-  color: var(--accent);
-  box-shadow: 0 0 16px rgba(124, 156, 255, 0.28);
+  background: rgba(124, 156, 255, 0.22) !important;
+  color: var(--accent) !important;
+  box-shadow: 0 0 16px rgba(124, 156, 255, 0.28) !important;
 }
-#album-lib-btn.is-in-lib:hover {
-  background: rgba(124, 156, 255, 0.32);
-  box-shadow: 0 0 20px rgba(124, 156, 255, 0.4);
+/* Desktop-only hover — avoids sticky “hover” on mobile delaying the glow */
+@media (hover: hover) and (pointer: fine) {
+  #album-lib-btn.is-in-lib:hover {
+    background: rgba(124, 156, 255, 0.32) !important;
+    box-shadow: 0 0 20px rgba(124, 156, 255, 0.4) !important;
+  }
 }
-#album-lib-btn.is-in-lib.is-pressed {
-  background: rgba(124, 156, 255, 0.4);
-  box-shadow: 0 0 18px rgba(124, 156, 255, 0.45);
+#album-lib-btn.is-in-lib.is-pressed,
+#album-lib-btn.is-in-lib:active {
+  background: rgba(124, 156, 255, 0.4) !important;
+  box-shadow: 0 0 18px rgba(124, 156, 255, 0.45) !important;
   transform: scale(0.92);
 }
 .gs-lib-btn {
@@ -6203,6 +6222,16 @@ body.fs-open .noma-toast {
 .track-fav-btn:active,
 .gs-fav-btn.is-pressed,
 .gs-fav-btn:active {
+  transform: scale(0.9);
+  box-shadow: 0 0 14px rgba(255, 255, 255, 0.2);
+}
+.track-fav-btn.is-fav.is-pressed,
+.track-fav-btn.is-fav:active,
+.gs-fav-btn.is-fav.is-pressed,
+.gs-fav-btn.is-fav:active {
+  background: #9eb4ff;
+  border-color: #9eb4ff;
+  box-shadow: 0 0 16px rgba(124, 156, 255, 0.5);
   transform: scale(0.9);
 }
 
@@ -6387,9 +6416,6 @@ body.fs-open .noma-toast {
   .lib-filter-btn.games-view-btn.active:hover {
     color: var(--text);
     background: var(--surface-2);
-  }
-  #album-lib-btn.is-in-lib:hover {
-    background: rgba(124, 156, 255, 0.22);
   }
 }
 
@@ -7036,12 +7062,19 @@ body.pl-editing .pl-cover-edit-hit:hover { background: rgba(0,0,0,0.55); }
   pointer-events: none;
 }
 .pl-loops-btn.is-active {
-  color: var(--accent);
-  background: var(--accent-soft);
+  color: var(--accent) !important;
+  background: rgba(124, 156, 255, 0.22) !important;
+  box-shadow: 0 0 16px rgba(124, 156, 255, 0.28) !important;
 }
 .pl-loops-btn.is-active .pl-loops-btn-badge {
   background: var(--accent);
   color: #0a0a0a;
+}
+.pl-loops-btn.is-active.is-pressed,
+.pl-loops-btn.is-active:active {
+  background: rgba(124, 156, 255, 0.4) !important;
+  box-shadow: 0 0 18px rgba(124, 156, 255, 0.45) !important;
+  transform: scale(0.92);
 }
 body:not(.pl-editing) #pl-loops-btn.hidden,
 #game-detail:not(.is-playlist-detail) #pl-loops-btn {

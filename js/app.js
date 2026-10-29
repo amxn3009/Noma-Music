@@ -10780,7 +10780,7 @@ function hideContextMenu() {
   contextMenuCloseTimer = setTimeout(() => {
     contextMenu.classList.add("hidden");
     contextMenu.classList.remove("is-closing");
-  }, 190);
+  }, 100);
 }
 
 function showContextMenu(x, y, payload, anchorEl = null) {
@@ -11220,7 +11220,7 @@ function bindContextMenu() {
 }
 
 const PRESS_MIN_MS_MOUSE = 120; // lower on mouse
-const PRESS_MIN_MS_TOUCH = 160; // higher on touchscreen
+const PRESS_MIN_MS_TOUCH = 150; // higher on touchscreen
 
 function pressMinMs(e) {
   // pointerType: "touch" | "pen" | "mouse"
@@ -11235,8 +11235,8 @@ function pressMinMs(e) {
 }
 
 function bindPressMinHold(root = document) {
-    const selector =
-    ".ctrl-btn, .play-btn, #btn-play, .primary-btn, .tab, .back-btn, .settings-btn, .circle-btn, .header-toggle-btn, .fs-back-btn, .confirm-btn, .game-card, .games-view-btn, .games-row-title, #play-all-btn, #shuffle-all-btn, #album-menu-btn, #settings-reset-btn, .gs-tool-btn, .gs-chip, .context-menu button, #loop-menu button, [data-loop-delta], .card-hover-play, .card-hover-menu, .pl-list-menu, .lib-create-chip, .lib-filter-btn, .pl-card, .pl-list-row";
+  const selector =
+  ".ctrl-btn, .play-btn, #btn-play, .primary-btn, .tab, .back-btn, .settings-btn, .circle-btn, .header-toggle-btn, .fs-back-btn, .confirm-btn, .game-card, .games-view-btn, .games-row-title, #play-all-btn, #shuffle-all-btn, #album-menu-btn, #album-lib-btn, #pl-loops-btn, #pl-edit-btn, #pl-edit-save, #pl-edit-cancel, #pl-add-songs-chip, #pl-multi-btn, #pl-multi-trash, #pl-clear-loops-btn, #settings-reset-btn, .gs-tool-btn, .gs-chip, .gs-fav-btn, .gs-lib-btn, .track-fav-btn, .context-menu button, #loop-menu button, [data-loop-delta], .card-hover-play, .card-hover-menu, .pl-list-menu, .lib-create-chip, .lib-filter-btn, .pl-card, .pl-list-row";
   root.querySelectorAll(selector).forEach((btn) => {
     if (btn.dataset.pressBound === "1") return;
     btn.dataset.pressBound = "1";
