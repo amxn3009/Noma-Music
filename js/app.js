@@ -11,7 +11,7 @@ const supabase =
     : null;
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = "29.10.26, added sync + Profiles and Stats, added export/import Playlists, fixed clear loops, fixed game count, added consistent eye, fixed Stat counts, css polishing";
+const APP_VERSION = "29.10.26, fix pc buttons.";
 
 let LIBRARY = [];
 
@@ -5352,6 +5352,12 @@ function enterPlaylistEditMode() {
     el.classList.remove("chip-enter");
     void el.offsetWidth;
     el.classList.add("chip-enter");
+    const done = () => {
+      el.classList.remove("chip-enter");
+      el.removeEventListener("animationend", done);
+    };
+    el.addEventListener("animationend", done);
+    setTimeout(done, 320);
   };
   popIn(document.getElementById("pl-edit-cancel"));
   popIn(document.getElementById("pl-edit-save"));
@@ -5409,7 +5415,6 @@ function enterPlaylistEditMode() {
   }
 
   ensureMultiSelectChrome();
-  popIn(document.getElementById("pl-multi-btn"));
   // multi wrap must be visible
   document.getElementById("pl-multi-wrap")?.classList.remove("hidden");
   const multiBtn = document.getElementById("pl-multi-btn");
@@ -6438,9 +6443,12 @@ const sortBtn = $("#lib-sort-btn");
 
   $("#lib-view-btn")?.addEventListener("click", (e) => {
     e.stopPropagation();
+    // Ignore only real ghost clicks right after a chip/sort-btn press — not intentional view taps
     if (performance.now() < ignoreViewClickUntil) return;
-    // Don't toggle view while sort panel is open
-    if (sortPanel && !sortPanel.classList.contains("hidden")) return;
+    // Sort menu open → close it, then still toggle the view
+    if (sortPanel && !sortPanel.classList.contains("hidden")) {
+      closeLibSortPanel();
+    }
     libPrefs.view = libPrefs.view === "grid" ? "list" : "grid";
     syncLibToolbar();
     renderLibrary({ animate: true });

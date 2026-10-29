@@ -1197,7 +1197,14 @@ body.search-mode #global-search-results {
   box-shadow: 0 0 22px rgba(255, 255, 255, 0.35);
 }
 
+/* Tabs: scale only — no glow */
 .topbar .tab.is-pressed,
+.topbar .tab:active {
+  transform: scale(0.92);
+  box-shadow: none;
+}
+
+/* Header icon buttons still get the soft press glow */
 .topbar .settings-btn.is-pressed,
 .topbar .sleep-btn.is-pressed,
 .topbar .ctrl-btn.is-pressed {
@@ -6749,7 +6756,14 @@ body.pl-editing .pl-cover-edit-hit:hover { background: rgba(0,0,0,0.55); }
 }
 #pl-edit-chrome.hidden { display: none !important; }
 #pl-edit-chrome .circle-btn,
-#pl-add-songs-chip.circle-btn {
+#pl-add-songs-chip.circle-btn,
+#pl-edit-btn.circle-btn,
+#pl-edit-save.circle-btn,
+#pl-edit-cancel.circle-btn,
+#pl-multi-btn.circle-btn,
+#pl-multi-trash.circle-btn,
+#pl-clear-loops-btn.circle-btn,
+#pl-loops-btn.circle-btn {
   width: 44px !important;
   height: 44px !important;
   min-width: 44px !important;
@@ -6762,7 +6776,34 @@ body.pl-editing .pl-cover-edit-hit:hover { background: rgba(0,0,0,0.55); }
   cursor: pointer;
   padding: 0;
   font-size: 0;
-  transition: opacity 0.25s var(--ease), transform 0.25s var(--ease), background 0.15s, box-shadow 0.2s;
+  transition:
+    opacity 0.25s var(--ease),
+    transform 0.12s ease,
+    background 0.15s,
+    box-shadow 0.2s;
+}
+/* Same hover language as normal circle-btn (edit mode + after exit) */
+@media (hover: hover) and (pointer: fine) {
+  #pl-edit-chrome .circle-btn:hover,
+  #pl-add-songs-chip.circle-btn:hover,
+  #pl-edit-btn.circle-btn:hover,
+  #pl-edit-save.circle-btn:hover,
+  #pl-edit-cancel.circle-btn:hover,
+  #pl-multi-btn.circle-btn:hover,
+  #pl-multi-trash.circle-btn:hover,
+  #pl-clear-loops-btn.circle-btn:hover,
+  #pl-loops-btn.circle-btn:hover,
+  body.pl-editing .circle-btn:hover,
+  body.pl-editing #pl-edit-chrome .circle-btn:hover {
+    background: rgba(255, 255, 255, 0.18);
+    box-shadow: 0 0 16px rgba(255, 255, 255, 0.15);
+    transform: scale(1.05);
+  }
+  #pl-edit-chrome .circle-btn:active,
+  #pl-add-songs-chip.circle-btn:active,
+  body.pl-editing .circle-btn:active {
+    transform: scale(0.92) !important;
+  }
 }
 .game-sticky-top.is-collapsed #pl-edit-chrome .circle-btn,
 .game-sticky-top.is-collapsed #pl-add-songs-chip.circle-btn {
@@ -6779,11 +6820,11 @@ body.pl-editing .pl-cover-edit-hit:hover { background: rgba(0,0,0,0.55); }
 #pl-edit-chrome .circle-btn.chip-enter {
   animation: chipIn 0.28s var(--ease) both;
 }
+/* Opacity only — do NOT leave a stuck transform (kills hover scale) */
 @keyframes chipIn {
-  from { opacity: 0; transform: scale(0.7); }
-  to   { opacity: 1; transform: scale(1); }
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
-
 /* Confirm / Fertig colors */
 .confirm-cancel {
   background: rgba(255, 80, 80, 0.18) !important;
@@ -7052,9 +7093,10 @@ body.pl-editing .pl-cover-edit-hit:hover { background: rgba(0,0,0,0.55); }
 .pl-ms-check.chip-enter {
   animation: chipIn 0.28s var(--ease) both;
 }
+/* Opacity only — do NOT leave a stuck transform (kills hover scale) */
 @keyframes chipIn {
-  from { opacity: 0; transform: scale(0.7); }
-  to   { opacity: 1; transform: scale(1); }
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 #pl-multi-trash.chip-out,
 #pl-multi-loops.chip-out {
