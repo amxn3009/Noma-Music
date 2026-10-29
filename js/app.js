@@ -11,7 +11,7 @@ const supabase =
     : null;
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = "29.10.26, fix pc buttons, fix mobile buttons attempt #1.";
+const APP_VERSION = "29.10.26, fix pc buttons, fix mobile buttons attempt #2.";
 
 let LIBRARY = [];
 
@@ -5388,6 +5388,14 @@ function enterPlaylistEditMode() {
     }
   });
 
+  if (typeof bindPressMinHold === "function") {
+    ["pl-edit-save", "pl-edit-cancel", "pl-multi-btn", "pl-clear-loops-btn", "pl-multi-trash"].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) delete el.dataset.pressBound;
+    });
+    bindPressMinHold(document.getElementById("pl-edit-chrome") || document);
+  }
+
   let coverEl = document.getElementById("game-cover");
   if (pl.id !== FAVORITES_ID && coverEl) {
     let wrap = coverEl.closest(".pl-cover-hit-wrap");
@@ -6035,6 +6043,24 @@ function ensureMultiSelectChrome() {
   document.getElementById("pl-clear-loops-btn")?.classList.remove("hidden");
   document.getElementById("pl-multi-btn")?.classList.toggle("is-active", !!plEdit.multi);
   syncMultiTrash();
+  // Re-bind press (created after first global bindPressMinHold)
+  if (typeof bindPressMinHold === "function") {
+    [
+      "pl-multi-btn",
+      "pl-multi-trash",
+      "pl-clear-loops-btn",
+      "pl-edit-save",
+      "pl-edit-cancel",
+      "pl-edit-btn",
+      "pl-add-songs-chip",
+      "pl-loops-btn",
+    ].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) delete el.dataset.pressBound;
+    });
+    bindPressMinHold(document.getElementById("pl-edit-chrome") || document);
+    bindPressMinHold(ms);
+  }
 }
 function popChip(el) {
   if (!el) return;

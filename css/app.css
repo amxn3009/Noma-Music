@@ -6787,10 +6787,7 @@ body.pl-editing .pl-cover-edit-hit:hover { background: rgba(0,0,0,0.55); }
   #pl-edit-chrome .circle-btn:hover,
   #pl-add-songs-chip.circle-btn:hover,
   #pl-edit-btn.circle-btn:hover,
-  #pl-edit-save.circle-btn:hover,
-  #pl-edit-cancel.circle-btn:hover,
   #pl-multi-btn.circle-btn:hover,
-  #pl-multi-trash.circle-btn:hover,
   #pl-clear-loops-btn.circle-btn:hover,
   #pl-loops-btn.circle-btn:hover,
   body.pl-editing .circle-btn:hover,
@@ -6799,6 +6796,44 @@ body.pl-editing .pl-cover-edit-hit:hover { background: rgba(0,0,0,0.55); }
     box-shadow: 0 0 16px rgba(255, 255, 255, 0.15);
     transform: scale(1.05);
   }
+
+  /* Confirm — blue */
+  #pl-edit-save.circle-btn:hover,
+  #pl-edit-save:hover {
+    background: rgba(124, 156, 255, 0.22) !important;
+    color: var(--accent) !important;
+    box-shadow: 0 0 18px rgba(124, 156, 255, 0.35) !important;
+    transform: scale(1.05);
+  }
+
+  /* Cancel — red */
+  #pl-edit-cancel.circle-btn:hover,
+  #pl-edit-cancel:hover {
+    background: rgba(255, 80, 80, 0.2) !important;
+    color: #ff6b6b !important;
+    box-shadow: 0 0 18px rgba(255, 80, 80, 0.35) !important;
+    transform: scale(1.05);
+  }
+
+  /* Delete selected — red */
+  #pl-multi-trash.circle-btn:hover,
+  #pl-multi-trash:hover {
+    background: rgba(255, 80, 80, 0.22) !important;
+    color: #ff6b6b !important;
+    box-shadow: 0 0 18px rgba(255, 80, 80, 0.35) !important;
+    transform: scale(1.05);
+  }
+
+  /* Active toggles keep blue on hover */
+  #pl-multi-btn.is-active:hover,
+  #pl-loops-btn.is-active:hover,
+  .pl-loops-btn.is-active:hover {
+    background: rgba(124, 156, 255, 0.28) !important;
+    color: var(--accent) !important;
+    box-shadow: 0 0 18px rgba(124, 156, 255, 0.4) !important;
+    transform: scale(1.05);
+  }
+
   #pl-edit-chrome .circle-btn:active,
   #pl-add-songs-chip.circle-btn:active,
   body.pl-editing .circle-btn:active {
@@ -7853,29 +7888,59 @@ body.pl-editing .header-toggle-btn {
     box-shadow: 0 0 18px rgba(124, 156, 255, 0.45) !important;
   }
 
-  /* --- Edit: Confirm (save) + Cancel — all three --- */
+  /* --- Edit: Confirm — blue press --- */
   #pl-edit-save.is-pressed,
   #pl-edit-save:active {
     transform: scale(0.92) !important;
-    background: rgba(255, 255, 255, 0.2) !important;
-    color: var(--accent) !important;
-    box-shadow: 0 0 16px rgba(124, 156, 255, 0.35) !important;
+    background: rgba(124, 156, 255, 0.35) !important;
+    color: #a8c0ff !important;
+    box-shadow: 0 0 18px rgba(124, 156, 255, 0.45) !important;
   }
+
+  /* --- Edit: Cancel — red press --- */
   #pl-edit-cancel.is-pressed,
   #pl-edit-cancel:active {
     transform: scale(0.92) !important;
-    background: rgba(255, 80, 80, 0.2) !important;
+    background: rgba(255, 80, 80, 0.22) !important;
     color: #ff6b6b !important;
-    box-shadow: 0 0 16px rgba(255, 80, 80, 0.3) !important;
+    box-shadow: 0 0 16px rgba(255, 80, 80, 0.35) !important;
   }
 
-  /* --- Clear-all-loops + multiselect: transform only --- */
+  /* --- Clear-all-loops: transform only --- */
   #pl-clear-loops-btn.is-pressed,
-  #pl-clear-loops-btn:active,
+  #pl-clear-loops-btn:active {
+    transform: scale(0.92) !important;
+    box-shadow: none !important;
+  }
+
+  /* --- Multiselect: transform while pressing; if already active keep blue --- */
   #pl-multi-btn.is-pressed,
   #pl-multi-btn:active {
     transform: scale(0.92) !important;
-    box-shadow: none !important;
+  }
+  #pl-multi-btn.is-active.is-pressed,
+  #pl-multi-btn.is-active:active {
+    background: rgba(124, 156, 255, 0.4) !important;
+    color: var(--accent) !important;
+    box-shadow: 0 0 18px rgba(124, 156, 255, 0.45) !important;
+  }
+
+  /*
+   * Sticky :hover on iPad can override .is-active after release.
+   * Force active look for multi + x-loop even under :hover.
+   */
+  #pl-multi-btn.is-active,
+  #pl-multi-btn.is-active:hover,
+  #pl-multi-btn.is-active:focus,
+  #pl-loops-btn.is-active,
+  #pl-loops-btn.is-active:hover,
+  #pl-loops-btn.is-active:focus,
+  .pl-loops-btn.is-active,
+  .pl-loops-btn.is-active:hover {
+    color: var(--accent) !important;
+    background: rgba(124, 156, 255, 0.22) !important;
+    box-shadow: 0 0 16px rgba(124, 156, 255, 0.28) !important;
+    transform: none;
   }
 
   /* --- Delete selected: all three --- */
@@ -7886,4 +7951,13 @@ body.pl-editing .header-toggle-btn {
     color: #ff6b6b !important;
     box-shadow: 0 0 16px rgba(255, 80, 80, 0.3) !important;
   }
+}
+
+/* Active toggles always beat sticky hover (iPad) */
+#pl-multi-btn.is-active:hover,
+#pl-loops-btn.is-active:hover,
+.pl-loops-btn.is-active:hover {
+  color: var(--accent) !important;
+  background: rgba(124, 156, 255, 0.22) !important;
+  box-shadow: 0 0 16px rgba(124, 156, 255, 0.28) !important;
 }
