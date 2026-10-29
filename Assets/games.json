@@ -886,25 +886,306 @@
     ]
   },
 
+{
+  "id": "mariogalaxy2",
+  "title": "Super Mario Galaxy 2",
+  "short": "Mario Galaxy 2",
+  "fullscreenName": "Super Mario Galaxy 2",
+  "composer": "Mahito Yokota, Ryo Nagamatsu, Koji Kondo",
+  "console": "wii",
+  "franchise": "mario",
+  "cover": "Assets/Games/SuperMarioGalaxy2/AlbumCover/AlbumCover_MarioGalaxy2.png",
+  "tracks": [
   {
-    "id": "mariogalaxy2",
-    "title": "Super Mario Galaxy 2",
-    "short": "Mario Galaxy 2",
-    "fullscreenName": "Super Mario Galaxy 2",
-    "composer": "Mahito Yokota, Ryo Nagamatsu, Koji Kondo",
-    "console": "wii",
-    "franchise": "mario",
-    "cover": "Assets/Games/SuperMarioGalaxy2/AlbumCover/AlbumCover_MarioGalaxy2.png",
-    "tracks": [
-      {
-        "id": "smg-overture",
-        "title": "Overture",
-        "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Overture.bfstm",
-        "duration": 44.662
-      }
-      
-    ]
+    "id": "smg2-overture",
+    "title": "Overture",
+    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Overture.bfstm",
+    "duration": 55.048
   },
+  {
+    "id": "smg2-a-new-story",
+    "title": "A New Story",
+    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/A New Story.bfstm",
+    "duration": 54.858
+  },
+  {
+    "id": "smg2-sky-station-galaxy",
+    "title": "Sky Station Galaxy",
+    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Sky Station Galaxy.bfstm",
+    "duration": 81.262
+  },
+  {
+    "id": "smg2-unknown-star",
+    "title": "Unknown Star",
+    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Unknown Star.bfstm",
+    "duration": 71.215
+  },
+  {
+    "id": "smg2-starship-mario-blasting-off",
+    "title": "Starship Mario, Blasting Off!",
+    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Starship Mario, Blasting Off!.bfstm",
+    "duration": 50.395
+  },
+  {
+    "id": "smg2-yoshi-star-galaxy",
+    "title": "Yoshi Star Galaxy",
+    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Yoshi Star Galaxy.bfstm",
+    "duration": 73.126
+  },
+  {
+    "id": "smg2-starship-mario-1",
+    "title": "Starship Mario 1",
+    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Starship Mario 1.bfstm",
+    "duration": 70.278
+  },
+  {
+    "id": "smg2-worlds-1-and-2",
+    "title": "Worlds 1 & 2",
+    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Worlds 1 & 2.bfstm",
+    "duration": 81.874
+  },
+  {
+    "id": "smg2-the-starships-journey",
+    "title": "The Starship's Journey",
+    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/The Starship's Journey.bfstm",
+    "duration": 74.362
+  },
+  {
+    "id": "smg2-spin-dig-galaxy",
+    "title": "Spin-Dig Galaxy",
+    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Spin-Dig Galaxy.bfstm",
+    "duration": 86.449
+  },
+  {
+    "id": "smg2-digga-leg",
+    "title": "Digga-Leg",
+    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Digga-Leg.bfstm",
+    "duration": 73.158
+  },
+  {
+    "id": "smg2-flip-swap-galaxy",
+    "title": "Flip-Swap Galaxy",
+    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Flip-Swap Galaxy.bfstm",
+    "duration": 55.427
+  },
+  {
+    "id": "smg2-puzzle-plank-galaxy",
+    "title": "Puzzle Plank Galaxy",
+    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Puzzle Plank Galaxy.bfstm",
+    "duration": 69.699
+  },
+  {
+    "id": "smg2-wild-glide-galaxy",
+    "title": "Wild Glide Galaxy",
+    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Wild Glide Galaxy.bfstm",
+    "duration": 73.361
+  },
+  {
+    "id": "smg2-cosmic-cove-galaxy",
+    "title": "Cosmic Cove Galaxy",
+    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Cosmic Cove Galaxy.bfstm",
+    "duration": 111.579
+  },
+  {
+    "id": "smg2-hightail-falls-galaxy",
+    "title": "Hightail Falls Galaxy",
+    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Hightail Falls Galaxy.bfstm",
+    "duration": 39.39
+  },
+  {
+    "id": "smg2-world-3",
+    "title": "World 3",
+    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/World 3.bfstm",
+    "duration": 66.033
+  },
+  {
+    "id": "smg2-slider",
+    "title": "Slider",
+    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Slider.bfstm",
+    "duration": 76.804
+  },
+  {
+    "id": "smg2-freezy-flake-galaxy",
+    "title": "Freezy Flake Galaxy",
+    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Freezy Flake Galaxy.bfstm",
+    "duration": 94.311
+  },
+  {
+    "id": "smg2-rolling-masterpiece-galaxy",
+    "title": "Rolling Masterpiece Galaxy",
+    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Rolling Masterpiece Galaxy.bfstm",
+    "duration": 48.699
+  },
+  {
+    "id": "smg2-cloudy-court-galaxy",
+    "title": "Cloudy Court Galaxy",
+    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Cloudy Court Galaxy.bfstm",
+    "duration": 115.093
+  },
+  {
+    "id": "smg2-starship-mario-2",
+    "title": "Starship Mario 2",
+    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Starship Mario 2.bfstm",
+    "duration": 70.284
+  },
+  {
+    "id": "smg2-world-4",
+    "title": "World 4",
+    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/World 4.bfstm",
+    "duration": 80.355
+  },
+  {
+    "id": "smg2-honeyhop-galaxy",
+    "title": "Honeyhop Galaxy",
+    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Honeyhop Galaxy.bfstm",
+    "duration": 87.731
+  },
+  {
+    "id": "smg2-starshine-beach-galaxy",
+    "title": "Starshine Beach Galaxy",
+    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Starshine Beach Galaxy.bfstm",
+    "duration": 102.057
+  },
+  {
+    "id": "smg2-starshine-beach-galaxy-underwater",
+    "title": "Starshine Beach Galaxy: Underwater",
+    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Starshine Beach Galaxy Underwater.bfstm",
+    "duration": 102.057
+  },
+  {
+    "id": "smg2-bowsers-lava-lair",
+    "title": "Bowser's Lava Lair",
+    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Bowser's Lava Lair.bfstm",
+    "duration": 80.083
+  },
+  {
+    "id": "smg2-world-5",
+    "title": "World 5",
+    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/World 5.bfstm",
+    "duration": 67.559
+  },
+  {
+    "id": "smg2-space-storm-galaxy",
+    "title": "Space Storm Galaxy",
+    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Space Storm Galaxy.bfstm",
+    "duration": 91.707
+  },
+  {
+    "id": "smg2-haunty-halls-galaxy",
+    "title": "Haunty Halls Galaxy",
+    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Haunty Halls Galaxy.bfstm",
+    "duration": 112.213
+  },
+  {
+    "id": "smg2-slipsand-galaxy",
+    "title": "Slipsand Galaxy",
+    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Slipsand Galaxy.bfstm",
+    "duration": 100.345
+  },
+  {
+    "id": "smg2-bowser-jrs-fiery-flotilla",
+    "title": "Bowser Jr.'s Fiery Flotilla",
+    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Bowser Jr.'s Fiery Flotilla.bfstm",
+    "duration": 57.111
+  },
+  {
+    "id": "smg2-starship-mario-3",
+    "title": "Starship Mario 3",
+    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Starship Mario 3.bfstm",
+    "duration": 70.284
+  },
+  {
+    "id": "smg2-world-6",
+    "title": "World 6",
+    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/World 6.bfstm",
+    "duration": 63.577
+  },
+  {
+    "id": "smg2-melty-monster-galaxy",
+    "title": "Melty Monster Galaxy",
+    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Melty Monster Galaxy.bfstm",
+    "duration": 74.032
+  },
+  {
+    "id": "smg2-throwback-galaxy",
+    "title": "Throwback Galaxy",
+    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Throwback Galaxy.bfstm",
+    "duration": 78.717
+  },
+  {
+    "id": "smg2-sweet-mystery-galaxy",
+    "title": "Sweet Mystery Galaxy",
+    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Sweet Mystery Galaxy.bfstm",
+    "duration": 74.935
+  },
+  {
+    "id": "smg2-gobblegut",
+    "title": "Gobblegut",
+    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Gobblegut.bfstm",
+    "duration": 60.956
+  },
+  {
+    "id": "smg2-boss-blitz-galaxy",
+    "title": "Boss Blitz Galaxy",
+    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Boss Blitz Galaxy.bfstm",
+    "duration": 37.863
+  },
+  {
+    "id": "smg2-speed-run",
+    "title": "Speed Run",
+    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Speed Run.bfstm",
+    "duration": 105.181
+  },
+  {
+    "id": "smg2-world-s",
+    "title": "World S",
+    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/World S.bfstm",
+    "duration": 84.032
+  },
+  {
+    "id": "smg2-a-tense-moment",
+    "title": "A Tense Moment",
+    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/A Tense Moment.bfstm",
+    "duration": 36.992
+  },
+  {
+    "id": "smg2-bowsers-galaxy-generator",
+    "title": "Bowser's Galaxy Generator",
+    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Bowser's Galaxy Generator.bfstm",
+    "duration": 106.209
+  },
+  {
+    "id": "smg2-king-bowsers-might",
+    "title": "King Bowser's Might",
+    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/King Bowser's Might.bfstm",
+    "duration": 176.644
+  },
+  {
+    "id": "smg2-fated-battle",
+    "title": "Fated Battle",
+    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Fated Battle.bfstm",
+    "duration": 98.071
+  },
+  {
+    "id": "smg2-precious-one",
+    "title": "Precious One",
+    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Precious One.bfstm",
+    "duration": 201.405
+  },
+  {
+    "id": "smg2-super-mario-galaxy-2-credits",
+    "title": "Super Mario Galaxy 2 Credits",
+    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Super Mario Galaxy 2 Credits.bfstm",
+    "duration": 227.248
+  },
+  {
+    "id": "smg2-the-luma-and-the-hat",
+    "title": "The Luma and the Hat",
+    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/The Luma and the Hat.bfstm",
+    "duration": 56.942
+  }
+]
+},
   
   {
     "id": "oot",

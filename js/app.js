@@ -11,7 +11,7 @@ const supabase =
     : null;
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = "29.10.26, fix buttons fully, fixed toast for editting playlists, fixed playlist exporting loops.";
+const APP_VERSION = "29.10.26, fix buttons fully, fixed toast for editting playlists, fixed playlist exporting loops, added smg2";
 
 let LIBRARY = [];
 
