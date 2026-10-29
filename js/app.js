@@ -10780,7 +10780,7 @@ function hideContextMenu() {
   contextMenuCloseTimer = setTimeout(() => {
     contextMenu.classList.add("hidden");
     contextMenu.classList.remove("is-closing");
-  }, 10);
+  }, 120);
 }
 
 function showContextMenu(x, y, payload, anchorEl = null) {
@@ -10931,7 +10931,8 @@ function showContextMenu(x, y, payload, anchorEl = null) {
   contextMenu.style.left = `${Math.min(x, window.innerWidth - menuW - 8)}px`;
   contextMenu.style.top = `${Math.min(y, window.innerHeight - menuH - 8)}px`;
 
-  armClickSuppress(600);
+  // Only long enough to kill the ghost click after long-press — not a long lockout
+  armClickSuppress(130);
   document.body.classList.add("context-menu-open");
 }
 
@@ -11188,7 +11189,7 @@ function bindContextMenu() {
           if (lpMoved) return;
           openNowPlayingContext(x, y);
           el.dataset.suppressClick = "1";
-          suppressDocClickUntil = performance.now() + 600;
+          suppressDocClickUntil = performance.now() + 130;
         }, 480);
       },
       { passive: true }
