@@ -1169,32 +1169,11 @@ body.search-mode #global-search-results {
   transform: scale(0.92);
 }
 
-/* Press glow (desktop + mobile) */
+/* Scale press for general controls — NO glow */
 .ctrl-btn.is-pressed,
-.play-btn.is-pressed,
 .primary-btn.is-pressed,
 .circle-btn.is-pressed,
 #play-all-btn.is-pressed,
-#shuffle-all-btn.is-pressed,
-#album-menu-btn.is-pressed {
-  transform: scale(0.92);
-}
-
-/* Press glow — only controls that already glowed on hover + play/pause */
-.play-btn.is-pressed {
-  transform: scale(0.92);
-  background: #eee;
-  box-shadow: 0 0 22px rgba(255, 255, 255, 0.35);
-}
-
-.primary-btn.is-pressed,
-#play-all-btn.is-pressed {
-  transform: scale(0.92);
-  background: #eee;
-  box-shadow: 0 0 20px rgba(255, 255, 255, 0.25);
-}
-
-.circle-btn.is-pressed,
 #shuffle-all-btn.is-pressed,
 #album-menu-btn.is-pressed,
 #pl-edit-btn.is-pressed,
@@ -1204,17 +1183,32 @@ body.search-mode #global-search-results {
 #pl-clear-loops-btn.is-pressed,
 #pl-add-songs-chip.is-pressed,
 #pl-loops-btn.is-pressed,
-.settings-btn.is-pressed,
 .back-btn.is-pressed,
 .header-toggle-btn.is-pressed,
 .gs-tool-btn.is-pressed {
   transform: scale(0.92);
-  background: rgba(255, 255, 255, 0.2);
-  box-shadow: 0 0 16px rgba(255, 255, 255, 0.15);
+}
+
+/* GLOW only: main play + topbar (tabs / sleep / settings / profile) */
+.play-btn.is-pressed,
+#btn-play.is-pressed {
+  transform: scale(0.92);
+  background: #eee;
+  box-shadow: 0 0 22px rgba(255, 255, 255, 0.35);
+}
+
+.topbar .tab.is-pressed,
+.topbar .settings-btn.is-pressed,
+.topbar .sleep-btn.is-pressed,
+.topbar .ctrl-btn.is-pressed {
+  transform: scale(0.92);
+  background: rgba(255, 255, 255, 0.18);
+  box-shadow: 0 0 16px rgba(255, 255, 255, 0.18);
+  color: var(--text);
   transition:
     transform 0.18s cubic-bezier(0.22, 1, 0.36, 1),
     background 0.18s ease,
-    box-shadow 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+    box-shadow 0.18s ease;
 }
 
 /* FS back: disc only while pressed */
@@ -6443,6 +6437,27 @@ body.fs-open .noma-toast {
 }
 
 @media (hover: none), (pointer: coarse) {
+  /* Kill sticky :hover after taps */
+  .lib-filter-btn.games-view-btn:hover,
+  .lib-filter-btn.games-view-btn.active:hover,
+  .lib-create-chip:hover,
+  #lib-create-panel .lib-create-option:hover,
+  .gs-chip:hover,
+  .gs-tool-btn:hover,
+  .gs-chip.active:hover,
+  .circle-btn:hover,
+  .circle-btn:hover:not(:active),
+  .primary-btn:hover,
+  .tab:hover,
+  .settings-btn:hover,
+  .ctrl-btn:hover {
+    background: inherit;
+    color: inherit;
+    box-shadow: none;
+    transform: none;
+  }
+
+  /* Restore non-hover defaults that :hover may have overridden */
   .lib-filter-btn.games-view-btn:hover {
     color: var(--muted);
     background: transparent;
@@ -6450,38 +6465,35 @@ body.fs-open .noma-toast {
   .lib-filter-btn.games-view-btn.active:hover {
     color: var(--text);
     background: var(--surface-2);
-  }
-  /* kill sticky hover styles */
-  .games-view-btn:hover,
-  .lib-filter-btn.games-view-btn:hover,
-  .gs-chip:hover,
-  .gs-tool-btn:hover,
-  .lib-create-chip:hover,
-  #lib-create-panel .lib-create-option:hover {
-    background: transparent;
-    color: inherit;
-    box-shadow: none;
-  }
-  .games-view-btn.active:hover,
-  .lib-filter-btn.games-view-btn.active:hover {
-    color: var(--text);
-    background: var(--surface-2);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
   }
   .gs-chip.active:hover {
     background: var(--accent-soft);
     color: var(--accent);
+    border-color: rgba(124, 156, 255, 0.35);
+    box-shadow: 0 0 0 1px rgba(124, 156, 255, 0.2);
+    transform: scale(1.02);
+  }
+  .gs-tool-btn:hover {
+    color: var(--muted);
+    background: rgba(255, 255, 255, 0.06);
+  }
+  .circle-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
+  .primary-btn:hover {
+    background: white;
+    transform: none;
+    box-shadow: none;
   }
 
-  /* press = color shift (glow can stay from existing is-pressed rules) */
-  .games-view-btn.is-pressed,
-  .games-view-btn:active,
+  /* Press-only feedback (scale + fill, no big glow) */
   .lib-filter-btn.is-pressed,
   .lib-filter-btn:active {
+    transform: scale(0.96) !important;
     color: var(--text) !important;
     background: rgba(255, 255, 255, 0.1) !important;
   }
-  .games-view-btn.active.is-pressed,
-  .games-view-btn.active:active,
   .lib-filter-btn.active.is-pressed,
   .lib-filter-btn.active:active {
     color: var(--text) !important;
@@ -6489,16 +6501,20 @@ body.fs-open .noma-toast {
   }
   .gs-chip.is-pressed,
   .gs-chip:active {
+    transform: scale(0.94) !important;
     background: rgba(255, 255, 255, 0.12) !important;
   }
   .gs-chip.active.is-pressed,
   .gs-chip.active:active {
+    transform: scale(0.96) !important;
     background: rgba(124, 156, 255, 0.28) !important;
     color: var(--accent) !important;
   }
   .gs-tool-btn.is-pressed,
   .gs-tool-btn:active {
-    background: rgba(255, 255, 255, 0.12) !important;
+    transform: scale(0.9) !important;
+    background: rgba(255, 255, 255, 0.14) !important;
+    color: var(--text) !important;
   }
 }
 

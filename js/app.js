@@ -6387,7 +6387,10 @@ const sortBtn = $("#lib-sort-btn");
     }, 180);
   }
 
+  let ignoreViewClickUntil = 0;
+
   sortBtn?.addEventListener("click", (e) => {
+    e.preventDefault();
     e.stopPropagation();
     const open = sortPanel && !sortPanel.classList.contains("hidden");
     if (open) {
@@ -6396,30 +6399,48 @@ const sortBtn = $("#lib-sort-btn");
       closeAllPopovers("lib-sort");
       sortPanel?.classList.remove("hidden", "is-closing");
     }
+    // Opening/closing the panel sits over the view button on iPad — block ghost clicks
+    ignoreViewClickUntil = performance.now() + 400;
     syncLibToolbar();
   });
 
+  // Panel itself: stop pointer events from falling through to view btn
+  sortPanel?.addEventListener(
+    "pointerdown",
+    (e) => {
+      e.stopPropagation();
+      ignoreViewClickUntil = performance.now() + 400;
+    },
+    { passive: true }
+  );
+
   sortPanel?.querySelectorAll("[data-lib-sort]").forEach((b) => {
     b.addEventListener("click", (e) => {
+      e.preventDefault();
       e.stopPropagation();
+      ignoreViewClickUntil = performance.now() + 400;
       libPrefs.sort = b.dataset.libSort;
       syncLibToolbar();
-      renderLibrary({ animate: true });
-      // keep panel open
+      // animate:false avoids layout thrash while panel is open
+      renderLibrary({ animate: false });
     });
   });
   sortPanel?.querySelectorAll("[data-lib-dir]").forEach((b) => {
     b.addEventListener("click", (e) => {
+      e.preventDefault();
       e.stopPropagation();
+      ignoreViewClickUntil = performance.now() + 400;
       libPrefs.dir = b.dataset.libDir;
       syncLibToolbar();
-      renderLibrary({ animate: true });
-      // keep panel open
+      renderLibrary({ animate: false });
     });
   });
 
   $("#lib-view-btn")?.addEventListener("click", (e) => {
     e.stopPropagation();
+    if (performance.now() < ignoreViewClickUntil) return;
+    // Don't toggle view while sort panel is open
+    if (sortPanel && !sortPanel.classList.contains("hidden")) return;
     libPrefs.view = libPrefs.view === "grid" ? "list" : "grid";
     syncLibToolbar();
     renderLibrary({ animate: true });
@@ -11284,7 +11305,7 @@ function pressMinMs(e) {
 
 function bindPressMinHold(root = document) {
   const selector =
-  ".ctrl-btn, .play-btn, #btn-play, .primary-btn, .tab, .back-btn, .settings-btn, .circle-btn, .header-toggle-btn, .fs-back-btn, .confirm-btn, .game-card, .games-view-btn, .games-row-title, #play-all-btn, #shuffle-all-btn, #album-menu-btn, #album-lib-btn, #pl-loops-btn, #pl-edit-btn, #pl-edit-save, #pl-edit-cancel, #pl-add-songs-chip, #pl-multi-btn, #pl-multi-trash, #pl-clear-loops-btn, #settings-reset-btn, .gs-tool-btn, .gs-chip, .gs-fav-btn, .gs-lib-btn, .track-fav-btn, .context-menu button, #loop-menu button, [data-loop-delta], .card-hover-play, .card-hover-menu, .pl-list-menu, .lib-create-chip, .lib-filter-btn, .pl-card, .pl-list-row";
+  ".ctrl-btn, .play-btn, #btn-play, .primary-btn, .tab, .back-btn, .settings-btn, .circle-btn, .header-toggle-btn, .fs-back-btn, .confirm-btn, .game-card, .games-view-btn, .games-row-title, #play-all-btn, #shuffle-all-btn, #album-menu-btn, #album-lib-btn, #pl-loops-btn, #pl-edit-btn, #pl-edit-save, #pl-edit-cancel, #pl-add-songs-chip, #pl-multi-btn, #pl-multi-trash, #pl-clear-loops-btn, #settings-reset-btn, .gs-tool-btn, .gs-chip, .gs-fav-btn, .gs-lib-btn, .track-fav-btn, .context-menu button, #loop-menu button, [data-loop-delta], .card-hover-play, .card-hover-menu, .pl-list-menu, .lib-create-chip, .lib-filter-btn, .pl-card, .pl-list-row, #btn-play, #btn-sleep, #btn-settings, #btn-profile, .sleep-btn, .settings-btn, .topbar .tab, .play-btn";
   root.querySelectorAll(selector).forEach((btn) => {
     if (btn.dataset.pressBound === "1") return;
     btn.dataset.pressBound = "1";
