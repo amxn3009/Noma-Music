@@ -11,7 +11,7 @@ const supabase =
     : null;
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = "29.10.26, fix pc buttons, fix mobile buttons attempt #2.";
+const APP_VERSION = "29.10.26, fix buttons fully, more changes.";
 
 let LIBRARY = [];
 
@@ -5305,6 +5305,7 @@ function bindPlaylistEditChrome() {
       e.preventDefault();
       e.stopPropagation();
       exitPlaylistEditMode(true);
+      showToast?.("Bearbeitung abgebrochen");
       return;
     }
     const saveBtn = e.target.closest("#pl-edit-save");
@@ -5317,6 +5318,11 @@ function bindPlaylistEditChrome() {
         saveUserLibrary();
       }
       exitPlaylistEditMode(false);
+      showToast?.({
+        title: pl?.name || "Playlist",
+        sub: "Änderungen gespeichert",
+        cover: pl ? playlistThumbUrl?.(pl) : undefined,
+      });
     }
   });
 }
@@ -5398,28 +5404,48 @@ function enterPlaylistEditMode() {
 
   let coverEl = document.getElementById("game-cover");
   if (pl.id !== FAVORITES_ID && coverEl) {
+    // Measure BEFORE wrapping so size doesn’t jump
+    const rect = coverEl.getBoundingClientRect();
     let wrap = coverEl.closest(".pl-cover-hit-wrap");
     if (!wrap) {
       wrap = document.createElement("div");
       wrap.className = "pl-cover-hit-wrap";
+      // Lock current visual size for one frame, then release to CSS transitions
+      if (rect.width > 0 && rect.height > 0) {
+        wrap.style.width = `${rect.width}px`;
+        wrap.style.height = `${rect.height}px`;
+      }
       coverEl.parentNode.insertBefore(wrap, coverEl);
       wrap.appendChild(coverEl);
+      requestAnimationFrame(() => {
+        wrap.style.width = "";
+        wrap.style.height = "";
+      });
     }
     coverEl.classList.add("pl-cover-editable");
     coverEl.querySelectorAll("img").forEach((img) => {
       img.style.pointerEvents = "none";
     });
+    // Remove old hit if re-entering
+    wrap.querySelectorAll(".pl-cover-edit-hit").forEach((n) => n.remove());
     const hit = document.createElement("button");
     hit.type = "button";
     hit.className = "pl-cover-edit-hit";
     hit.title = "Name & Cover";
     hit.innerHTML = `<svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1.003 1.003 0 0 0 0-1.42l-2.34-2.34a1.003 1.003 0 0 0-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z"/></svg>`;
+    // Start invisible → fade in (avoids snap flash)
+    hit.style.opacity = "0";
     hit.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
       openPlaylistEditMetaModal(pl);
     });
     wrap.appendChild(hit);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        hit.style.opacity = "";
+      });
+    });
   }
 
   ensureMultiSelectChrome();
@@ -8057,7 +8083,12 @@ document.querySelectorAll(".tab").forEach((tab) => {
   $("#back-to-games").addEventListener("click", () => {
     // From playlist detail → library
     if (state.currentPlaylist) {
-      cancelEditIfNeeded();
+      // In edit mode: back = cancel edit, stay on playlist
+      if (plEdit?.active) {
+        exitPlaylistEditMode(true);
+        showToast?.("Bearbeitung abgebrochen");
+        return;
+      }
       state.currentPlaylist = null;
       state.currentGame = null;
       gameDetail.classList.add("hidden");

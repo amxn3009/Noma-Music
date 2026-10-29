@@ -7443,6 +7443,18 @@ body.pl-editing .header-toggle-btn {
   opacity: 0.35;
 }
 
+/* Edit mode: keep track numbers — no hover-play swap */
+body.pl-editing .track-row:not(.playing):hover .track-num .num {
+  opacity: 1 !important;
+}
+body.pl-editing .track-row .track-num .hover-play {
+  display: none !important;
+  opacity: 0 !important;
+}
+body.pl-editing .track-list.is-editing .track-row:not(.playing):hover .track-num .num {
+  opacity: 1 !important;
+}
+
 
 /* Profile reuses .settings-view / .settings-top / .settings-row entirely */
 
@@ -7961,3 +7973,16 @@ body.pl-editing .header-toggle-btn {
   background: rgba(124, 156, 255, 0.22) !important;
   box-shadow: 0 0 16px rgba(124, 156, 255, 0.28) !important;
 }
+
+.pl-cover-edit-hit,
+.pl-cover-hit-wrap .pl-cover-edit-hit,
+#game-cover .pl-cover-edit-hit {
+  opacity: 0;
+  transition: opacity 0.25s var(--ease), background 0.15s ease;
+  pointer-events: auto;
+}
+body.pl-editing .pl-cover-edit-hit,
+body.pl-editing .pl-cover-hit-wrap .pl-cover-edit-hit {
+  opacity: 1; /* allow JS inline opacity:0 → "" to animate */
+}
+/* Prefer not using opacity: 1 !important on the hit during enter */
