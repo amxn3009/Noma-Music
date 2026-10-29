@@ -6815,10 +6815,6 @@ body.pl-editing .pl-cover-edit-hit:hover { background: rgba(0,0,0,0.55); }
 .track-list.is-editing .track-row.dragging {
   opacity: 0.35;
 }
-#pl-multi-btn.is-active {
-  background: var(--accent-soft);
-  color: var(--accent);
-}
 .pl-multi-wrap {
   display: inline-flex;
   gap: 6px;
@@ -6848,10 +6844,6 @@ body.pl-editing .pl-cover-edit-hit:hover { background: rgba(0,0,0,0.55); }
   border-left: 2px solid #0a0a0a;
   border-bottom: 2px solid #0a0a0a;
   transform: rotate(-45deg) translateY(-1px);
-}
-#pl-multi-btn.is-active {
-  color: var(--accent);
-  background: var(--accent-soft);
 }
 
 /* playlist rows are taller (cover + two text lines) */
@@ -7189,6 +7181,17 @@ body.pl-editing .track-list.is-playlist .track-row.playing .track-num .eq {
 #pl-clear-loops-btn.chip-enter {
   animation: chipIn 0.28s var(--ease) both;
 }
+#pl-multi-btn.is-active {
+  color: var(--accent) !important;
+  background: rgba(124, 156, 255, 0.22) !important;
+  box-shadow: 0 0 16px rgba(124, 156, 255, 0.28) !important;
+}
+#pl-multi-btn.is-active.is-pressed,
+#pl-multi-btn.is-active:active {
+  background: rgba(124, 156, 255, 0.4) !important;
+  box-shadow: 0 0 18px rgba(124, 156, 255, 0.45) !important;
+  transform: scale(0.92);
+}
 #pl-clear-loops-btn .pl-track-loops-icon {
   pointer-events: none;
 }
@@ -7236,10 +7239,21 @@ body.pl-editing .track-list.is-playlist .track-meta .track-sub {
 
 #pl-clear-loops-btn.pl-clear-loops-btn {
   color: #ff6b6b !important;
-  background: rgba(255, 80, 80, 0.12);
+  background: rgba(255, 80, 80, 0.12) !important;
+  box-shadow: 0 0 14px rgba(255, 80, 80, 0.22);
 }
-#pl-clear-loops-btn.pl-clear-loops-btn:hover {
-  background: rgba(255, 80, 80, 0.22);
+@media (hover: hover) and (pointer: fine) {
+  #pl-clear-loops-btn.pl-clear-loops-btn:hover {
+    background: rgba(255, 80, 80, 0.22) !important;
+    box-shadow: 0 0 18px rgba(255, 80, 80, 0.35);
+  }
+}
+#pl-clear-loops-btn.pl-clear-loops-btn.is-pressed,
+#pl-clear-loops-btn.pl-clear-loops-btn:active {
+  background: rgba(255, 80, 80, 0.35) !important;
+  box-shadow: 0 0 18px rgba(255, 80, 80, 0.45) !important;
+  transform: scale(0.92);
+  color: #ff8a8a !important;
 }
 #pl-clear-loops-btn .pl-clear-loops-x {
   background: #ff4d4d !important;

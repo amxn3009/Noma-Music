@@ -10780,7 +10780,7 @@ function hideContextMenu() {
   contextMenuCloseTimer = setTimeout(() => {
     contextMenu.classList.add("hidden");
     contextMenu.classList.remove("is-closing");
-  }, 100);
+  }, 10);
 }
 
 function showContextMenu(x, y, payload, anchorEl = null) {
