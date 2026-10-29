@@ -11,7 +11,7 @@ const supabase =
     : null;
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = "29.10.26, added sync + Profiles and Stats, added export/import Playlists, fixed clear loops, fixed game count, added consistent eye, fixed Stat counts";
+const APP_VERSION = "29.10.26, added sync + Profiles and Stats, added export/import Playlists, fixed clear loops, fixed game count, added consistent eye, fixed Stat counts, css polishing";
 
 let LIBRARY = [];
 
@@ -3298,9 +3298,7 @@ function bindHotkeys() {
         e.preventDefault();
         // Confirm dialogs first
         if (!$("#confirm-overlay")?.classList.contains("hidden")) {
-          closeClearQueueConfirm?.();
-          $("#confirm-overlay")?.classList.add("hidden");
-          $("#confirm-overlay")?.setAttribute("aria-hidden", "true");
+          closeConfirmOverlay?.() || closeClearQueueConfirm?.();
           handled = true;
           break;
         }
@@ -4668,13 +4666,14 @@ function openPlaylistDetail(id) {
     sessionQuickAddId = pl.id;
     window.__forcePlaylistSelectId = pl.id; // always add into THIS playlist
     openGlobalSearch(true);
-    requestAnimationFrame(() => {
-      const input = $("#global-search-input");
-      if (input) {
+    const input = $("#global-search-input");
+    if (input) {
+      try {
+        input.focus({ preventScroll: true });
+      } catch (_) {
         input.focus();
-        input.select?.();
       }
-    });
+    }
   };
 
   // ── Edit chrome (create SECOND) ──
@@ -4781,10 +4780,17 @@ function openPlaylistDetail(id) {
       </div>`;
     $("#pl-add-songs-btn")?.addEventListener("click", () => {
       searchReturn = { type: "playlist", playlistId: pl.id, stayInSearch: true };
-      // Force quick-add / menu default to this playlist for the search session
       sessionQuickAddId = pl.id;
-      window.__forcePlaylistSelectId = pl.id; // used by openAddToPlaylistMenu
+      window.__forcePlaylistSelectId = pl.id;
       openGlobalSearch(true);
+      const input = $("#global-search-input");
+      if (input) {
+        try {
+          input.focus({ preventScroll: true });
+        } catch (_) {
+          input.focus();
+        }
+      }
     });
   }
 
@@ -5130,15 +5136,19 @@ function openDeletePlaylistConfirm(plId) {
   if (title) title.textContent = "Playlist löschen?";
   if (body) body.textContent = `Willst du wirklich „${pl.name}“ löschen?`;
   if (ok) ok.textContent = "Löschen";
-  overlay?.classList.remove("hidden");
-  overlay?.setAttribute("aria-hidden", "false");
+  openConfirmOverlay();
 
   const cleanup = () => {
-    overlay?.classList.add("hidden");
-    overlay?.setAttribute("aria-hidden", "true");
-    if (ok) ok.textContent = "Leeren";
-    if (title) title.textContent = "Warteschlange leeren?";
-    if (body) body.textContent = "Alle Songs werden entfernt und die Wiedergabe gestoppt.";
+    closeConfirmOverlay(() => {
+      if (ok) ok.textContent = "Leeren";
+      if (title) title.textContent = "Warteschlange leeren?";
+      if (body) {
+        body.textContent =
+          "Alle Songs werden entfernt und die Wiedergabe gestoppt.";
+      }
+      ok?.removeEventListener("click", onOk);
+      cancel?.removeEventListener("click", onCancel);
+    });
   };
 
   const onOk = () => {
@@ -5192,22 +5202,21 @@ function openClearPlaylistLoopsConfirm(plId) {
   }
   ok.textContent = "Zurücksetzen";
 
-  overlay.classList.remove("hidden");
-  overlay.setAttribute("aria-hidden", "false");
+  openConfirmOverlay();
 
   const cleanup = () => {
-    overlay.classList.add("hidden");
-    overlay.setAttribute("aria-hidden", "true");
-    ok.textContent = "Leeren";
-    if (title) title.textContent = "Warteschlange leeren?";
-    if (body) {
-      body.textContent =
-        "Alle Songs werden entfernt und die Wiedergabe gestoppt.";
-    }
-    ok.removeEventListener("click", onOk);
-    cancel?.removeEventListener("click", onCancel);
-    overlay.removeEventListener("click", onBackdrop);
-    document.removeEventListener("keydown", onKey, true);
+    closeConfirmOverlay(() => {
+      ok.textContent = "Leeren";
+      if (title) title.textContent = "Warteschlange leeren?";
+      if (body) {
+        body.textContent =
+          "Alle Songs werden entfernt und die Wiedergabe gestoppt.";
+      }
+      ok.removeEventListener("click", onOk);
+      cancel?.removeEventListener("click", onCancel);
+      overlay.removeEventListener("click", onBackdrop);
+      document.removeEventListener("keydown", onKey, true);
+    });
   };
 
   const onOk = () => {
@@ -6920,8 +6929,13 @@ function openGlobalSearch(clearInput = true) {
     input.value = "";
     $("#global-search-clear")?.classList.add("hidden");
   }
-  if (clearInput && input && document.activeElement !== input) {
-    requestAnimationFrame(() => input.focus());
+  // Sync focus — required for mobile keyboard (rAF is too late)
+  if (input) {
+    try {
+      input.focus({ preventScroll: true });
+    } catch (_) {
+      input.focus();
+    }
   }
 
   runGlobalSearch(input?.value || "");
@@ -10279,18 +10293,51 @@ function bindQueuePanel() {
   });
 }
 
-function openClearQueueConfirm() {
+
+let confirmCloseTimer = null;
+
+function openConfirmOverlay() {
   const overlay = $("#confirm-overlay");
   if (!overlay) return;
-  overlay.classList.remove("hidden");
+  clearTimeout(confirmCloseTimer);
+  overlay.classList.remove("hidden", "is-closing");
   overlay.setAttribute("aria-hidden", "false");
+  // restart open animation
+  void overlay.offsetWidth;
+}
+
+function closeConfirmOverlay(after) {
+  const overlay = $("#confirm-overlay");
+  if (!overlay || overlay.classList.contains("hidden")) {
+    after?.();
+    return;
+  }
+  if (overlay.classList.contains("is-closing")) return;
+  overlay.classList.add("is-closing");
+  clearTimeout(confirmCloseTimer);
+  confirmCloseTimer = setTimeout(() => {
+    overlay.classList.add("hidden");
+    overlay.classList.remove("is-closing");
+    overlay.setAttribute("aria-hidden", "true");
+    after?.();
+  }, 100); // snappy close — matches CSS 0.1s
+}
+
+function openClearQueueConfirm() {
+  const title = $("#confirm-title");
+  const body = $("#confirm-overlay")?.querySelector(".confirm-text");
+  const ok = $("#confirm-ok");
+  if (title) title.textContent = "Warteschlange leeren?";
+  if (body) {
+    body.textContent =
+      "Alle Songs werden entfernt und die Wiedergabe gestoppt.";
+  }
+  if (ok) ok.textContent = "Leeren";
+  openConfirmOverlay();
 }
 
 function closeClearQueueConfirm() {
-  const overlay = $("#confirm-overlay");
-  if (!overlay) return;
-  overlay.classList.add("hidden");
-  overlay.setAttribute("aria-hidden", "true");
+  closeConfirmOverlay();
 }
 
 function bindClearQueueConfirm() {

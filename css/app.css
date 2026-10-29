@@ -2020,6 +2020,21 @@ li.queue-item::marker,
 .confirm-overlay.hidden {
   display: none !important;
 }
+.confirm-overlay:not(.hidden):not(.is-closing) {
+  animation: confirmOverlayIn 0.22s ease both;
+}
+.confirm-overlay.is-closing {
+  animation: confirmOverlayOut 0.1s ease both;
+  pointer-events: none;
+}
+@keyframes confirmOverlayIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes confirmOverlayOut {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
 .confirm-dialog {
   width: min(360px, 100%);
   padding: 22px 20px 16px;
@@ -2029,6 +2044,20 @@ li.queue-item::marker,
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+}
+.confirm-overlay:not(.hidden):not(.is-closing) .confirm-dialog {
+  animation: confirmDialogIn 0.24s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.confirm-overlay.is-closing .confirm-dialog {
+  animation: confirmDialogOut 0.1s ease both;
+}
+@keyframes confirmDialogIn {
+  from { opacity: 0; transform: translateY(10px) scale(0.96); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes confirmDialogOut {
+  from { opacity: 1; transform: none; }
+  to   { opacity: 0; transform: translateY(6px) scale(0.97); }
 }
 .confirm-dialog h3 {
   margin: 0 0 8px;
@@ -3381,8 +3410,16 @@ body.search-mode .search-close-btn {
   cursor: pointer;
   transition: color 0.15s, background 0.15s;
 }
-.games-view-btn:hover {
-  color: var(--text);
+@media (hover: hover) and (pointer: fine) {
+  .games-view-btn:hover {
+    color: var(--text);
+  }
+  .lib-filter-btn.games-view-btn:hover {
+    color: var(--text);
+  }
+  .gs-chip:hover {
+    background: rgba(255, 255, 255, 0.08);
+  }
 }
 .games-view-btn.active {
   color: var(--text);
@@ -5791,9 +5828,6 @@ body.fs-open .noma-toast {
   cursor: pointer;
   transition: color 0.15s, background 0.15s, transform 0.12s;
 }
-.lib-filter-btn.games-view-btn:hover {
-  color: var(--text);
-}
 .lib-filter-btn.games-view-btn.active {
   color: var(--text);
   background: var(--surface-2);
@@ -6416,6 +6450,55 @@ body.fs-open .noma-toast {
   .lib-filter-btn.games-view-btn.active:hover {
     color: var(--text);
     background: var(--surface-2);
+  }
+  /* kill sticky hover styles */
+  .games-view-btn:hover,
+  .lib-filter-btn.games-view-btn:hover,
+  .gs-chip:hover,
+  .gs-tool-btn:hover,
+  .lib-create-chip:hover,
+  #lib-create-panel .lib-create-option:hover {
+    background: transparent;
+    color: inherit;
+    box-shadow: none;
+  }
+  .games-view-btn.active:hover,
+  .lib-filter-btn.games-view-btn.active:hover {
+    color: var(--text);
+    background: var(--surface-2);
+  }
+  .gs-chip.active:hover {
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+
+  /* press = color shift (glow can stay from existing is-pressed rules) */
+  .games-view-btn.is-pressed,
+  .games-view-btn:active,
+  .lib-filter-btn.is-pressed,
+  .lib-filter-btn:active {
+    color: var(--text) !important;
+    background: rgba(255, 255, 255, 0.1) !important;
+  }
+  .games-view-btn.active.is-pressed,
+  .games-view-btn.active:active,
+  .lib-filter-btn.active.is-pressed,
+  .lib-filter-btn.active:active {
+    color: var(--text) !important;
+    background: rgba(255, 255, 255, 0.16) !important;
+  }
+  .gs-chip.is-pressed,
+  .gs-chip:active {
+    background: rgba(255, 255, 255, 0.12) !important;
+  }
+  .gs-chip.active.is-pressed,
+  .gs-chip.active:active {
+    background: rgba(124, 156, 255, 0.28) !important;
+    color: var(--accent) !important;
+  }
+  .gs-tool-btn.is-pressed,
+  .gs-tool-btn:active {
+    background: rgba(255, 255, 255, 0.12) !important;
   }
 }
 
@@ -7475,10 +7558,28 @@ body.pl-editing .header-toggle-btn {
   justify-content: flex-start;
   text-align: left;
   padding: 10px 12px;
+  border-radius: 12px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.12s ease;
 }
 #lib-create-panel .lib-create-option svg {
   flex-shrink: 0;
   opacity: 0.9;
+}
+@media (hover: hover) and (pointer: fine) {
+  #lib-create-panel .lib-create-option:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text);
+  }
+}
+#lib-create-panel .lib-create-option.is-pressed,
+#lib-create-panel .lib-create-option:active {
+  background: rgba(255, 255, 255, 0.12);
+  transform: scale(0.98);
 }
 
 .lib-create-wrap {
