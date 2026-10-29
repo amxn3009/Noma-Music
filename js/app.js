@@ -11,7 +11,7 @@ const supabase =
     : null;
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = "27.10.26, added sync + Profiles and Stats, added export/import Playlists, fixed clear loops, fixed game count, added consistent eye";
+const APP_VERSION = "29.10.26, added sync + Profiles and Stats, added export/import Playlists, fixed clear loops, fixed game count, added consistent eye, fixed Stat counts";
 
 let LIBRARY = [];
 
@@ -2275,17 +2275,23 @@ function beginListenSession() {
   listenClock.gameId = item.gameId;
   listenClock.playlistId = state.playingPlaylistId || null;
   listenClock.playCounted = false;
+  startListenHeartbeat();
 }
 
-function flushListenTime() {
+function flushListenTime(opts = {}) {
+  // opts.force — run even if UI/RAF was dead (wake from background)
   if (!listenClock.lastTs || !listenClock.trackKey) return;
+  if (!state.playing && !opts.force) return;
+
   const now = Date.now();
   let delta = (now - listenClock.lastTs) / 1000;
   listenClock.lastTs = now;
-  // Ignore huge gaps (tab sleep / background for minutes)
+
   if (!Number.isFinite(delta) || delta <= 0) return;
-  if (delta > 30) delta = 0; // don't credit offline time in one chunk
-  if (delta <= 0) return;
+
+  // Only ignore absurd clock jumps (e.g. device left for days). Normal bg listening is fully counted.
+  const MAX_CHUNK = 12 * 3600; // 12 hours
+  if (delta > MAX_CHUNK) delta = MAX_CHUNK;
 
   const stats = loadListenStats();
   stats.totalSec = (stats.totalSec || 0) + delta;
@@ -2312,8 +2318,7 @@ function flushListenTime() {
     stats.playlists[pid].sec += delta;
   }
 
-  // Count a play once per session after ~5s listened
-  if (!listenClock.playCounted && stats.tracks[tk].sec >= 5) {
+  if (!listenClock.playCounted && (stats.tracks[tk].sec || 0) >= 5) {
     listenClock.playCounted = true;
     stats.tracks[tk].plays = (stats.tracks[tk].plays || 0) + 1;
     if (gid) stats.games[gid].plays = (stats.games[gid].plays || 0) + 1;
@@ -2323,9 +2328,27 @@ function flushListenTime() {
   saveListenStats(stats);
 }
 
+/** Heartbeat while playing — survives heavy RAF throttling better than UI alone */
+let listenHeartbeat = null;
+function startListenHeartbeat() {
+  stopListenHeartbeat();
+  listenHeartbeat = setInterval(() => {
+    if (state.playing && listenClock.trackKey) {
+      flushListenTime({ force: true });
+    }
+  }, 10000);
+}
+function stopListenHeartbeat() {
+  if (listenHeartbeat) {
+    clearInterval(listenHeartbeat);
+    listenHeartbeat = null;
+  }
+}
+
 function endListenSession() {
-  flushListenTime();
+  flushListenTime({ force: true });
   listenClock.lastTs = 0;
+  stopListenHeartbeat();
 }
 
 function getLoopStartSec() {
@@ -2767,7 +2790,7 @@ async function playMediaUrlStreamLoop(url, track, offsetSec = 0) {
 
 function updateProgressUI() {
   if (state.playing && listenClock.trackKey) flushListenTime();
-  else if (!state.playing) listenClock.lastTs = 0;
+  // Do NOT clear lastTs here — endListenSession / pause paths own that
   if (!decodedBuffer) return;
 
   if (scrubbing) {
@@ -3714,6 +3737,11 @@ async function init() {
         if (!useMediaEl) startSilentShield();
         startBgSessionKeepAlive();
       }
+      // Listening stats: stamp / flush on hide (before return)
+      if (state.playing && listenClock.trackKey) {
+        flushListenTime({ force: true });
+        listenClock.lastTs = Date.now();
+      }
       return;
     }
 
@@ -3739,6 +3767,13 @@ async function init() {
     if (transitioning && state.loopMode === "count" && state.loopsRemaining !== 0) {
       state.loopsRemaining = 0;
       updatePlayerUI();
+    }
+
+    // Listening stats: credit whole background stretch on show
+    if (state.playing && listenClock.trackKey) {
+      flushListenTime({ force: true });
+      listenClock.lastTs = Date.now();
+      startListenHeartbeat();
     }
 
     // App was killed / reloaded while audio was "ghosting": force idle UI + session
@@ -12366,6 +12401,8 @@ function fireSleepTimer() {
   cancelSleepTimer();
   // Stop playback / clear player
   try {
+    // Credit listen time up to the stop, then clear the clock
+    if (typeof endListenSession === "function") endListenSession();
     if (state.playing) {
       // force stop without toggling resume path oddly
       stopSource();
