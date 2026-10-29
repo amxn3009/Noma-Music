@@ -11,7 +11,7 @@ const supabase =
     : null;
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = "29.10.26, fix pc buttons.";
+const APP_VERSION = "29.10.26, fix pc buttons, fix mobile buttons attempt #1.";
 
 let LIBRARY = [];
 
@@ -5417,6 +5417,9 @@ function enterPlaylistEditMode() {
   ensureMultiSelectChrome();
   // multi wrap must be visible
   document.getElementById("pl-multi-wrap")?.classList.remove("hidden");
+  document.getElementById("pl-multi-wrap")?.classList.remove("hidden");
+  document.getElementById("pl-multi-btn")?.classList.remove("hidden");
+  document.getElementById("pl-clear-loops-btn")?.classList.remove("hidden");
   const multiBtn = document.getElementById("pl-multi-btn");
   if (multiBtn) {
     multiBtn.classList.remove("chip-enter");
@@ -6027,10 +6030,12 @@ function ensureMultiSelectChrome() {
     });
   }
   ms.classList.remove("hidden");
+  // openGame may have left these with .hidden — always clear when entering edit
+  document.getElementById("pl-multi-btn")?.classList.remove("hidden");
+  document.getElementById("pl-clear-loops-btn")?.classList.remove("hidden");
   document.getElementById("pl-multi-btn")?.classList.toggle("is-active", !!plEdit.multi);
   syncMultiTrash();
 }
-
 function popChip(el) {
   if (!el) return;
   el.classList.remove("hidden", "chip-out");
@@ -7695,8 +7700,10 @@ function openGame(id) {
   $("#pl-add-songs-btn")?.classList.add("hidden");
   $("#pl-edit-btn")?.classList.add("hidden");
   $("#pl-edit-chrome")?.classList.add("hidden");
+  $("#pl-multi-wrap")?.classList.add("hidden");
   $("#pl-multi-btn")?.classList.add("hidden");
   $("#pl-multi-trash")?.classList.add("hidden");
+  $("#pl-clear-loops-btn")?.classList.add("hidden");
   $("#pl-loops-btn")?.classList.add("hidden");
 
   const coverEl = $("#game-cover");

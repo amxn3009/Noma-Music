@@ -7705,3 +7705,185 @@ body.pl-editing .header-toggle-btn {
 .password-toggle .hidden {
   display: none !important;
 }
+
+
+/* ===== Mobile / touch press feedback (no sticky hover) ===== */
+@media (hover: none), (pointer: coarse) {
+
+  /* --- Kill sticky :hover on album chrome --- */
+  #play-all-btn:hover,
+  #play-all-btn:hover .play-all-label,
+  #shuffle-all-btn:hover,
+  #album-menu-btn:hover,
+  #album-lib-btn:hover,
+  #pl-loops-btn:hover,
+  #pl-add-songs-chip:hover,
+  #pl-edit-btn:hover,
+  #pl-edit-save:hover,
+  #pl-edit-cancel:hover,
+  #pl-multi-btn:hover,
+  #pl-clear-loops-btn:hover,
+  #pl-multi-trash:hover,
+  .circle-btn:hover,
+  .circle-btn:hover:not(:active),
+  .primary-btn:hover,
+  .play-btn:hover {
+    transform: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Play-all: keep its normal fill — don't turn label "white-on-white" via hover */
+  #play-all-btn:hover {
+    background: white !important;
+    color: #111 !important;
+  }
+  #play-all-btn:hover .play-all-label {
+    color: #111 !important;
+  }
+
+  /* Bottom play: stay solid white — glow only while pressed */
+  .play-btn:hover,
+  #btn-play:hover {
+    background: white !important;
+    color: #111 !important;
+    opacity: 1 !important;
+    box-shadow: none !important;
+    transform: none !important;
+  }
+  .play-btn.is-pressed,
+  #btn-play.is-pressed,
+  .play-btn:active,
+  #btn-play:active {
+    background: white !important;
+    color: #111 !important;
+    opacity: 1 !important;
+    transform: scale(0.92) !important;
+    box-shadow: 0 0 22px rgba(255, 255, 255, 0.45) !important;
+  }
+
+  /* Shared “white-up” color change (like shuffle/⋯ already aim for) */
+  #shuffle-all-btn.is-pressed,
+  #album-menu-btn.is-pressed,
+  #pl-add-songs-chip.is-pressed,
+  #pl-edit-btn.is-pressed,
+  #pl-edit-save.is-pressed,
+  #pl-edit-cancel.is-pressed,
+  #pl-multi-trash.is-pressed {
+    background: rgba(255, 255, 255, 0.2) !important;
+    color: #fff !important;
+  }
+
+  /* --- Play all: scale + white fill + glow --- */
+  #play-all-btn.is-pressed,
+  #play-all-btn:active {
+    transform: scale(0.92) !important;
+    background: #eee !important;
+    color: #111 !important;
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.35) !important;
+  }
+  #play-all-btn.is-pressed .play-all-label,
+  #play-all-btn:active .play-all-label {
+    color: #111 !important;
+  }
+
+  /* --- Shuffle: glow on press (scale already there) --- */
+  #shuffle-all-btn.is-pressed,
+  #shuffle-all-btn:active {
+    transform: scale(0.92) !important;
+    box-shadow: 0 0 16px rgba(255, 255, 255, 0.2) !important;
+  }
+
+  /* --- ⋯ menu: same as shuffle — glow on press --- */
+  #album-menu-btn.is-pressed,
+  #album-menu-btn:active {
+    transform: scale(0.92) !important;
+    box-shadow: 0 0 16px rgba(255, 255, 255, 0.2) !important;
+  }
+
+  /* --- × loop toggle: transform always; active blue without waiting for hover clear --- */
+  #pl-loops-btn.is-pressed,
+  #pl-loops-btn:active {
+    transform: scale(0.92) !important;
+  }
+  #pl-loops-btn.is-active,
+  #pl-loops-btn.active {
+    background: rgba(124, 156, 255, 0.22) !important;
+    color: var(--accent) !important;
+    box-shadow: 0 0 14px rgba(124, 156, 255, 0.3) !important;
+  }
+  #pl-loops-btn.is-active:hover,
+  #pl-loops-btn.active:hover {
+    background: rgba(124, 156, 255, 0.22) !important;
+    color: var(--accent) !important;
+    box-shadow: 0 0 14px rgba(124, 156, 255, 0.3) !important;
+  }
+
+  /* --- + Songs + pencil: color change + scale + glow --- */
+  #pl-add-songs-chip.is-pressed,
+  #pl-add-songs-chip:active,
+  #pl-edit-btn.is-pressed,
+  #pl-edit-btn:active {
+    transform: scale(0.92) !important;
+    background: rgba(255, 255, 255, 0.2) !important;
+    color: #fff !important;
+    box-shadow: 0 0 16px rgba(255, 255, 255, 0.2) !important;
+  }
+
+  /* --- Library / in-lib check: keep blue bg while pressed; no empty ghost --- */
+  #album-lib-btn:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+    box-shadow: none !important;
+    transform: none !important;
+  }
+  #album-lib-btn.is-in-lib:hover {
+    background: rgba(124, 156, 255, 0.22) !important;
+    color: var(--accent) !important;
+    box-shadow: 0 0 16px rgba(124, 156, 255, 0.28) !important;
+  }
+  #album-lib-btn.is-pressed,
+  #album-lib-btn:active {
+    transform: scale(0.92) !important;
+    background: rgba(255, 255, 255, 0.2) !important;
+  }
+  #album-lib-btn.is-in-lib.is-pressed,
+  #album-lib-btn.is-in-lib:active {
+    transform: scale(0.92) !important;
+    background: rgba(124, 156, 255, 0.4) !important;
+    color: var(--accent) !important;
+    box-shadow: 0 0 18px rgba(124, 156, 255, 0.45) !important;
+  }
+
+  /* --- Edit: Confirm (save) + Cancel — all three --- */
+  #pl-edit-save.is-pressed,
+  #pl-edit-save:active {
+    transform: scale(0.92) !important;
+    background: rgba(255, 255, 255, 0.2) !important;
+    color: var(--accent) !important;
+    box-shadow: 0 0 16px rgba(124, 156, 255, 0.35) !important;
+  }
+  #pl-edit-cancel.is-pressed,
+  #pl-edit-cancel:active {
+    transform: scale(0.92) !important;
+    background: rgba(255, 80, 80, 0.2) !important;
+    color: #ff6b6b !important;
+    box-shadow: 0 0 16px rgba(255, 80, 80, 0.3) !important;
+  }
+
+  /* --- Clear-all-loops + multiselect: transform only --- */
+  #pl-clear-loops-btn.is-pressed,
+  #pl-clear-loops-btn:active,
+  #pl-multi-btn.is-pressed,
+  #pl-multi-btn:active {
+    transform: scale(0.92) !important;
+    box-shadow: none !important;
+  }
+
+  /* --- Delete selected: all three --- */
+  #pl-multi-trash.is-pressed,
+  #pl-multi-trash:active {
+    transform: scale(0.92) !important;
+    background: rgba(255, 80, 80, 0.22) !important;
+    color: #ff6b6b !important;
+    box-shadow: 0 0 16px rgba(255, 80, 80, 0.3) !important;
+  }
+}
