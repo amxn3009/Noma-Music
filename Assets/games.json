@@ -500,7 +500,7 @@
     ]
   },
 
-    {
+  {
     "id": "mariogalaxy",
     "title": "Super Mario Galaxy",
     "short": "Mario Galaxy",
@@ -883,6 +883,26 @@
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/Day Break- A New Dawn.bfstm",
         "duration": 54.428
       }
+    ]
+  },
+
+  {
+    "id": "mariogalaxy2",
+    "title": "Super Mario Galaxy 2",
+    "short": "Mario Galaxy 2",
+    "fullscreenName": "Super Mario Galaxy 2",
+    "composer": "Mahito Yokota, Ryo Nagamatsu, Koji Kondo",
+    "console": "wii",
+    "franchise": "mario",
+    "cover": "Assets/Games/SuperMarioGalaxy2/AlbumCover/AlbumCover_MarioGalaxy2.png",
+    "tracks": [
+      {
+        "id": "smg-overture",
+        "title": "Overture",
+        "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Overture.bfstm",
+        "duration": 44.662
+      }
+      
     ]
   },
   
