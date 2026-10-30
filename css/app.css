@@ -8253,9 +8253,8 @@ body.pl-editing .pl-cover-hit-wrap .pl-cover-edit-hit {
   }
 }
 
-/* ===== Mobile FS expanded queue — restore "added smg2" layout ===== */
-/* Phones + iPad (touch) — smg2 expanded FS layout */
-@media (max-width: 720px), (hover: none), (pointer: coarse) {
+/* ===== FS expanded: phones only ===== */
+@media (max-width: 720px) {
   .fs-queue,
   body.fs-queue-open .fs-queue,
   body.fs-open.fs-queue-open .fs-queue,
@@ -8265,8 +8264,7 @@ body.pl-editing .pl-cover-hit-wrap .pl-cover-edit-hit {
     right: 12px;
   }
 
-  html.ios-standalone .fs-queue,
-  html.ios-standalone body.fs-queue-open .fs-queue {
+  html.ios-standalone .fs-queue {
     top: calc(30px + env(safe-area-inset-top, 0px) + 56px);
   }
 
@@ -8278,13 +8276,11 @@ body.pl-editing .pl-cover-hit-wrap .pl-cover-edit-hit {
   }
 
   body.fs-queue-open .fs-cover,
-  body.fs-open.fs-queue-open .fs-cover,
-  body.fs-closing-layout .fs-cover {
+  body.fs-open.fs-queue-open .fs-cover {
     width: min(180px, 42vw) !important;
     max-width: min(180px, 42vw) !important;
   }
 
-  /* Queue open: 1 line + ellipsis */
   body.fs-queue-open .fs-title,
   body.fs-open.fs-queue-open .fs-title {
     font-size: 1.2rem !important;
@@ -8292,11 +8288,8 @@ body.pl-editing .pl-cover-hit-wrap .pl-cover-edit-hit {
     white-space: nowrap !important;
     display: block !important;
     -webkit-line-clamp: unset !important;
-    -webkit-box-orient: unset !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
-    line-height: 1.25 !important;
-    padding-bottom: 0 !important;
   }
 
   body.fs-queue-open .fs-game,
@@ -8308,16 +8301,65 @@ body.pl-editing .pl-cover-hit-wrap .pl-cover-edit-hit {
     text-overflow: ellipsis !important;
   }
 
-  /* Queue closed: multi-line song title */
   body.fs-open:not(.fs-queue-open) .fs-title {
     white-space: normal !important;
     display: -webkit-box !important;
     -webkit-box-orient: vertical !important;
     -webkit-line-clamp: 3 !important;
     overflow: hidden !important;
-    text-overflow: ellipsis !important;
     font-size: 1.75rem !important;
     max-width: min(560px, 88vw) !important;
-    line-height: 1.35 !important;
+  }
+}
+
+/* ===== FS expanded: iPad / tablet (touch, wider than phone) — smg2 defaults ===== */
+@media (min-width: 721px) and ((hover: none) or (pointer: coarse)) {
+  .fs-queue,
+  body.fs-queue-open .fs-queue,
+  body.fs-open.fs-queue-open .fs-queue,
+  body.fs-closing-layout .fs-queue {
+    width: min(520px, 52vw) !important;
+  }
+
+  body.fs-queue-open .fs-stage,
+  body.fs-open.fs-queue-open .fs-stage {
+    transform: translateX(calc(-1 * min(60px, 6vw))) !important;
+    max-width: calc(100% - min(520px, 52vw) - 24px) !important;
+  }
+
+  body.fs-queue-open .fs-cover,
+  body.fs-open.fs-queue-open .fs-cover,
+  body.fs-closing-layout .fs-cover {
+    width: min(300px, 42vw) !important;
+    max-width: min(300px, 42vw) !important;
+  }
+
+  body.fs-queue-open .fs-title,
+  body.fs-open.fs-queue-open .fs-title {
+    font-size: 1.35rem !important;
+    max-width: min(320px, 48vw) !important;
+    white-space: nowrap !important;
+    display: block !important;
+    -webkit-line-clamp: unset !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  body.fs-queue-open .fs-game,
+  body.fs-open.fs-queue-open .fs-game {
+    max-width: min(320px, 48vw) !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  /* Queue closed: multi-line title still ok on iPad */
+  body.fs-open:not(.fs-queue-open) .fs-title {
+    white-space: normal !important;
+    display: -webkit-box !important;
+    -webkit-box-orient: vertical !important;
+    -webkit-line-clamp: 3 !important;
+    overflow: hidden !important;
+    font-size: 1.75rem !important;
   }
 }
