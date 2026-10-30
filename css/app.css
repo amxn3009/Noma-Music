@@ -8254,8 +8254,8 @@ body.pl-editing .pl-cover-hit-wrap .pl-cover-edit-hit {
 }
 
 /* ===== Mobile FS expanded queue — restore "added smg2" layout ===== */
-@media (max-width: 720px) {
-  /* Queue width / position (same as before PC widen) */
+/* Phones + iPad (touch) — smg2 expanded FS layout */
+@media (max-width: 720px), (hover: none), (pointer: coarse) {
   .fs-queue,
   body.fs-queue-open .fs-queue,
   body.fs-open.fs-queue-open .fs-queue,
@@ -8270,7 +8270,6 @@ body.pl-editing .pl-cover-hit-wrap .pl-cover-edit-hit {
     top: calc(30px + env(safe-area-inset-top, 0px) + 56px);
   }
 
-  /* Stage: barely shift left, leave room for 360px queue */
   body.fs-queue-open .fs-stage,
   body.fs-open.fs-queue-open .fs-stage {
     transform: translateX(-4px) !important;
@@ -8278,7 +8277,6 @@ body.pl-editing .pl-cover-hit-wrap .pl-cover-edit-hit {
     gap: 8px;
   }
 
-  /* Smaller cover when queue open (smg2 values) */
   body.fs-queue-open .fs-cover,
   body.fs-open.fs-queue-open .fs-cover,
   body.fs-closing-layout .fs-cover {
@@ -8286,7 +8284,7 @@ body.pl-editing .pl-cover-hit-wrap .pl-cover-edit-hit {
     max-width: min(180px, 42vw) !important;
   }
 
-  /* Title: smaller when queue open; single line + ellipsis */
+  /* Queue open: 1 line + ellipsis */
   body.fs-queue-open .fs-title,
   body.fs-open.fs-queue-open .fs-title {
     font-size: 1.2rem !important;
@@ -8297,8 +8295,8 @@ body.pl-editing .pl-cover-hit-wrap .pl-cover-edit-hit {
     -webkit-box-orient: unset !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
-    padding-bottom: 0 !important;
     line-height: 1.25 !important;
+    padding-bottom: 0 !important;
   }
 
   body.fs-queue-open .fs-game,
@@ -8310,7 +8308,7 @@ body.pl-editing .pl-cover-hit-wrap .pl-cover-edit-hit {
     text-overflow: ellipsis !important;
   }
 
-  /* Queue closed: keep multi-line song title (current behaviour) */
+  /* Queue closed: multi-line song title */
   body.fs-open:not(.fs-queue-open) .fs-title {
     white-space: normal !important;
     display: -webkit-box !important;
