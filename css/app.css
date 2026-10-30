@@ -5246,9 +5246,46 @@ body.fs-queue-open .fs-queue {
 
 /* Mobile: keep existing tighter shift (see max-width: 720px block) */
 @media (max-width: 720px) {
-  body.fs-queue-open .fs-stage {
+  /* Narrow queue — do NOT use PC 640px width */
+  .fs-queue,
+  body.fs-queue-open .fs-queue,
+  body.fs-open.fs-queue-open .fs-queue,
+  body.fs-closing-layout .fs-queue {
+    width: min(100vw - 24px, 360px) !important;
+  }
+
+  body.fs-queue-open .fs-stage,
+  body.fs-open.fs-queue-open .fs-stage {
     transform: translateX(-4px);
     max-width: calc(100% - min(100vw - 24px, 360px) - 16px);
+  }
+
+  /* Smaller cover when queue open */
+  body.fs-queue-open .fs-cover,
+  body.fs-open.fs-queue-open .fs-cover {
+    width: min(180px, 42vw) !important;
+    max-width: min(180px, 42vw) !important;
+  }
+
+  /* Smaller title when queue open */
+  body.fs-queue-open .fs-title,
+  body.fs-open.fs-queue-open .fs-title {
+    font-size: 1.2rem !important;
+    max-width: min(280px, 70vw);
+  }
+  body.fs-queue-open .fs-game,
+  body.fs-open.fs-queue-open .fs-game {
+    font-size: 0.85rem;
+    max-width: min(280px, 70vw);
+  }
+}
+
+@media (min-width: 721px) {
+  .fs-queue,
+  body.fs-queue-open .fs-queue,
+  body.fs-open.fs-queue-open .fs-queue,
+  body.fs-closing-layout .fs-queue {
+    width: min(640px, 58vw) !important;
   }
 }
 
@@ -5316,14 +5353,16 @@ body.fs-queue-open .fs-queue {
 
   body.fs-queue-open .fs-title,
   body.fs-open.fs-queue-open .fs-title {
-    white-space: nowrap;
-    display: block;
-    -webkit-line-clamp: unset;
-    -webkit-box-orient: unset;
-    text-overflow: ellipsis;
-    overflow: hidden;
-    max-width: min(320px, 48vw);
-    font-size: 1.75rem;
+    white-space: nowrap !important;
+    display: block !important;
+    -webkit-line-clamp: unset !important;
+    -webkit-box-orient: unset !important;
+    text-overflow: ellipsis !important;
+    overflow: hidden !important;
+    max-width: min(280px, 70vw) !important;
+    font-size: 1.2rem !important;
+    line-height: 1.25 !important;
+    padding-bottom: 0 !important;
   }
 
   body.fs-queue-open .fs-game,
@@ -8160,5 +8199,56 @@ body.pl-editing .pl-cover-hit-wrap .pl-cover-edit-hit {
   .q-remove,
   .queue-item .q-remove {
     color: #ff6b6b !important;
+  }
+
+  /* Minimize (exit FS): full white like other player icons */
+  #btn-minimize,
+  #btn-minimize .ctrl-img,
+  #btn-minimize .icon,
+  #btn-minimize .icon-mask {
+    color: var(--text) !important;
+    opacity: 1 !important;
+    filter: none;
+  }
+  /* If minimize uses a masked img that stays grey via filter: */
+  #btn-minimize .ctrl-img,
+  #btn-minimize img {
+    opacity: 1 !important;
+    filter: brightness(0) invert(1);
+  }
+
+  /* Play / pause: black glyph on white disc */
+  .play-btn,
+  #btn-play,
+  .play-btn svg,
+  #btn-play svg,
+  .play-btn .icon,
+  #btn-play .icon {
+    color: #111 !important;
+    fill: #111 !important;
+  }
+  .play-btn svg path,
+  #btn-play svg path {
+    fill: #111 !important;
+    stroke: #111 !important;
+  }
+
+  /* Bottom player shuffle + loop: blue when active (like queue) */
+  #btn-shuffle.active,
+  #btn-loop.active,
+  .player-bar #btn-shuffle.active,
+  .player-bar #btn-loop.active,
+  .controls #btn-shuffle.active,
+  .controls #btn-loop.active {
+    color: var(--accent) !important;
+  }
+  #btn-shuffle.active .ctrl-img,
+  #btn-loop.active .ctrl-img,
+  #btn-shuffle.active img,
+  #btn-loop.active img {
+    filter: none;
+    opacity: 1;
+    /* If icons are monochrome masks, tint toward accent: */
+    /* filter: invert(56%) sepia(40%) saturate(600%) hue-rotate(195deg); */
   }
 }

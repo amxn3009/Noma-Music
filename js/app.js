@@ -11,7 +11,7 @@ const supabase =
     : null;
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = "30.10.26, css changes, changed ios cache size.";
+const APP_VERSION = "30.10.26, css changes, changed ios cache size + mobile fix #1";
 
 let LIBRARY = [];
 
