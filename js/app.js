@@ -11,7 +11,7 @@ const supabase =
     : null;
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = "29.10.26, fix buttons fully, fixed toast for editting playlists, fixed playlist exporting loops, added smg2";
+const APP_VERSION = "30.10.26, css changes, changed ios cache size.";
 
 let LIBRARY = [];
 
@@ -1903,7 +1903,7 @@ async function resumeAudio() {
 const durationCache = new Map(); // url → seconds
 
 // Decode cache (BFSTM / web audio). Cap memory — long tracks are heavy.
-const DECODE_CACHE_MAX = isIOS() ? 6 : 10;
+const DECODE_CACHE_MAX = isIOS() ? 4 : 10;
 const decodeCache = new Map(); // url → { audioBuffer, loopStartSample, sampleRate, loopFlag? }
 
 function decodeCacheGet(url) {

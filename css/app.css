@@ -1543,19 +1543,20 @@ body.fs-open .volume-wrap {
 .ctrl-btn {
   background: transparent;
   border: none;
-  color: var(--muted);
   cursor: pointer;
   padding: 8px 10px;
   border-radius: 50%;
   font-size: 1.3rem;
   transition: color 0.15s, background 0.15s, transform 0.15s;
-  color: var(--muted);
+  color: var(--muted); /* PC default */
 }
 .ctrl-btn:hover {
   color: var(--text);
-  background: rgba(255,255,255,0.08);
+  background: rgba(255, 255, 255, 0.08);
 }
-.ctrl-btn.active { color: var(--accent); }
+.ctrl-btn.active {
+  color: var(--accent);
+}
 
 .ctrl-btn .icon {
   display: block;
@@ -1772,7 +1773,10 @@ body.is-transitioning .time {
 #queue-loop-btn,
 #queue-clear,
 #queue-close,
-#queue-fs-expand {
+#queue-fs-expand,
+#fs-queue-loop-btn,
+#fs-queue-clear,
+#fs-queue-close {
   width: 36px;
   height: 36px;
   min-width: 36px;
@@ -1783,7 +1787,7 @@ body.is-transitioning .time {
   place-items: center;
   line-height: 1;
   font-size: 1.05rem;
-  color: var(--muted);
+  color: var(--muted); /* PC default */
 }
 
 
@@ -1793,11 +1797,13 @@ body.is-transitioning .time {
   transform: translateY(0.5px);
 }
 
-#queue-clear:hover {
+/* PC: clear stays muted, red only on hover */
+#queue-clear:hover,
+#fs-queue-clear:hover,
+.q-remove:hover {
   color: #ff6b6b;
   background: rgba(255, 100, 100, 0.12);
 }
-
 #queue-close:hover,
 #queue-fs-expand:hover {
   color: var(--text);
@@ -2840,6 +2846,38 @@ body.fs-open .progress-row {
 .sleep-btn.active {
   color: var(--accent);
   background: var(--accent-soft);
+}
+
+.sleep-btn.active {
+  color: var(--accent) !important;
+  background: var(--accent-soft);
+}
+
+/* Sleep white only while fullscreen is open */
+body.fs-open .sleep-btn,
+body.fs-open .settings-btn.sleep-btn {
+  color: var(--text) !important;
+}
+body.fs-open .sleep-btn.active {
+  color: var(--accent) !important;
+}
+
+/* Active chip a bit stronger (all devices) */
+body.fs-open .sleep-active {
+  padding: 6px 8px 6px 12px;
+  background: rgba(124, 156, 255, 0.18);
+  border: 1px solid rgba(124, 156, 255, 0.4);
+  box-shadow: 0 0 18px rgba(124, 156, 255, 0.2);
+}
+body.fs-open .sleep-countdown {
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+body.fs-open .sleep-chip {
+  width: 30px;
+  height: 30px;
+  background: rgba(255, 255, 255, 0.14);
+  font-size: 0.8rem;
 }
 
 /* Fixed + on <body> so it stacks above queue / lists */
@@ -4906,15 +4944,19 @@ img,
     opacity 0.35s ease;
 }
 
-/* Stage shifts left when queue is open */
+/* Stage shifts left when queue is open — PC only (cover stays full size) */
 body.fs-open.fs-queue-open .fullscreen-player {
   padding-right: calc(var(--fs-queue-w) + 28px);
   padding-left: 20px;
 }
 
-body.fs-open.fs-queue-open .fs-cover {
-  width: min(280px, 46vw);
-  max-width: min(280px, 46vw);
+/* Do NOT shrink cover on PC — only mobile media query may resize it */
+@media (min-width: 721px) {
+  body.fs-open.fs-queue-open .fs-cover,
+  body.fs-queue-open .fs-cover {
+    width: min(360px, 72vw) !important;
+    max-width: min(360px, 72vw) !important;
+  }
 }
 
 /* Queue panel: default floating (non-fs) unchanged.
@@ -5101,7 +5143,7 @@ body.fs-queue-open .queue-fs-expand svg {
   top: calc(56px + env(safe-area-inset-top, 0px));
   right: 12px;
   bottom: 12px;
-  width: min(520px, 52vw); /* was 460 / 46vw */
+  width: min(520px, 52vw); /* mobile default */
   display: flex;
   flex-direction: column;
   pointer-events: none;
@@ -5114,6 +5156,16 @@ body.fs-queue-open .fs-queue {
   opacity: 1;
   transform: translateX(0);
   pointer-events: auto;
+}
+
+/* PC: same width open, closed, and mid-animation — no jump */
+@media (min-width: 721px) {
+  .fs-queue,
+  body.fs-queue-open .fs-queue,
+  body.fs-open.fs-queue-open .fs-queue,
+  body.fs-closing-layout .fs-queue {
+    width: min(640px, 58vw) !important;
+  }
 }
 
 /* Same list model as normal queue (not flex-gap — drop slot needs block flow) */
@@ -5177,35 +5229,47 @@ body.fs-queue-open .fs-queue {
   box-shadow: inset 0 0 0 1px rgba(124, 156, 255, 0.35);
 }
 
-/* Cover shifts left less aggressively so gap shrinks */
-body.fs-queue-open .fs-stage {
-  transform: translateX(calc(-1 * min(60px, 6vw))); /* was 120px / 10vw */
-  max-width: calc(100% - min(520px, 52vw) - 24px);
-}
-body.fs-queue-open .fs-cover {
-  width: min(300px, 42vw);
-  max-width: min(300px, 42vw);
-}
-body.fs-queue-open .fs-title {
-  font-size: 1.4rem;
+/* PC: shift stage left; wider queue; title size stays the same */
+@media (min-width: 721px) {
+  body.fs-queue-open .fs-stage,
+  body.fs-open.fs-queue-open .fs-stage {
+    transform: translateX(calc(-1 * min(160px, 14vw)));
+    max-width: calc(100% - min(640px, 58vw) - 40px);
+  }
+
+  /* Wider than the old min(520px, 52vw) */
+  body.fs-queue-open .fs-queue,
+  body.fs-open.fs-queue-open .fs-queue {
+    width: min(640px, 58vw) !important;
+  }
 }
 
+/* Mobile: keep existing tighter shift (see max-width: 720px block) */
+@media (max-width: 720px) {
+  body.fs-queue-open .fs-stage {
+    transform: translateX(-4px);
+    max-width: calc(100% - min(100vw - 24px, 360px) - 16px);
+  }
+}
+
+/* Base FS title */
 .fs-title {
   font-size: 1.75rem;
   font-weight: 700;
   text-align: center;
   margin: 0;
-  line-height: 1.2;
+  line-height: 1.25;
   max-width: min(560px, 88vw);
-  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   transition: font-size 0.42s var(--ease), max-width 0.42s var(--ease);
 }
+
 .fs-game {
   text-align: center;
   margin: 0;
-  line-height: 1.2;
+  line-height: 1.45;          /* room for descenders */
+  padding-bottom: 0.15em;     /* extra bottom clearance */
   max-width: min(560px, 88vw);
   white-space: nowrap;
   overflow: hidden;
@@ -5213,14 +5277,59 @@ body.fs-queue-open .fs-title {
   transition: font-size 0.42s var(--ease), max-width 0.42s var(--ease);
 }
 
-body.fs-queue-open .fs-title,
-body.fs-open.fs-queue-open .fs-title {
-  font-size: 1.35rem;
-  max-width: min(320px, 48vw);
+/* PC: always multi-line (queue open or closed) */
+@media (min-width: 721px) {
+  .fs-title,
+  body.fs-open .fs-title,
+  body.fs-queue-open .fs-title,
+  body.fs-open.fs-queue-open .fs-title {
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 1.75rem;
+  }
+
+  body.fs-queue-open .fs-title,
+  body.fs-open.fs-queue-open .fs-title {
+    max-width: min(420px, 40vw);
+  }
+
+  body.fs-queue-open .fs-game,
+  body.fs-open.fs-queue-open .fs-game {
+    max-width: min(420px, 40vw);
+  }
 }
-body.fs-queue-open .fs-game,
-body.fs-open.fs-queue-open .fs-game {
-  max-width: min(320px, 48vw);
+
+/* Mobile: multi-line when queue closed; 1 line + ellipsis when open */
+@media (max-width: 720px) {
+  body.fs-open:not(.fs-queue-open) .fs-title {
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  body.fs-queue-open .fs-title,
+  body.fs-open.fs-queue-open .fs-title {
+    white-space: nowrap;
+    display: block;
+    -webkit-line-clamp: unset;
+    -webkit-box-orient: unset;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    max-width: min(320px, 48vw);
+    font-size: 1.75rem;
+  }
+
+  body.fs-queue-open .fs-game,
+  body.fs-open.fs-queue-open .fs-game {
+    max-width: min(320px, 48vw);
+  }
 }
 
 /* Expanded mode: hide floating window */
@@ -5294,31 +5403,60 @@ body.fs-queue-open #queue-panel {
   background: rgba(255, 255, 255, 0.08);
 }
 
-/* While FS is closing, freeze stage position (no slide-to-center) */
-/* While FS is closing from expanded: freeze stage (no center slide) */
-/* Freeze stage while closing FS from expanded — no slide-to-center */
-body.fs-closing-layout .fs-stage {
-  transition: none !important;
-  transform: translateX(calc(-1 * min(60px, 6vw))) !important;
-  max-width: calc(100% - min(520px, 52vw) - 24px) !important;
+/* Freeze layout at the OPEN expanded sizes while closing (matches PC rules) */
+@media (min-width: 721px) {
+  body.fs-closing-layout .fs-stage {
+    transition: none !important;
+    transform: translateX(calc(-1 * min(160px, 14vw))) !important;
+    max-width: calc(100% - min(640px, 58vw) - 40px) !important;
+  }
+  body.fs-closing-layout .fs-cover {
+    transition: none !important;
+    width: min(360px, 72vw) !important;
+    max-width: min(360px, 72vw) !important;
+  }
+  body.fs-closing-layout .fs-title,
+  body.fs-closing-layout .fs-game {
+    transition: none !important;
+    max-width: min(420px, 40vw) !important;
+  }
+  body.fs-closing-layout .fs-queue {
+    transition: none !important;
+    width: min(640px, 58vw) !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
 }
-body.fs-closing-layout .fs-cover {
-  transition: none !important;
-  width: min(300px, 42vw) !important;
-  max-width: min(300px, 42vw) !important;
+
+@media (max-width: 720px) {
+  body.fs-closing-layout .fs-stage {
+    transition: none !important;
+    transform: translateX(-4px) !important;
+    max-width: calc(100% - min(100vw - 24px, 360px) - 16px) !important;
+  }
+  body.fs-closing-layout .fs-cover {
+    transition: none !important;
+    width: min(180px, 42vw) !important;
+    max-width: min(180px, 42vw) !important;
+  }
+  body.fs-closing-layout .fs-title,
+  body.fs-closing-layout .fs-game {
+    transition: none !important;
+    max-width: min(320px, 48vw) !important;
+  }
+  body.fs-closing-layout .fs-queue {
+    transition: none !important;
+    width: min(100vw - 24px, 360px) !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
 }
-body.fs-closing-layout .fs-title,
-body.fs-closing-layout .fs-game {
-  transition: none !important;
-  max-width: min(320px, 48vw) !important;
-  white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-}
-body.fs-closing-layout .fs-queue {
-  transition: none !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
+
+@media (min-width: 721px) {
+  body.fs-queue-open .fs-queue,
+  body.fs-open.fs-queue-open .fs-queue {
+    width: min(640px, 58vw) !important;
+  }
 }
 
 
@@ -7986,3 +8124,41 @@ body.pl-editing .pl-cover-hit-wrap .pl-cover-edit-hit {
   opacity: 1; /* allow JS inline opacity:0 → "" to animate */
 }
 /* Prefer not using opacity: 1 !important on the hit during enter */
+
+@media (hover: none), (pointer: coarse) {
+  /* Bottom player + queue controls: fully white (like FS back) */
+  .ctrl-btn,
+  .player-bar .ctrl-btn,
+  #btn-shuffle,
+  #btn-prev,
+  #btn-next,
+  #btn-loop,
+  #btn-queue,
+  #btn-minimize,
+  .volume-wrap,
+  .volume-wrap .volume-icon,
+  .queue-header-actions .ctrl-btn,
+  #queue-loop-btn,
+  #queue-close,
+  #queue-fs-expand,
+  #fs-queue-loop-btn,
+  #fs-queue-close,
+  body.fs-open .queue-fs-expand,
+  body.fs-open #queue-fs-expand {
+    color: var(--text) !important;
+  }
+
+  .ctrl-btn.active,
+  #queue-loop-btn.active,
+  #fs-queue-loop-btn.active {
+    color: var(--accent) !important;
+  }
+
+  /* Trash / clear queue: red */
+  #queue-clear,
+  #fs-queue-clear,
+  .q-remove,
+  .queue-item .q-remove {
+    color: #ff6b6b !important;
+  }
+}
