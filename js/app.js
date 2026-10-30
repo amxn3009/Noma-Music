@@ -11,7 +11,7 @@ const supabase =
     : null;
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = "30.10.26, css changes, changed ios cache size + mobile fix #4";
+const APP_VERSION = "30.10.26, css changes, changed ios cache size + mobile fix #4, added auto q scroll on skips";
 
 let LIBRARY = [];
 
@@ -8746,6 +8746,31 @@ async function togglePlay() {
   updatePlayerUI();
 }
 
+/** Scroll every open queue list so the current row is in view. */
+function scrollQueuesToCurrent() {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      const sel = ".queue-item.current";
+      const floating = $("#queue-list")?.querySelector(sel);
+      const fs = $("#fs-queue-list")?.querySelector(sel);
+
+      const panel = $("#queue-panel");
+      if (
+        floating &&
+        panel &&
+        !panel.classList.contains("hidden") &&
+        !panel.classList.contains("is-closing")
+      ) {
+        floating.scrollIntoView({ block: "center", behavior: "smooth" });
+      }
+
+      if (fs && document.body.classList.contains("fs-queue-open")) {
+        fs.scrollIntoView({ block: "center", behavior: "smooth" });
+      }
+    });
+  });
+}
+
 function nextTrack(fromNaturalEnd = false) {
   if (state.queue.length === 0) return;
 
@@ -8799,6 +8824,11 @@ function nextTrack(fromNaturalEnd = false) {
     state.loopsRemaining = 0;
   }
   playCurrent();
+
+  // Manual skip only — not auto-advance at end of song
+  if (!fromNaturalEnd) {
+    scrollQueuesToCurrent();
+  }
 }
 
 function prevTrack() {
@@ -8873,6 +8903,7 @@ function prevTrack() {
     state.loopsRemaining = 0;
   }
   playCurrent();
+  scrollQueuesToCurrent(); // always a user action when we reach here
 }
 
 function toggleLoop() {

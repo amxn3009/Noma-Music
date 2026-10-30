@@ -8253,66 +8253,7 @@ body.pl-editing .pl-cover-hit-wrap .pl-cover-edit-hit {
   }
 }
 
-/* ===== FS expanded: phones only ===== */
-@media (max-width: 720px) {
-  .fs-queue,
-  body.fs-queue-open .fs-queue,
-  body.fs-open.fs-queue-open .fs-queue,
-  body.fs-closing-layout .fs-queue {
-    width: min(100vw - 24px, 360px) !important;
-    top: calc(52px + env(safe-area-inset-top, 0px));
-    right: 12px;
-  }
-
-  html.ios-standalone .fs-queue {
-    top: calc(30px + env(safe-area-inset-top, 0px) + 56px);
-  }
-
-  body.fs-queue-open .fs-stage,
-  body.fs-open.fs-queue-open .fs-stage {
-    transform: translateX(-4px) !important;
-    max-width: calc(100% - min(100vw - 24px, 360px) - 16px) !important;
-    gap: 8px;
-  }
-
-  body.fs-queue-open .fs-cover,
-  body.fs-open.fs-queue-open .fs-cover {
-    width: min(180px, 42vw) !important;
-    max-width: min(180px, 42vw) !important;
-  }
-
-  body.fs-queue-open .fs-title,
-  body.fs-open.fs-queue-open .fs-title {
-    font-size: 1.2rem !important;
-    max-width: min(280px, 70vw) !important;
-    white-space: nowrap !important;
-    display: block !important;
-    -webkit-line-clamp: unset !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-  }
-
-  body.fs-queue-open .fs-game,
-  body.fs-open.fs-queue-open .fs-game {
-    font-size: 0.85rem !important;
-    max-width: min(280px, 70vw) !important;
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-  }
-
-  body.fs-open:not(.fs-queue-open) .fs-title {
-    white-space: normal !important;
-    display: -webkit-box !important;
-    -webkit-box-orient: vertical !important;
-    -webkit-line-clamp: 3 !important;
-    overflow: hidden !important;
-    font-size: 1.75rem !important;
-    max-width: min(560px, 88vw) !important;
-  }
-}
-
-/* ===== FS expanded: iPad / tablet (touch, wider than phone) — smg2 defaults ===== */
+/* ===== FS expanded: iPad / tablet — smg2 defaults ===== */
 @media (min-width: 721px) and ((hover: none) or (pointer: coarse)) {
   .fs-queue,
   body.fs-queue-open .fs-queue,
