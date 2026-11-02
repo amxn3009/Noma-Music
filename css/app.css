@@ -8539,15 +8539,46 @@ body.fs-open.fs-queue-open .fs-queue {
   }
 }
 
-/* Both panels use the same width */
-body.fs-open.fs-queue-open .fs-queue,
-body.fs-open.fs-queue-open .fs-queue,
-.fs-queue {
-  width: var(--fs-side-w) !important;
+/* PC only: shared side width (leave this alone — works) */
+@media (hover: hover) and (pointer: fine) {
+  body.fs-open.fs-queue-open .fs-queue {
+    width: var(--fs-side-w) !important;
+  }
+  .fs-lyrics,
+  body.fs-open.fs-lyrics-open .fs-lyrics {
+    width: var(--fs-side-w) !important;
+  }
 }
-.fs-lyrics,
-body.fs-open.fs-lyrics-open .fs-lyrics {
-  width: var(--fs-side-w) !important;
+
+/* iPad / phone: restore pre-lyrics queue sizing — do not use PC --fs-side-w */
+@media (hover: none), (pointer: coarse) {
+  .fs-queue,
+  body.fs-queue-open .fs-queue,
+  body.fs-open.fs-queue-open .fs-queue,
+  body.fs-closing-layout .fs-queue {
+    width: min(100vw - 24px, 360px) !important;
+  }
+  body.fs-open.fs-queue-open .fs-stage,
+  body.fs-queue-open .fs-stage {
+    transform: translateX(-4px) !important;
+    max-width: calc(100% - min(100vw - 24px, 360px) - 16px) !important;
+  }
+  body.fs-open.fs-queue-open .fs-cover,
+  body.fs-queue-open .fs-cover {
+    width: min(180px, 42vw) !important;
+    max-width: min(180px, 42vw) !important;
+  }
+  body.fs-open.fs-queue-open .fullscreen-player {
+    padding-right: 12px !important;
+    padding-left: 12px !important;
+  }
+  .fs-lyrics,
+  body.fs-open.fs-lyrics-open .fs-lyrics {
+    width: min(100vw - 24px, 360px) !important;
+  }
+  body.fs-open.fs-lyrics-open .fullscreen-player {
+    padding-right: 12px !important;
+  }
 }
 
 /* Stage inset identical for queue OR lyrics */
