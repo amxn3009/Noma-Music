@@ -63,7 +63,15 @@
   </div>
 
   <div class="sleep-wrap">
-    <!-- keep your existing sleep + settings markup exactly as it is -->
+        <button id="btn-fs-lyrics" class="settings-btn sleep-btn fs-lyrics-btn hidden" type="button"
+                title="Lyrics" aria-label="Lyrics" aria-pressed="false" disabled>
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 2a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/>
+            <path d="M19 10v1a7 7 0 0 1-14 0v-1"/>
+            <line x1="12" y1="19" x2="12" y2="22"/>
+          </svg>
+        </button>
         <button id="btn-sleep" class="settings-btn sleep-btn" type="button" title="Ruhemodus" aria-label="Ruhemodus-Timer" aria-expanded="false">
           <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
             <path d="M12.3 2.3a9.7 9.7 0 0 0 9.4 12.9A9.5 9.5 0 1 1 12.3 2.3z"/>
@@ -956,6 +964,17 @@
   <ul id="fs-queue-list" class="fs-queue-list"></ul>
 </div>
 </div><!-- /#fullscreen-player -->
+
+<div id="fs-lyrics" class="fs-lyrics" aria-hidden="true">
+  <div class="fs-lyrics-bar">
+    <span class="fs-lyrics-title">Lyrics</span>
+    <button id="fs-lyrics-close" class="ctrl-btn fs-queue-close" type="button"
+            title="Schließen" aria-label="Lyrics schließen">✕</button>
+  </div>
+  <div id="fs-lyrics-scroll" class="fs-lyrics-scroll">
+    <div id="fs-lyrics-list" class="fs-lyrics-list"></div>
+  </div>
+</div>
 
 <!-- Add to playlist -->
 <div id="add-to-pl-overlay" class="add-to-pl-overlay hidden" aria-hidden="true">

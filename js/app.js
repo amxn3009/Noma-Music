@@ -528,6 +528,60 @@ function bindProfileAuth() {
   $("#profile-sync-now")?.addEventListener("click", () => syncNow());
 }
 
+let LYRICS_DB = {}; // key → { lines: [{ tSec, text }] }
+let lyricsUserScrollUntil = 0;
+let lyricsActiveIndex = -1;
+
+function parseLyricTime(str) {
+  // min:sec:ms  e.g. "1:02:050" → 62.05
+  const m = String(str || "").trim().match(/^(\d+):(\d{1,2}):(\d{1,3})$/);
+  if (!m) return 0;
+  const min = Number(m[1]);
+  const sec = Number(m[2]);
+  const ms = Number(m[3].padEnd(3, "0").slice(0, 3));
+  return min * 60 + sec + ms / 1000;
+}
+
+function trackLyricsKey(item) {
+  if (!item) return "";
+  const g = item.gameId || item.game?.id || state.currentGame?.id || "";
+  const t = item.track?.id || item.trackId || item.id || "";
+  return g && t ? `${g}:${t}` : "";
+}
+
+function getLyricsForQueueItem(item) {
+  const key = trackLyricsKey(item);
+  return key ? LYRICS_DB[key] || null : null;
+}
+
+function currentTrackHasLyrics() {
+  const item = state.queue[state.queueIndex];
+  const data = getLyricsForQueueItem(item);
+  return !!(data && data.lines && data.lines.length);
+}
+
+async function loadLyricsDb() {
+  try {
+    const res = await fetch("Assets/lyrics.json", { cache: "no-cache" });
+    if (!res.ok) return;
+    const raw = await res.json();
+    const out = {};
+    for (const [key, val] of Object.entries(raw || {})) {
+      const lines = (val.lines || [])
+        .map((ln) => ({
+          tSec: typeof ln.t === "number" ? ln.t : parseLyricTime(ln.t),
+          text: String(ln.text || ""),
+        }))
+        .filter((ln) => ln.text)
+        .sort((a, b) => a.tSec - b.tSec);
+      if (lines.length) out[key] = { lines };
+    }
+    LYRICS_DB = out;
+  } catch (e) {
+    console.warn("[Noma lyrics]", e);
+  }
+}
+
 function uid() {
   return `pl_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -1196,6 +1250,11 @@ const CONSOLE_META = {
     id: "n64",
     label: "Nintendo 64",
     logo: "Assets/Filter/Console/Nintendo64_Logo.webp",
+  },
+  snes: {
+    id: "snes",
+    label: "SNES",
+    logo: "Assets/Filter/Console/SNES_Logo.png",
   },
 };
 
@@ -2902,6 +2961,9 @@ function updateProgressUI() {
   }
 
   if (state.playing) {
+  if (document.body.classList.contains("fs-lyrics-open")) {
+    updateFsLyricsHighlight(false);
+  }
     animFrame = requestAnimationFrame(updateProgressUI);
     maybeUpdateMediaSessionPosition();
   }
@@ -3459,6 +3521,9 @@ function toggleFullscreen() {
     if (fsGame) fsGame.textContent = nowGame;
     if (fsCover) fsCover.src = nowCover;
 
+    updateFsLyricsButton();
+    if (!document.body.classList.contains("fs-open")) setFsLyricsOpen(false);
+
     // Snapshot: was the normal queue open outside FS?
     queueOpenOutsideFs = isQueuePanelOpen();
 
@@ -3713,6 +3778,8 @@ async function init() {
   bindAddToPlaylistUI()
   renderLibrary({ animate: false });
   bindPlaylistEditChrome()
+  await loadLyricsDb();
+  bindFsLyrics();
   updatePlayerUI();
   masterVolume = settings.volume ?? 1;
   const volSlider = $("#volume-slider");
@@ -9335,6 +9402,8 @@ function updatePlayerUI() {
   // sync lock screen / Control Center — NOT bindMediaSession()
   updateMediaSession();
   markPlayingLibraryCards();
+  updateFsLyricsButton();
+  updateFsLyricsHighlight(false);
 }
 
 function absoluteAssetUrl(path) {
@@ -10314,6 +10383,11 @@ function setFsQueueOpen(open) {
     open = false;
   }
 
+  if (open) {
+    // exclusive with expanded lyrics
+    setFsLyricsOpen(false);
+  }
+
   const wasOpen = document.body.classList.contains("fs-queue-open");
   document.body.classList.toggle("fs-queue-open", !!open);
 
@@ -10326,7 +10400,6 @@ function setFsQueueOpen(open) {
   if (fsQ) fsQ.setAttribute("aria-hidden", open ? "false" : "true");
 
   if (open) {
-    // Expanded on → hide floating without delay/flash
     closeQueuePanel({ animate: false });
     renderQueue();
     requestAnimationFrame(() => {
@@ -10336,7 +10409,7 @@ function setFsQueueOpen(open) {
       });
     });
   } else if (wasOpen) {
-    // Caller decides: arrow → open floating; X → stay closed
+    // caller decides floating vs closed
   }
 }
 
@@ -10360,6 +10433,124 @@ function toggleFsQueueMode() {
     setFsQueueOpen(false);
     openQueuePanel({ animate: false });
   }
+}
+
+function setFsLyricsOpen(open) {
+  if (open) {
+    if (!document.body.classList.contains("fs-open")) open = false;
+    if (!currentTrackHasLyrics()) open = false;
+  }
+
+  if (open) {
+    // only expanded queue — small floating queue may stay
+    setFsQueueOpen(false);
+  }
+
+  document.body.classList.toggle("fs-lyrics-open", !!open);
+
+  const panel = $("#fs-lyrics");
+  if (panel) panel.setAttribute("aria-hidden", open ? "false" : "true");
+
+  const btn = $("#btn-fs-lyrics");
+  if (btn) {
+    btn.classList.toggle("active", !!open);
+    btn.setAttribute("aria-pressed", open ? "true" : "false");
+  }
+
+  if (open) {
+    renderFsLyrics();
+    lyricsActiveIndex = -1;
+    updateFsLyricsHighlight(true);
+  }
+}
+
+function updateFsLyricsButton() {
+  const btn = $("#btn-fs-lyrics");
+  if (!btn) return;
+  const inFs = document.body.classList.contains("fs-open");
+  btn.classList.toggle("hidden", !inFs);
+  const has = currentTrackHasLyrics();
+  btn.disabled = !has;
+  btn.classList.toggle("is-disabled", !has);
+  if (!has && document.body.classList.contains("fs-lyrics-open")) {
+    setFsLyricsOpen(false);
+  }
+}
+
+function renderFsLyrics() {
+  const list = $("#fs-lyrics-list");
+  if (!list) return;
+  const data = getLyricsForQueueItem(state.queue[state.queueIndex]);
+  if (!data?.lines?.length) {
+    list.innerHTML = `<div class="fs-lyrics-line" style="opacity:0.5">Keine Lyrics</div>`;
+    return;
+  }
+  list.innerHTML = data.lines
+    .map(
+      (ln, i) =>
+        `<div class="fs-lyrics-line" data-i="${i}">${escapeHtml(ln.text)}</div>`
+    )
+    .join("");
+  lyricsActiveIndex = -1;
+}
+
+function updateFsLyricsHighlight(forceScroll = false) {
+  if (!document.body.classList.contains("fs-lyrics-open")) return;
+  const data = getLyricsForQueueItem(state.queue[state.queueIndex]);
+  if (!data?.lines?.length) return;
+
+  const t = typeof getPlaybackPosition === "function" ? getPlaybackPosition() : 0;
+  let idx = 0;
+  for (let i = 0; i < data.lines.length; i++) {
+    if (data.lines[i].tSec <= t + 0.05) idx = i;
+    else break;
+  }
+
+  if (idx === lyricsActiveIndex && !forceScroll) return;
+  lyricsActiveIndex = idx;
+
+  const nodes = $("#fs-lyrics-list")?.querySelectorAll(".fs-lyrics-line");
+  if (!nodes) return;
+  nodes.forEach((el, i) => {
+    el.classList.toggle("is-active", i === idx);
+    el.classList.toggle("is-past", i < idx);
+  });
+
+  if (Date.now() < lyricsUserScrollUntil && !forceScroll) return;
+  const active = nodes[idx];
+  const scroller = $("#fs-lyrics-scroll");
+  if (active && scroller) {
+    const ar = active.getBoundingClientRect();
+    const sr = scroller.getBoundingClientRect();
+    const offset =
+      ar.top -
+      sr.top -
+      sr.height / 2 +
+      ar.height / 2 +
+      scroller.scrollTop;
+    scroller.scrollTo({ top: offset, behavior: forceScroll ? "auto" : "smooth" });
+  }
+}
+
+function bindFsLyrics() {
+  $("#btn-fs-lyrics")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if ($("#btn-fs-lyrics")?.disabled) return;
+    setFsLyricsOpen(!document.body.classList.contains("fs-lyrics-open"));
+  });
+  $("#fs-lyrics-close")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    setFsLyricsOpen(false);
+  });
+  const scroller = $("#fs-lyrics-scroll");
+  scroller?.addEventListener(
+    "scroll",
+    () => {
+      if (!document.body.classList.contains("fs-lyrics-open")) return;
+      lyricsUserScrollUntil = Date.now() + 3000;
+    },
+    { passive: true }
+  );
 }
 
 function bindQueuePanel() {

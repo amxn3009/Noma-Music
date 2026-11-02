@@ -1,0 +1,9 @@
+{
+  "marioodyssey:smo-bonneton": {
+    "lines": [
+      { "t": "0:00:000", "text": "First line" },
+      { "t": "0:04:200", "text": "Second line" },
+      { "t": "1:02:050", "text": "After one minute" }
+    ]
+  }
+}
