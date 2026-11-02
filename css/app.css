@@ -8312,7 +8312,7 @@ html.ios-standalone .fs-lyrics {
 }
 
 /* PC: lock width open/closed like queue */
-@media (min-width: 721px) {
+@media (min-width: 721px) and (hover: hover) and (pointer: fine) {
   .fs-lyrics,
   body.fs-lyrics-open .fs-lyrics,
   body.fs-open.fs-lyrics-open .fs-lyrics {
@@ -8445,18 +8445,6 @@ body.fs-lyrics-scrolling .fs-lyrics-line.is-past {
   }
 }
 
-/* One side width for BOTH queue and lyrics → no cover jump */
-body.fs-open.fs-queue-open,
-body.fs-open.fs-lyrics-open {
-  --fs-side-w: var(--fs-lyrics-w); /* use wider lyrics width for both */
-}
-@media (max-width: 720px) {
-  body.fs-open.fs-queue-open,
-  body.fs-open.fs-lyrics-open {
-    --fs-side-w: min(100vw - 24px, 360px);
-  }
-}
-
 body.fs-open.fs-queue-open .fullscreen-player,
 body.fs-open.fs-lyrics-open .fullscreen-player {
   padding-right: calc(var(--fs-side-w) + 28px);
@@ -8472,8 +8460,10 @@ body.fs-open.fs-lyrics-open .fullscreen-player {
 }
 
 /* Queue panel uses same width when expanded so swap is seamless */
-body.fs-open.fs-queue-open .fs-queue {
-  width: var(--fs-side-w) !important;
+@media (hover: hover) and (pointer: fine) {
+  body.fs-open.fs-queue-open .fs-queue {
+    width: var(--fs-side-w) !important;
+  }
 }
 
 
@@ -8556,9 +8546,11 @@ body.fs-open.fs-queue-open .fs-queue {
 }
 
 /* iPad / tablet — narrower queue + lyrics */
+/* iPad: side panel ≈ good Oct 30 shot — not PC 640/760 */
 @media (min-width: 721px) and ((hover: none) or (pointer: coarse)) {
   :root {
-    --fs-side-w: min(320px, 36vw);
+    --fs-side-w: min(420px, 42vw);
+    --fs-lyrics-w: min(420px, 42vw);
   }
 
   .fs-queue,
@@ -8566,6 +8558,7 @@ body.fs-open.fs-queue-open .fs-queue {
   body.fs-open.fs-queue-open .fs-queue,
   body.fs-closing-layout .fs-queue,
   .fs-lyrics,
+  body.fs-lyrics-open .fs-lyrics,
   body.fs-open.fs-lyrics-open .fs-lyrics {
     width: var(--fs-side-w) !important;
   }
@@ -8573,21 +8566,21 @@ body.fs-open.fs-queue-open .fs-queue {
   body.fs-open.fs-queue-open .fs-stage,
   body.fs-queue-open .fs-stage,
   body.fs-open.fs-lyrics-open .fs-stage {
-    transform: translateX(calc(-1 * min(48px, 5vw))) !important;
-    max-width: calc(100% - var(--fs-side-w) - 24px) !important;
+    transform: translateX(calc(-1 * min(56px, 6vw))) !important;
+    max-width: calc(100% - var(--fs-side-w) - 28px) !important;
   }
 
   body.fs-open.fs-queue-open .fs-cover,
   body.fs-queue-open .fs-cover,
   body.fs-open.fs-lyrics-open .fs-cover {
-    width: min(260px, 34vw) !important;
-    max-width: min(260px, 34vw) !important;
+    width: min(300px, 40vw) !important;
+    max-width: min(300px, 40vw) !important;
   }
 
   body.fs-open.fs-queue-open .fs-title,
   body.fs-open.fs-lyrics-open .fs-title {
-    font-size: 1.3rem !important;
-    max-width: min(280px, 36vw) !important;
+    font-size: 1.4rem !important;
+    max-width: min(340px, 42vw) !important;
     white-space: nowrap !important;
     display: block !important;
     -webkit-line-clamp: unset !important;
@@ -8597,13 +8590,13 @@ body.fs-open.fs-queue-open .fs-queue {
 
   body.fs-open.fs-queue-open .fs-game,
   body.fs-open.fs-lyrics-open .fs-game {
-    font-size: 0.85rem !important;
-    max-width: min(280px, 36vw) !important;
+    font-size: 0.9rem !important;
+    max-width: min(340px, 42vw) !important;
   }
 
   body.fs-open.fs-queue-open .fullscreen-player,
   body.fs-open.fs-lyrics-open .fullscreen-player {
-    padding-right: calc(var(--fs-side-w) + 16px) !important;
+    padding-right: calc(var(--fs-side-w) + 20px) !important;
     padding-left: 16px !important;
   }
 }
