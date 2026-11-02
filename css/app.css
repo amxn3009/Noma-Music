@@ -8654,3 +8654,58 @@ body.fs-open.fs-queue-open .fs-queue {
     max-width: calc(100% - var(--fs-side-w) - 40px) !important;
   }
 }
+
+/* iPad / tablet only — queue size from "added auto q scroll" default
+   min(520px, 52vw)  |  cover + title shrink when open  |  lyrics = same width
+   PC (fine pointer) and phone (≤720) untouched */
+@media (min-width: 721px) and ((hover: none) or (pointer: coarse)) {
+  :root {
+    --fs-side-w: min(520px, 52vw);
+  }
+
+  .fs-queue,
+  body.fs-queue-open .fs-queue,
+  body.fs-open.fs-queue-open .fs-queue,
+  body.fs-closing-layout .fs-queue,
+  .fs-lyrics,
+  body.fs-open.fs-lyrics-open .fs-lyrics {
+    width: var(--fs-side-w) !important;
+  }
+
+  body.fs-open.fs-queue-open .fs-stage,
+  body.fs-queue-open .fs-stage,
+  body.fs-open.fs-lyrics-open .fs-stage {
+    transform: translateX(calc(-1 * min(80px, 8vw))) !important;
+    max-width: calc(100% - var(--fs-side-w) - 28px) !important;
+  }
+
+  body.fs-open.fs-queue-open .fs-cover,
+  body.fs-queue-open .fs-cover,
+  body.fs-open.fs-lyrics-open .fs-cover {
+    width: min(280px, 36vw) !important;
+    max-width: min(280px, 36vw) !important;
+  }
+
+  body.fs-open.fs-queue-open .fs-title,
+  body.fs-open.fs-lyrics-open .fs-title {
+    font-size: 1.35rem !important;
+    max-width: min(320px, 40vw) !important;
+    white-space: nowrap !important;
+    display: block !important;
+    -webkit-line-clamp: unset !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  body.fs-open.fs-queue-open .fs-game,
+  body.fs-open.fs-lyrics-open .fs-game {
+    font-size: 0.9rem !important;
+    max-width: min(320px, 40vw) !important;
+  }
+
+  body.fs-open.fs-queue-open .fullscreen-player,
+  body.fs-open.fs-lyrics-open .fullscreen-player {
+    padding-right: calc(var(--fs-side-w) + 20px) !important;
+    padding-left: 16px !important;
+  }
+}
