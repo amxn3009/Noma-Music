@@ -8581,15 +8581,14 @@ body.fs-open.fs-queue-open .fs-queue {
   }
 }
 
-/* Stage inset identical for queue OR lyrics */
-body.fs-open.fs-queue-open .fullscreen-player,
-body.fs-open.fs-lyrics-open .fullscreen-player {
-  padding-right: calc(var(--fs-side-w) + 28px) !important;
-  padding-left: 20px !important;
-}
+/* PC only — these used to override iPad because iPad is often ≥721px wide */
+@media (hover: hover) and (pointer: fine) {
+  body.fs-open.fs-queue-open .fullscreen-player,
+  body.fs-open.fs-lyrics-open .fullscreen-player {
+    padding-right: calc(var(--fs-side-w) + 28px) !important;
+    padding-left: 20px !important;
+  }
 
-/* Cover size identical for queue OR lyrics — no resize on swap */
-@media (min-width: 721px) {
   body.fs-open.fs-queue-open .fs-cover,
   body.fs-open.fs-lyrics-open .fs-cover,
   body.fs-queue-open .fs-cover {
@@ -8600,11 +8599,5 @@ body.fs-open.fs-lyrics-open .fullscreen-player {
   body.fs-open.fs-lyrics-open .fs-stage {
     transform: none !important;
     max-width: calc(100% - var(--fs-side-w) - 40px) !important;
-  }
-}
-@media (max-width: 720px) {
-  body.fs-open.fs-queue-open .fullscreen-player,
-  body.fs-open.fs-lyrics-open .fullscreen-player {
-    padding-right: 12px !important;
   }
 }
