@@ -8451,7 +8451,7 @@ body.fs-open.fs-lyrics-open .fullscreen-player {
   padding-left: 20px;
 }
 
-@media (min-width: 721px) {
+@media (min-width: 721px) and (hover: hover) and (pointer: fine) {
   body.fs-open.fs-queue-open .fs-cover,
   body.fs-open.fs-lyrics-open .fs-cover {
     width: min(360px, 72vw) !important;
@@ -8547,14 +8547,11 @@ body.fs-open.fs-lyrics-open .fullscreen-player {
 
 /* iPad / tablet — narrower queue + lyrics */
 /* iPad: side panel ≈ good Oct 30 shot — not PC 640/760 */
-/* iPad: wider queue/lyrics to the red line — cover position frozen */
+/* iPad: wide side panel, cover does NOT shift left */
 @media (min-width: 721px) and ((hover: none) or (pointer: coarse)) {
   :root {
-    /* wider panel (touches the gap by the cover) */
     --fs-side-w: min(640px, 56vw);
     --fs-lyrics-w: min(640px, 56vw);
-    /* stage budget stays as with the OLD 520px panel → cover does not move */
-    --fs-stage-budget: min(520px, 48vw);
   }
 
   .fs-queue,
@@ -8570,9 +8567,9 @@ body.fs-open.fs-lyrics-open .fullscreen-player {
   body.fs-open.fs-queue-open .fs-stage,
   body.fs-queue-open .fs-stage,
   body.fs-open.fs-lyrics-open .fs-stage {
-    transform: translateX(calc(-1 * min(56px, 6vw))) !important;
-    /* freeze stage width to previous layout — do not use new side-w */
-    max-width: calc(100% - var(--fs-stage-budget) - 28px) !important;
+    /* no left shove — cover stays where it is */
+    transform: none !important;
+    max-width: calc(100% - var(--fs-side-w) - 28px) !important;
   }
 
   body.fs-open.fs-queue-open .fs-cover,
@@ -8601,7 +8598,6 @@ body.fs-open.fs-lyrics-open .fullscreen-player {
 
   body.fs-open.fs-queue-open .fullscreen-player,
   body.fs-open.fs-lyrics-open .fullscreen-player {
-    /* only the panel grows; stage padding uses frozen budget so cover stays */
     padding-right: calc(var(--fs-side-w) + 20px) !important;
     padding-left: 16px !important;
   }
