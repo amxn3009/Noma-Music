@@ -8558,7 +8558,7 @@ body.fs-open.fs-queue-open .fs-queue {
 /* iPad / tablet — narrower queue + lyrics */
 @media (min-width: 721px) and ((hover: none) or (pointer: coarse)) {
   :root {
-    --fs-side-w: min(380px, 40vw);
+    --fs-side-w: min(320px, 36vw);
   }
 
   .fs-queue,

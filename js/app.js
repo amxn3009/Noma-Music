@@ -11,7 +11,7 @@ const supabase =
     : null;
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = "2.11.26, Added lyrics, fix ipad #5";
+const APP_VERSION = "2.11.26, Added lyrics, fix ipad #6";
 
 let LIBRARY = [];
 
