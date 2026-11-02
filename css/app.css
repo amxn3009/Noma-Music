@@ -8547,10 +8547,11 @@ body.fs-open.fs-lyrics-open .fullscreen-player {
 
 /* iPad / tablet — narrower queue + lyrics */
 /* iPad: side panel ≈ good Oct 30 shot — not PC 640/760 */
+/* iPad / tablet — wider side panel, cover size unchanged */
 @media (min-width: 721px) and ((hover: none) or (pointer: coarse)) {
   :root {
-    --fs-side-w: min(420px, 42vw);
-    --fs-lyrics-w: min(420px, 42vw);
+    --fs-side-w: min(520px, 48vw);
+    --fs-lyrics-w: min(520px, 48vw);
   }
 
   .fs-queue,
@@ -8566,6 +8567,7 @@ body.fs-open.fs-lyrics-open .fullscreen-player {
   body.fs-open.fs-queue-open .fs-stage,
   body.fs-queue-open .fs-stage,
   body.fs-open.fs-lyrics-open .fs-stage {
+    /* same shift as before so cover doesn’t jump left */
     transform: translateX(calc(-1 * min(56px, 6vw))) !important;
     max-width: calc(100% - var(--fs-side-w) - 28px) !important;
   }
