@@ -8246,7 +8246,7 @@ body.pl-editing .pl-cover-hit-wrap .pl-cover-edit-hit {
 }
 @media (min-width: 721px) {
   :root {
-    --fs-lyrics-w: min(760px, 68vw); /* wider than queue on PC */
+    --fs-lyrics-w: min(860px, 60vw); /* match queue; iPad/phone override below */
   }
 }
 
@@ -8316,7 +8316,7 @@ html.ios-standalone .fs-lyrics {
   .fs-lyrics,
   body.fs-lyrics-open .fs-lyrics,
   body.fs-open.fs-lyrics-open .fs-lyrics {
-    width: min(760px, 68vw) !important;
+    width: var(--fs-side-w) !important;
   }
 }
 
@@ -8469,7 +8469,7 @@ body.fs-open.fs-lyrics-open .fullscreen-player {
 
 /* ── Unified FS side panel: queue + lyrics share size → cover never moves ── */
 :root {
-  --fs-side-w: min(640px, 58vw);
+  --fs-side-w: min(860px, 60vw);
 }
 @media (max-width: 720px) {
   :root {
@@ -8524,24 +8524,25 @@ body.fs-open.fs-lyrics-open .fullscreen-player {
   }
 }
 
-/* PC only */
+/* PC only — wider side panel, cover stays put */
 @media (hover: hover) and (pointer: fine) {
   body.fs-open.fs-queue-open .fullscreen-player,
   body.fs-open.fs-lyrics-open .fullscreen-player {
-    padding-right: calc(var(--fs-side-w) + 28px) !important;
+    padding-right: calc(var(--fs-side-w) + 24px) !important;
     padding-left: 20px !important;
   }
 
   body.fs-open.fs-queue-open .fs-cover,
   body.fs-open.fs-lyrics-open .fs-cover,
   body.fs-queue-open .fs-cover {
-    width: min(360px, 42vw) !important;
-    max-width: min(360px, 42vw) !important;
+    width: min(340px, 36vw) !important;
+    max-width: min(340px, 36vw) !important;
   }
+
   body.fs-open.fs-queue-open .fs-stage,
   body.fs-open.fs-lyrics-open .fs-stage {
     transform: none !important;
-    max-width: calc(100% - var(--fs-side-w) - 40px) !important;
+    max-width: calc(100% - var(--fs-side-w) - 32px) !important;
   }
 }
 
@@ -8600,5 +8601,58 @@ body.fs-open.fs-lyrics-open .fullscreen-player {
   body.fs-open.fs-lyrics-open .fullscreen-player {
     padding-right: calc(var(--fs-side-w) + 20px) !important;
     padding-left: 16px !important;
+  }
+}
+
+/* Locked while panel open OR while JS holds fs-title-lock during close anim */
+body.fs-open.fs-queue-open .fs-title,
+body.fs-open.fs-lyrics-open .fs-title,
+body.fs-title-lock .fs-title,
+body.fs-open.fs-queue-open .fs-game,
+body.fs-open.fs-lyrics-open .fs-game,
+body.fs-title-lock .fs-game {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  word-break: normal !important;
+  overflow-wrap: normal !important;
+  display: block !important;
+  -webkit-line-clamp: unset !important;
+  line-clamp: unset !important;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  body.fs-open.fs-queue-open .fs-stage,
+  body.fs-open.fs-lyrics-open .fs-stage {
+    min-width: min(420px, 36vw) !important;
+  }
+
+  body.fs-open.fs-queue-open .fs-title,
+  body.fs-open.fs-lyrics-open .fs-title,
+  body.fs-open.fs-queue-open .fs-game,
+  body.fs-open.fs-lyrics-open .fs-game {
+    max-width: min(480px, 100%) !important;
+    width: min(480px, 100%) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+}
+
+/* PC: slightly taller FS queue items */
+@media (hover: hover) and (pointer: fine) {
+  #fs-queue-list .queue-item,
+  .fs-queue-list .queue-item,
+  #fs-queue .queue-item {
+    min-height: 64px !important;
+    padding-top: 10px !important;
+    padding-bottom: 10px !important;
+  }
+
+  #fs-queue-list .queue-item img,
+  .fs-queue-list .queue-item img,
+  #fs-queue .queue-item .q-cover,
+  #fs-queue .queue-item img {
+    width: 48px !important;
+    height: 48px !important;
   }
 }

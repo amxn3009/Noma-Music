@@ -11,7 +11,7 @@ const supabase =
     : null;
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = "2.11.26, Added lyrics, fix ipad #10";
+const APP_VERSION = "2.11.26, Added lyrics, fix ipad #10, fix pc and other fs issues";
 
 let LIBRARY = [];
 
@@ -10458,7 +10458,7 @@ function closeAnyQueue({ remember = true } = {}) {
     }
     // if both closed, leave fsQueuePreferOpen as-is
   }
-
+  
   document.body.classList.remove("fs-queue-open");
   const fsQ = $("#fs-queue");
   if (fsQ) fsQ.setAttribute("aria-hidden", "true");
@@ -10483,7 +10483,20 @@ function setFsQueueOpen(open) {
   }
 
   const wasOpen = document.body.classList.contains("fs-queue-open");
-  document.body.classList.toggle("fs-queue-open", !!open);
+
+  if (open) {
+    document.body.classList.remove("fs-title-lock");
+    document.body.classList.add("fs-queue-open");
+  } else {
+    // lock title to one line for the whole close animation
+    if (wasOpen) {
+      document.body.classList.add("fs-title-lock");
+      setTimeout(() => {
+        document.body.classList.remove("fs-title-lock");
+      }, 450);
+    }
+    document.body.classList.remove("fs-queue-open");
+  }
 
   const expandBtn = $("#queue-fs-expand");
   if (expandBtn) {
@@ -10562,6 +10575,13 @@ function setFsLyricsOpen(open, { fromUser = false } = {}) {
     if (fsQ) fsQ.setAttribute("aria-hidden", "true");
     closeQueuePanel({ animate: false });
   } else {
+    const wasLyrics = document.body.classList.contains("fs-lyrics-open");
+    if (wasLyrics) {
+      document.body.classList.add("fs-title-lock");
+      setTimeout(() => {
+        document.body.classList.remove("fs-title-lock");
+      }, 450);
+    }
     document.body.classList.remove("fs-lyrics-open");
     document.body.classList.remove("fs-lyrics-scrolling");
   }
