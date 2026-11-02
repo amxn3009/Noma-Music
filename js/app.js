@@ -11,7 +11,7 @@ const supabase =
     : null;
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = "30.10.26, css changes, changed ios cache size + mobile fix #4, added auto q scroll on skips";
+const APP_VERSION = "2.11.26, Added lyrics";
 
 let LIBRARY = [];
 
@@ -44,6 +44,7 @@ const DEFAULT_SETTINGS = {
   autoCollapseAlbum: true, // collapse album header when scrolling down
     quickAddEnabled: false,
     quickAddPlaylistId: "favorites",
+    lyricsAutoOpen: true, // false = only open via mic button
 };
 
 const LIBRARY_KEY = "noma-library-v1";
@@ -531,6 +532,9 @@ function bindProfileAuth() {
 let LYRICS_DB = {}; // key → { lines: [{ tSec, text }] }
 let lyricsUserScrollUntil = 0;
 let lyricsActiveIndex = -1;
+
+let lyricsPreferOpen = false; // user turned lyrics on at least once this session / last state
+let lastLyricsTrackKey = "";
 
 function parseLyricTime(str) {
   // min:sec:ms  e.g. "1:02:050" → 62.05
@@ -1350,6 +1354,10 @@ function loadSettings() {
       typeof parsed.quickAddPlaylistId === "string" && parsed.quickAddPlaylistId
         ? parsed.quickAddPlaylistId
         : DEFAULT_SETTINGS.quickAddPlaylistId;
+    settings.lyricsAutoOpen =
+      typeof parsed.lyricsAutoOpen === "boolean"
+        ? parsed.lyricsAutoOpen
+        : DEFAULT_SETTINGS.lyricsAutoOpen;
   } catch (_) {}
 }
 
@@ -2466,6 +2474,64 @@ function getPlaybackPosition() {
   return loopStart + (afterEnd % loopLen);
 }
 
+function seekToSeconds(sec) {
+  if (transitioning) {
+    if (typeof cancelTransition === "function") cancelTransition(true);
+  }
+  lastLoopCycle = -1;
+
+  const duration = useMediaEl && mediaEl
+    ? (mediaEl.duration || state.duration || 0)
+    : (decodedBuffer?.duration || state.duration || 0);
+  if (!duration && !Number.isFinite(sec)) return;
+
+  const safeEnd = duration > 0 ? Math.max(0, duration - 0.05) : Number(sec) || 0;
+  const pos = Math.max(0, Math.min(Number(sec) || 0, safeEnd));
+
+  if (useMediaEl && mediaEl) {
+    const cur = (typeof activeMedia === "function" ? activeMedia() : null) || mediaEl;
+    cur.currentTime = pos;
+    pauseOffset = pos;
+    state.currentTime = pos;
+    if (mediaA && mediaB) {
+      const other = typeof standbyMedia === "function" ? standbyMedia() : null;
+      if (other) {
+        other.currentTime = mediaForceFullLoop ? 0 : mediaLoopStart;
+        other.volume = 0;
+      }
+    }
+    if (state.playing) {
+      cur.play().catch(() => {});
+      if (mediaA && mediaB) bindStreamProgress();
+      else if (typeof updateMediaProgress === "function") updateMediaProgress();
+    }
+  } else if (decodedBuffer) {
+    if (state.playing) {
+      playBuffer(decodedBuffer, pos);
+    } else {
+      pauseOffset = pos;
+      state.currentTime = pos;
+    }
+  } else {
+    pauseOffset = pos;
+    state.currentTime = pos;
+  }
+
+  const fill = $("#progress-fill");
+  if (fill && duration > 0) fill.style.width = `${(pos / duration) * 100}%`;
+  const tCur = $("#time-current");
+  if (tCur) tCur.textContent = formatTime(pos);
+
+  if (typeof updateMediaSession === "function") updateMediaSession();
+
+  lyricsUserScrollUntil = 0;
+  lastLyricsPlaybackT = 0;
+  lyricsActiveIndex = -2;
+  if (document.body.classList.contains("fs-lyrics-open")) {
+    updateFsLyricsHighlight(true);
+  }
+}
+
 function getMediaPosition() {
   return mediaEl ? mediaEl.currentTime : 0;
 }
@@ -3522,7 +3588,6 @@ function toggleFullscreen() {
     if (fsCover) fsCover.src = nowCover;
 
     updateFsLyricsButton();
-    if (!document.body.classList.contains("fs-open")) setFsLyricsOpen(false);
 
     // Snapshot: was the normal queue open outside FS?
     queueOpenOutsideFs = isQueuePanelOpen();
@@ -3548,6 +3613,17 @@ function toggleFullscreen() {
       closeQueuePanel({ animate: false });
     }
 
+        // Lyrics: reopen if user had them on before and setting allows
+    if (
+      settings.lyricsAutoOpen !== false &&
+      lyricsPreferOpen &&
+      currentTrackHasLyrics()
+    ) {
+      setFsLyricsOpen(true);
+    } else {
+      setFsLyricsOpen(false);
+    }
+
     btnFs?.classList.add("hidden");
     btnMin?.classList.remove("hidden");
   } else {
@@ -3569,6 +3645,8 @@ function toggleFullscreen() {
     }
     document.body.classList.remove("fs-queue-open");
     document.body.classList.remove("fs-open");
+    setFsLyricsOpen(false);
+    document.body.classList.remove("fs-lyrics-open");
     document.body.classList.add("fs-leaving");
 
     const fsQ = $("#fs-queue");
@@ -8813,6 +8891,16 @@ async function togglePlay() {
   updatePlayerUI();
 }
 
+function ensureLyricsCenterPadding() {
+  const scroller = $("#fs-lyrics-scroll");
+  const list = $("#fs-lyrics-list");
+  if (!scroller || !list) return;
+  // half viewport → active line can sit exactly in the middle
+  const half = Math.max(0, Math.round(scroller.clientHeight / 2));
+  list.style.paddingTop = `${half}px`;
+  list.style.paddingBottom = `${half}px`;
+}
+
 /** Scroll every open queue list so the current row is in view. */
 function scrollQueuesToCurrent() {
   requestAnimationFrame(() => {
@@ -9403,7 +9491,13 @@ function updatePlayerUI() {
   updateMediaSession();
   markPlayingLibraryCards();
   updateFsLyricsButton();
-  updateFsLyricsHighlight(false);
+
+  // Only react to track changes — not pause/play/loop/shuffle
+  const lyrKey = trackLyricsKey(state.queue[state.queueIndex]);
+  if (lyrKey !== lastLyricsTrackKey) {
+    lastLyricsTrackKey = lyrKey;
+    maybeAutoOpenLyrics();
+  }
 }
 
 function absoluteAssetUrl(path) {
@@ -10435,18 +10529,42 @@ function toggleFsQueueMode() {
   }
 }
 
-function setFsLyricsOpen(open) {
+function isFsQueueBusy() {
+  return !!(
+    document.querySelector(".queue-item.dragging") ||
+    document.querySelector(".queue-drag-ghost") ||
+    document.querySelector("#fs-queue-list .dragging")
+  );
+}
+
+function setFsLyricsOpen(open, { fromUser = false } = {}) {
   if (open) {
     if (!document.body.classList.contains("fs-open")) open = false;
     if (!currentTrackHasLyrics()) open = false;
+    if (isFsQueueBusy()) open = false; // no open while queue drag/scroll-reorder
+  }
+
+  if (fromUser) {
+    // only manual mic toggles the preference
+    lyricsPreferOpen = !!open;
   }
 
   if (open) {
-    // only expanded queue — small floating queue may stay
-    setFsQueueOpen(false);
+    // add lyrics BEFORE removing queue → no padding collapse frame
+    document.body.classList.add("fs-lyrics-open");
+    document.body.classList.remove("fs-queue-open");
+    const expandBtn = $("#queue-fs-expand");
+    if (expandBtn) {
+      expandBtn.setAttribute("aria-expanded", "false");
+      expandBtn.title = "Große Warteschlange";
+    }
+    const fsQ = $("#fs-queue");
+    if (fsQ) fsQ.setAttribute("aria-hidden", "true");
+    closeQueuePanel({ animate: false });
+  } else {
+    document.body.classList.remove("fs-lyrics-open");
+    document.body.classList.remove("fs-lyrics-scrolling");
   }
-
-  document.body.classList.toggle("fs-lyrics-open", !!open);
 
   const panel = $("#fs-lyrics");
   if (panel) panel.setAttribute("aria-hidden", open ? "false" : "true");
@@ -10460,10 +10578,38 @@ function setFsLyricsOpen(open) {
   if (open) {
     renderFsLyrics();
     lyricsActiveIndex = -1;
-    updateFsLyricsHighlight(true);
+    requestAnimationFrame(() => {
+      ensureLyricsCenterPadding();
+      updateFsLyricsHighlight(true);
+    });
   }
 }
 
+/** Call whenever the current track changes (and after updateFsLyricsButton). */
+function maybeAutoOpenLyrics() {
+  if (!document.body.classList.contains("fs-open")) return;
+  if (settings.lyricsAutoOpen === false) return;
+  if (!lyricsPreferOpen) return;
+  if (!currentTrackHasLyrics()) {
+    setFsLyricsOpen(false);
+    return;
+  }
+  if (isFsQueueBusy()) return;
+
+  if (document.body.classList.contains("fs-lyrics-open")) {
+    // Track changed while open → rebuild once, no extra open animation
+    renderFsLyrics();
+    lyricsActiveIndex = -1;
+    lyricsUserScrollUntil = 0;
+    document.body.classList.remove("fs-lyrics-scrolling");
+    requestAnimationFrame(() => {
+      ensureLyricsCenterPadding();
+      updateFsLyricsHighlight(true);
+    });
+    return;
+  }
+  setFsLyricsOpen(true);
+}
 function updateFsLyricsButton() {
   const btn = $("#btn-fs-lyrics");
   if (!btn) return;
@@ -10492,62 +10638,151 @@ function renderFsLyrics() {
     )
     .join("");
   lyricsActiveIndex = -1;
+  lastLyricsPlaybackT = 0;
 }
+
+let lyricsProgrammaticScroll = false;
+let lastLyricsPlaybackT = 0;
 
 function updateFsLyricsHighlight(forceScroll = false) {
   if (!document.body.classList.contains("fs-lyrics-open")) return;
   const data = getLyricsForQueueItem(state.queue[state.queueIndex]);
   if (!data?.lines?.length) return;
 
-  const t = typeof getPlaybackPosition === "function" ? getPlaybackPosition() : 0;
-  let idx = 0;
+  // User interfered → unblur; auto-scroll keeps blur on past lines
+  const manual = Date.now() < lyricsUserScrollUntil;
+  document.body.classList.toggle("fs-lyrics-scrolling", manual);
+
+  const t =
+    typeof getPlaybackPosition === "function"
+      ? getPlaybackPosition()
+      : state.currentTime || 0;
+
+  // Loop / big seek backward on same track
+  let loopJump = false;
+  if (t < lastLyricsPlaybackT - 1.0) {
+    lyricsActiveIndex = -2;
+    loopJump = true;
+    if (!manual) forceScroll = true;
+  }
+  lastLyricsPlaybackT = t;
+
+  // -1 = nothing marked yet (before first line’s time)
+  let idx = -1;
   for (let i = 0; i < data.lines.length; i++) {
-    if (data.lines[i].tSec <= t + 0.05) idx = i;
+    if (data.lines[i].tSec <= t + 0.02) idx = i;
     else break;
   }
 
-  if (idx === lyricsActiveIndex && !forceScroll) return;
-  lyricsActiveIndex = idx;
-
   const nodes = $("#fs-lyrics-list")?.querySelectorAll(".fs-lyrics-line");
-  if (!nodes) return;
-  nodes.forEach((el, i) => {
-    el.classList.toggle("is-active", i === idx);
-    el.classList.toggle("is-past", i < idx);
-  });
+  if (!nodes?.length) return;
 
-  if (Date.now() < lyricsUserScrollUntil && !forceScroll) return;
-  const active = nodes[idx];
-  const scroller = $("#fs-lyrics-scroll");
-  if (active && scroller) {
-    const ar = active.getBoundingClientRect();
-    const sr = scroller.getBoundingClientRect();
-    const offset =
-      ar.top -
-      sr.top -
-      sr.height / 2 +
-      ar.height / 2 +
-      scroller.scrollTop;
-    scroller.scrollTo({ top: offset, behavior: forceScroll ? "auto" : "smooth" });
+  const lineChanged = idx !== lyricsActiveIndex;
+
+  if (lineChanged) {
+    nodes.forEach((el, i) => {
+      const on = i === idx;
+      const was = el.classList.contains("is-active");
+      el.classList.toggle("is-active", on);
+      el.classList.toggle("is-past", idx >= 0 && i < idx);
+      if (on && !was) {
+        el.classList.remove("is-glow");
+        void el.offsetWidth;
+        el.classList.add("is-glow");
+        el.addEventListener(
+          "animationend",
+          () => el.classList.remove("is-glow"),
+          { once: true }
+        );
+      } else if (!on) {
+        el.classList.remove("is-glow");
+      }
+    });
+    lyricsActiveIndex = idx;
+  } else if (forceScroll) {
+    nodes.forEach((el, i) => {
+      el.classList.toggle("is-active", i === idx);
+      el.classList.toggle("is-past", idx >= 0 && i < idx);
+    });
   }
+
+  // Only move the scroller when the line changes / force / loop — NOT every RAF
+  if (!lineChanged && !forceScroll) return;
+  if (manual && !forceScroll) return;
+
+  const scroller = $("#fs-lyrics-scroll");
+  if (!scroller) return;
+
+  // smooth for normal 1-line steps; instant for force / loop / big jumps
+  const jumpSize =
+    lyricsActiveIndex < 0 || idx < 0
+      ? 99
+      : Math.abs(idx - (typeof lyricsActiveIndex === "number" ? lyricsActiveIndex : idx));
+  // note: lyricsActiveIndex already equals idx after lineChanged; use force/loopJump
+  const instant = forceScroll || loopJump;
+
+  lyricsProgrammaticScroll = true;
+  if (idx < 0) {
+    scroller.scrollTo({ top: 0, behavior: instant ? "auto" : "smooth" });
+  } else {
+    const active = nodes[idx];
+    if (!active) {
+      lyricsProgrammaticScroll = false;
+      return;
+    }
+    const target =
+      active.offsetTop + active.offsetHeight / 2 - scroller.clientHeight / 2;
+    scroller.scrollTo({
+      top: Math.max(0, target),
+      behavior: instant ? "auto" : "smooth",
+    });
+  }
+
+  // Keep flag up long enough that smooth scroll events don't count as user scroll
+  clearTimeout(window.__lyricsProgTimer);
+  window.__lyricsProgTimer = setTimeout(() => {
+    lyricsProgrammaticScroll = false;
+  }, instant ? 50 : 450);
 }
 
 function bindFsLyrics() {
   $("#btn-fs-lyrics")?.addEventListener("click", (e) => {
     e.stopPropagation();
     if ($("#btn-fs-lyrics")?.disabled) return;
-    setFsLyricsOpen(!document.body.classList.contains("fs-lyrics-open"));
+    setFsLyricsOpen(!document.body.classList.contains("fs-lyrics-open"), {
+      fromUser: true,
+    });
   });
-  $("#fs-lyrics-close")?.addEventListener("click", (e) => {
-    e.stopPropagation();
-    setFsLyricsOpen(false);
+
+  // line click → seek
+  $("#fs-lyrics-list")?.addEventListener("click", (e) => {
+    const line = e.target.closest(".fs-lyrics-line[data-i]");
+    if (!line) return;
+    const data = getLyricsForQueueItem(state.queue[state.queueIndex]);
+    const i = Number(line.dataset.i);
+    if (!data?.lines?.[i]) return;
+    seekToSeconds(data.lines[i].tSec);
   });
+
   const scroller = $("#fs-lyrics-scroll");
   scroller?.addEventListener(
     "scroll",
     () => {
       if (!document.body.classList.contains("fs-lyrics-open")) return;
+      // auto-scroll must NOT count as user interference
+      if (lyricsProgrammaticScroll) return;
       lyricsUserScrollUntil = Date.now() + 3000;
+      document.body.classList.add("fs-lyrics-scrolling");
+    },
+    { passive: true }
+  );
+
+    window.addEventListener(
+    "resize",
+    () => {
+      if (!document.body.classList.contains("fs-lyrics-open")) return;
+      ensureLyricsCenterPadding();
+      updateFsLyricsHighlight(true);
     },
     { passive: true }
   );
@@ -12363,6 +12598,11 @@ function bindSettings() {
     e.target.value = e.target.value.replace(/[^\d]/g, "").slice(0, 2);
   });
 
+  $("#setting-lyrics-auto")?.addEventListener("change", (e) => {
+    settings.lyricsAutoOpen = !!e.target.checked;
+    saveSettings();
+  });
+
   const bindLoopStep = (id, key) => {
     const el = $(id);
     if (!el) return;
@@ -12510,6 +12750,9 @@ function syncSettingsForm() {
     "is-disabled",
     !settings.quickAddEnabled
   );
+
+  const la = $("#setting-lyrics-auto");
+  if (la) la.checked = settings.lyricsAutoOpen !== false;
 
   $("#setting-transition-menu")?.querySelectorAll("li").forEach((li) => {
     li.setAttribute(

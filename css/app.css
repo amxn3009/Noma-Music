@@ -4944,12 +4944,6 @@ img,
     opacity 0.35s ease;
 }
 
-/* Stage shifts left when queue is open — PC only (cover stays full size) */
-body.fs-open.fs-queue-open .fullscreen-player {
-  padding-right: calc(var(--fs-queue-w) + 28px);
-  padding-left: 20px;
-}
-
 /* Do NOT shrink cover on PC — only mobile media query may resize it */
 @media (min-width: 721px) {
   body.fs-open.fs-queue-open .fs-cover,
@@ -5159,14 +5153,6 @@ body.fs-queue-open .fs-queue {
 }
 
 /* PC: same width open, closed, and mid-animation — no jump */
-@media (min-width: 721px) {
-  .fs-queue,
-  body.fs-queue-open .fs-queue,
-  body.fs-open.fs-queue-open .fs-queue,
-  body.fs-closing-layout .fs-queue {
-    width: min(640px, 58vw) !important;
-  }
-}
 
 /* Same list model as normal queue (not flex-gap — drop slot needs block flow) */
 .fs-queue-list {
@@ -5285,7 +5271,7 @@ body.fs-queue-open .fs-queue {
   body.fs-queue-open .fs-queue,
   body.fs-open.fs-queue-open .fs-queue,
   body.fs-closing-layout .fs-queue {
-    width: min(640px, 58vw) !important;
+    width: var(--fs-side-w) !important;
   }
 }
 
@@ -8306,14 +8292,22 @@ body.pl-editing .pl-cover-hit-wrap .pl-cover-edit-hit {
 }
 
 
-/* ── FS Lyrics (mirror FS queue layout) ── */
+/* ── FS Lyrics (transparent, big type, queue-like slide) ── */
 :root {
-  --fs-lyrics-w: min(560px, 56vw);
+  --fs-lyrics-w: min(520px, 52vw); /* mobile = same idea as fs-queue */
 }
 @media (min-width: 721px) {
   :root {
-    --fs-lyrics-w: min(720px, 64vw); /* wider than queue on PC */
+    --fs-lyrics-w: min(760px, 68vw); /* wider than queue on PC */
   }
+}
+
+/* mic + moon spacing */
+body.fs-open .sleep-wrap {
+  gap: 14px;
+}
+.fs-lyrics-btn {
+  margin-right: 2px;
 }
 
 body.fs-open .fs-lyrics-btn {
@@ -8335,22 +8329,11 @@ body:not(.fs-open) .fs-lyrics-btn {
   background: var(--accent-soft) !important;
 }
 
-body.fs-open.fs-lyrics-open .fullscreen-player {
-  padding-right: calc(var(--fs-lyrics-w) + 28px);
-  padding-left: 20px;
-}
-@media (min-width: 721px) {
-  body.fs-open.fs-lyrics-open .fs-cover {
-    width: min(360px, 72vw) !important;
-    max-width: min(360px, 72vw) !important;
-  }
-}
-
 .fs-lyrics {
   position: absolute;
   top: calc(56px + env(safe-area-inset-top, 0px));
   right: 12px;
-  bottom: 12px;
+  bottom: calc(var(--player-h) + env(safe-area-inset-bottom, 0px) + 16px);
   width: var(--fs-lyrics-w);
   display: flex;
   flex-direction: column;
@@ -8359,79 +8342,146 @@ body.fs-open.fs-lyrics-open .fullscreen-player {
   transform: translateX(20px);
   transition: opacity 0.36s ease, transform 0.42s var(--ease);
   z-index: 4;
-  background: rgba(0, 0, 0, 0.25);
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  overflow: hidden;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  overflow: visible; /* allow text-shadow / glow */
+  box-shadow: none;
 }
-body.fs-lyrics-open .fs-lyrics {
+body.fs-open.fs-lyrics-open .fs-lyrics {
   opacity: 1;
   transform: translateX(0);
   pointer-events: auto;
+}
+body:not(.fs-open) .fs-lyrics,
+body:not(.fs-lyrics-open) .fs-lyrics {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: translateX(20px);
 }
 html.ios-standalone .fs-lyrics {
   top: calc(30px + env(safe-area-inset-top, 0px) + 56px);
 }
 
-.fs-lyrics-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 10px 12px;
-  flex-shrink: 0;
+/* PC: lock width open/closed like queue */
+@media (min-width: 721px) {
+  .fs-lyrics,
+  body.fs-lyrics-open .fs-lyrics,
+  body.fs-open.fs-lyrics-open .fs-lyrics {
+    width: min(760px, 68vw) !important;
+  }
 }
-.fs-lyrics-title {
-  font-weight: 650;
-  font-size: 0.95rem;
-  color: var(--muted);
-}
+
 .fs-lyrics-scroll {
+  position: relative;
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
-  padding: 8px 16px 24px;
+  padding: 28px 28px 40px 16px; /* side room so glow isn’t clipped by mask */
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    #000 48px,
+    #000 calc(100% - 56px),
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    #000 48px,
+    #000 calc(100% - 56px),
+    transparent 100%
+  );
 }
 .fs-lyrics-scroll::-webkit-scrollbar {
   width: 0 !important;
   height: 0 !important;
 }
+
 .fs-lyrics-list {
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: 4px;
+  min-height: 100%;
+  box-sizing: border-box;
+  /* paddingTop/Bottom set in JS to half the scroller height */
 }
+
 .fs-lyrics-line {
-  padding: 6px 0;
-  font-size: 1.15rem;
-  line-height: 1.35;
+  padding: 10px 8px;
+  font-size: clamp(1.55rem, 2.4vw, 2.15rem);
+  font-weight: 600;
+  line-height: 1.28;
+  letter-spacing: -0.01em;
   color: var(--text);
-  opacity: 0.45;
+  opacity: 0.38;
   filter: none;
   transform-origin: left center;
+  border-radius: 10px;
+  cursor: pointer;
   transition:
-    opacity 0.35s ease,
-    filter 0.35s ease,
-    transform 0.16s ease;
-  cursor: default;
+    opacity 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    text-shadow 0.55s ease,
+    color 0.4s ease;
 }
 .fs-lyrics-line.is-past {
-  opacity: 0.33;
-  filter: blur(2.5px);
+  opacity: 0.36;
+  filter: blur(2.2px);
+  transition:
+    opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+/* while user is scrolling: show past lines clearly */
+body.fs-lyrics-scrolling .fs-lyrics-line.is-past {
+  opacity: 0.55;
+  filter: blur(0);
 }
 .fs-lyrics-line.is-active {
   opacity: 1;
   filter: none;
-  font-weight: 650;
-  font-size: 1.28rem;
+  font-weight: 700;
+  color: #fff;
+  text-shadow:
+    0 0 18px rgba(255, 255, 255, 0.35),
+    0 0 36px rgba(124, 156, 255, 0.25);
+  transform: scale(1.02);
 }
+/* first moment a line becomes active */
+.fs-lyrics-line.is-active.is-glow {
+  animation: lyricGlowIn 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes lyricGlowIn {
+  0% {
+    text-shadow:
+      0 0 0 rgba(255, 255, 255, 0),
+      0 0 0 rgba(124, 156, 255, 0);
+    transform: scale(1);
+  }
+  40% {
+    text-shadow:
+      0 0 28px rgba(255, 255, 255, 0.55),
+      0 0 48px rgba(124, 156, 255, 0.4);
+    transform: scale(1.04);
+  }
+  100% {
+    text-shadow:
+      0 0 18px rgba(255, 255, 255, 0.35),
+      0 0 36px rgba(124, 156, 255, 0.25);
+    transform: scale(1.02);
+  }
+}
+
 @media (hover: hover) and (pointer: fine) {
   .fs-lyrics-line:hover {
-    opacity: 1 !important;
+    opacity: 0.85 !important;
     filter: none !important;
-    transform: scale(1.02);
+  }
+  .fs-lyrics-line.is-active:hover {
+    opacity: 1 !important;
   }
 }
 
@@ -8441,5 +8491,89 @@ html.ios-standalone .fs-lyrics {
   }
   body.fs-open.fs-lyrics-open .fullscreen-player {
     padding-right: 12px;
+  }
+  .fs-lyrics-line {
+    font-size: 1.45rem;
+  }
+}
+
+/* One side width for BOTH queue and lyrics → no cover jump */
+body.fs-open.fs-queue-open,
+body.fs-open.fs-lyrics-open {
+  --fs-side-w: var(--fs-lyrics-w); /* use wider lyrics width for both */
+}
+@media (max-width: 720px) {
+  body.fs-open.fs-queue-open,
+  body.fs-open.fs-lyrics-open {
+    --fs-side-w: min(100vw - 24px, 360px);
+  }
+}
+
+body.fs-open.fs-queue-open .fullscreen-player,
+body.fs-open.fs-lyrics-open .fullscreen-player {
+  padding-right: calc(var(--fs-side-w) + 28px);
+  padding-left: 20px;
+}
+
+@media (min-width: 721px) {
+  body.fs-open.fs-queue-open .fs-cover,
+  body.fs-open.fs-lyrics-open .fs-cover {
+    width: min(360px, 72vw) !important;
+    max-width: min(360px, 72vw) !important;
+  }
+}
+
+/* Queue panel uses same width when expanded so swap is seamless */
+body.fs-open.fs-queue-open .fs-queue {
+  width: var(--fs-side-w) !important;
+}
+
+
+/* ── Unified FS side panel: queue + lyrics share size → cover never moves ── */
+:root {
+  --fs-side-w: min(640px, 58vw);
+}
+@media (max-width: 720px) {
+  :root {
+    --fs-side-w: min(100vw - 24px, 360px);
+  }
+}
+
+/* Both panels use the same width */
+body.fs-open.fs-queue-open .fs-queue,
+body.fs-open.fs-queue-open .fs-queue,
+.fs-queue {
+  width: var(--fs-side-w) !important;
+}
+.fs-lyrics,
+body.fs-open.fs-lyrics-open .fs-lyrics {
+  width: var(--fs-side-w) !important;
+}
+
+/* Stage inset identical for queue OR lyrics */
+body.fs-open.fs-queue-open .fullscreen-player,
+body.fs-open.fs-lyrics-open .fullscreen-player {
+  padding-right: calc(var(--fs-side-w) + 28px) !important;
+  padding-left: 20px !important;
+}
+
+/* Cover size identical for queue OR lyrics — no resize on swap */
+@media (min-width: 721px) {
+  body.fs-open.fs-queue-open .fs-cover,
+  body.fs-open.fs-lyrics-open .fs-cover,
+  body.fs-queue-open .fs-cover {
+    width: min(360px, 42vw) !important;
+    max-width: min(360px, 42vw) !important;
+  }
+  body.fs-open.fs-queue-open .fs-stage,
+  body.fs-open.fs-lyrics-open .fs-stage {
+    transform: none !important;
+    max-width: calc(100% - var(--fs-side-w) - 40px) !important;
+  }
+}
+@media (max-width: 720px) {
+  body.fs-open.fs-queue-open .fullscreen-player,
+  body.fs-open.fs-lyrics-open .fullscreen-player {
+    padding-right: 12px !important;
   }
 }

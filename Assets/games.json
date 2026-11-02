@@ -228,10 +228,10 @@
         "duration": 59.462
       },
       {
-        "id": "smo-jump-up-super-star-festival",
-        "title": "Jump Up, Super Star! - New Donk City Festival",
-        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Jump Up, Super Star! - New Donk City Festival.bfstm",
-        "duration": 240.211
+        "id": "smo-jump-up-super-star",
+        "title": "Jump Up, Super Star!",
+        "file": "Assets/Games/SuperMarioOdyssey/Tracks/Jump Up, Super Star!.bfstm",
+        "duration": 0
       },
       {
         "id": "smo-festival-finale",
@@ -399,7 +399,7 @@
         "id": "smo-break-free-lead-the-way",
         "title": "Break Free (Lead the Way)",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Break Free (Lead the Way).bfstm",
-        "duration": 139.051
+        "duration": 0
       },
       {
         "id": "smo-staff-roll",
