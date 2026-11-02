@@ -8239,58 +8239,6 @@ body.pl-editing .pl-cover-hit-wrap .pl-cover-edit-hit {
   }
 }
 
-/* ===== FS expanded: iPad / tablet — smg2 defaults ===== */
-@media (min-width: 721px) and ((hover: none) or (pointer: coarse)) {
-  .fs-queue,
-  body.fs-queue-open .fs-queue,
-  body.fs-open.fs-queue-open .fs-queue,
-  body.fs-closing-layout .fs-queue {
-    width: min(520px, 52vw) !important;
-  }
-
-  body.fs-queue-open .fs-stage,
-  body.fs-open.fs-queue-open .fs-stage {
-    transform: translateX(calc(-1 * min(60px, 6vw))) !important;
-    max-width: calc(100% - min(520px, 52vw) - 24px) !important;
-  }
-
-  body.fs-queue-open .fs-cover,
-  body.fs-open.fs-queue-open .fs-cover,
-  body.fs-closing-layout .fs-cover {
-    width: min(300px, 42vw) !important;
-    max-width: min(300px, 42vw) !important;
-  }
-
-  body.fs-queue-open .fs-title,
-  body.fs-open.fs-queue-open .fs-title {
-    font-size: 1.35rem !important;
-    max-width: min(320px, 48vw) !important;
-    white-space: nowrap !important;
-    display: block !important;
-    -webkit-line-clamp: unset !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-  }
-
-  body.fs-queue-open .fs-game,
-  body.fs-open.fs-queue-open .fs-game {
-    max-width: min(320px, 48vw) !important;
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-  }
-
-  /* Queue closed: multi-line title still ok on iPad */
-  body.fs-open:not(.fs-queue-open) .fs-title {
-    white-space: normal !important;
-    display: -webkit-box !important;
-    -webkit-box-orient: vertical !important;
-    -webkit-line-clamp: 3 !important;
-    overflow: hidden !important;
-    font-size: 1.75rem !important;
-  }
-}
-
 
 /* ── FS Lyrics (transparent, big type, queue-like slide) ── */
 :root {
@@ -8586,55 +8534,7 @@ body.fs-open.fs-queue-open .fs-queue {
   }
 }
 
-/*
- * iPad / tablet (touch, ≥721): same layout as "added auto q scroll"
- * — wide side panel, cover shifted LEFT (not centered).
- * PC rules (hover:hover + pointer:fine) stay unchanged.
- */
-@media (min-width: 721px) and ((hover: none) or (pointer: coarse)) {
-  :root {
-    --fs-side-w: min(640px, 58vw);
-  }
-
-  .fs-queue,
-  body.fs-queue-open .fs-queue,
-  body.fs-open.fs-queue-open .fs-queue,
-  body.fs-closing-layout .fs-queue,
-  .fs-lyrics,
-  body.fs-open.fs-lyrics-open .fs-lyrics {
-    width: var(--fs-side-w) !important;
-  }
-
-  body.fs-open.fs-queue-open .fs-stage,
-  body.fs-queue-open .fs-stage,
-  body.fs-open.fs-lyrics-open .fs-stage {
-    /* strong left shift so cover sits on the left, panel fills the right */
-    transform: translateX(calc(-1 * min(160px, 14vw))) !important;
-    max-width: calc(100% - var(--fs-side-w) - 40px) !important;
-  }
-
-  body.fs-open.fs-queue-open .fs-cover,
-  body.fs-queue-open .fs-cover,
-  body.fs-open.fs-lyrics-open .fs-cover {
-    width: min(360px, 42vw) !important;
-    max-width: min(360px, 42vw) !important;
-  }
-
-  body.fs-open.fs-queue-open .fullscreen-player,
-  body.fs-open.fs-lyrics-open .fullscreen-player {
-    padding-right: calc(var(--fs-side-w) + 28px) !important;
-    padding-left: 20px !important;
-  }
-
-  body.fs-open.fs-queue-open .fs-title,
-  body.fs-open.fs-lyrics-open .fs-title,
-  body.fs-open.fs-queue-open .fs-game,
-  body.fs-open.fs-lyrics-open .fs-game {
-    max-width: min(420px, 40vw) !important;
-  }
-}
-
-/* PC only — these used to override iPad because iPad is often ≥721px wide */
+/* PC only */
 @media (hover: hover) and (pointer: fine) {
   body.fs-open.fs-queue-open .fullscreen-player,
   body.fs-open.fs-lyrics-open .fullscreen-player {
@@ -8655,12 +8555,10 @@ body.fs-open.fs-queue-open .fs-queue {
   }
 }
 
-/* iPad / tablet only — queue size from "added auto q scroll" default
-   min(520px, 52vw)  |  cover + title shrink when open  |  lyrics = same width
-   PC (fine pointer) and phone (≤720) untouched */
+/* iPad / tablet — narrower queue + lyrics */
 @media (min-width: 721px) and ((hover: none) or (pointer: coarse)) {
   :root {
-    --fs-side-w: min(520px, 52vw);
+    --fs-side-w: min(380px, 40vw);
   }
 
   .fs-queue,
@@ -8675,21 +8573,21 @@ body.fs-open.fs-queue-open .fs-queue {
   body.fs-open.fs-queue-open .fs-stage,
   body.fs-queue-open .fs-stage,
   body.fs-open.fs-lyrics-open .fs-stage {
-    transform: translateX(calc(-1 * min(80px, 8vw))) !important;
-    max-width: calc(100% - var(--fs-side-w) - 28px) !important;
+    transform: translateX(calc(-1 * min(48px, 5vw))) !important;
+    max-width: calc(100% - var(--fs-side-w) - 24px) !important;
   }
 
   body.fs-open.fs-queue-open .fs-cover,
   body.fs-queue-open .fs-cover,
   body.fs-open.fs-lyrics-open .fs-cover {
-    width: min(280px, 36vw) !important;
-    max-width: min(280px, 36vw) !important;
+    width: min(260px, 34vw) !important;
+    max-width: min(260px, 34vw) !important;
   }
 
   body.fs-open.fs-queue-open .fs-title,
   body.fs-open.fs-lyrics-open .fs-title {
-    font-size: 1.35rem !important;
-    max-width: min(320px, 40vw) !important;
+    font-size: 1.3rem !important;
+    max-width: min(280px, 36vw) !important;
     white-space: nowrap !important;
     display: block !important;
     -webkit-line-clamp: unset !important;
@@ -8699,13 +8597,13 @@ body.fs-open.fs-queue-open .fs-queue {
 
   body.fs-open.fs-queue-open .fs-game,
   body.fs-open.fs-lyrics-open .fs-game {
-    font-size: 0.9rem !important;
-    max-width: min(320px, 40vw) !important;
+    font-size: 0.85rem !important;
+    max-width: min(280px, 36vw) !important;
   }
 
   body.fs-open.fs-queue-open .fullscreen-player,
   body.fs-open.fs-lyrics-open .fullscreen-player {
-    padding-right: calc(var(--fs-side-w) + 20px) !important;
+    padding-right: calc(var(--fs-side-w) + 16px) !important;
     padding-left: 16px !important;
   }
 }
