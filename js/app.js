@@ -11,7 +11,7 @@ const supabase =
     : null;
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = "3.11.26, bug fixes";
+const APP_VERSION = "3.11.26, bug fixes, synced lyircs more accurately";
 
 let LIBRARY = [];
 
