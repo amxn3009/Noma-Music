@@ -11,7 +11,7 @@ const supabase =
     : null;
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = "2.11.26, Added lyrics, fix ipad #10, fix pc and other fs issues";
+const APP_VERSION = "3.11.26, bug fixes";
 
 let LIBRARY = [];
 
@@ -3592,9 +3592,12 @@ function toggleFullscreen() {
     // Snapshot: was the normal queue open outside FS?
     queueOpenOutsideFs = isQueuePanelOpen();
 
+    // Snap layout to center (or side) BEFORE the panel is visible again
+    document.body.classList.remove("fs-leaving", "fs-closing-layout", "fs-queue-open", "fs-lyrics-open");
     fs.classList.remove("hidden", "is-closing");
+    // force a reflow so the centered layout is applied before paint
+    void fs.offsetWidth;
     document.body.classList.add("fs-open");
-    document.body.classList.remove("fs-leaving", "fs-closing-layout");
 
     // Only auto-open a queue in FS if it was open in the player bar
     if (queueOpenOutsideFs && state.queue.length > 0 && state.queueIndex >= 0) {
@@ -3639,12 +3642,15 @@ function toggleFullscreen() {
 
     fs.classList.add("is-closing");
 
-    // Freeze expanded layout so stage doesn't slide to center mid-exit
-    if (hadExpanded) {
+    // Freeze side-panel layout for the whole exit anim (queue OR lyrics).
+    // Cover stays where it was; center snap happens only on next open.
+    const hadLyrics = document.body.classList.contains("fs-lyrics-open");
+    if (hadExpanded || hadLyrics) {
       document.body.classList.add("fs-closing-layout");
     }
-    document.body.classList.remove("fs-queue-open");
+    // Keep fs-queue-open / fs-lyrics-open until layout freeze is on, then strip open
     document.body.classList.remove("fs-open");
+    document.body.classList.remove("fs-queue-open");
     setFsLyricsOpen(false);
     document.body.classList.remove("fs-lyrics-open");
     document.body.classList.add("fs-leaving");
@@ -5269,19 +5275,9 @@ function addPlaylistToEnd(pl) {
 function shufflePlaylistIntoQueue(pl) {
   const items = playlistQueueItems(pl);
   if (!items.length) return;
-  for (let i = items.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [items[i], items[j]] = [items[j], items[i]];
-  }
-  if (state.queueIndex < 0 || !state.queue.length) {
-    state.queue = items;
-    state.queueIndex = 0;
-    playCurrent();
-  } else {
-    state.queue.splice(state.queueIndex + 1, 0, ...items);
-  }
+  shuffleItemsIntoQueueAfterCurrent(items);
   if (state.shuffle && unshuffledQueue) {
-    unshuffledQueue.push(...items.map((x) => ({ ...x })));
+    unshuffledQueue = cloneQueue(state.queue);
   }
   renderQueue();
   updatePlayerUI();
@@ -7931,8 +7927,32 @@ function openGame(id) {
   $("#pl-clear-loops-btn")?.classList.add("hidden");
   $("#pl-loops-btn")?.classList.add("hidden");
 
-  const coverEl = $("#game-cover");
-  if (coverEl) coverEl.src = game.cover || PLACEHOLDER;
+  // Playlist may have replaced #game-cover with a mosaic <div> — always restore <img>
+  (function restoreGameCover() {
+    document.querySelectorAll(".pl-cover-hit-wrap").forEach((wrap) => {
+      const parent = wrap.parentNode;
+      if (!parent) return;
+      while (wrap.firstChild) parent.insertBefore(wrap.firstChild, wrap);
+      wrap.remove();
+    });
+    document.querySelectorAll(".pl-cover-edit-hit").forEach((n) => n.remove());
+
+    let el = document.getElementById("game-cover");
+    const src = game.cover || PLACEHOLDER;
+    if (!el) return;
+
+    if (el.tagName !== "IMG" || el.classList.contains("pl-cover-mosaic")) {
+      const img = document.createElement("img");
+      img.id = "game-cover";
+      img.className = "game-cover-lg";
+      img.alt = "";
+      img.src = src;
+      el.replaceWith(img);
+      return;
+    }
+    el.classList.remove("pl-cover-mosaic", "pl-cover-editable");
+    el.src = src;
+  })();
 
   const titleEl = $("#game-title");
   if (titleEl) {
@@ -9536,14 +9556,32 @@ function bindMediaSession() {
     updateMediaSession();
   });
 
-  set("play", async () => {
-    if (!state.playing) await togglePlay();
-    updateMediaSession();
+  set("play", () => {
+    if (!state.playing) {
+      void togglePlay().then(() => {
+        try {
+          navigator.mediaSession.playbackState = "playing";
+        } catch (_) {}
+        updateMediaSession();
+        bindMediaSession();
+      });
+    } else {
+      updateMediaSession();
+    }
   });
 
-  set("pause", async () => {
-    if (state.playing) await togglePlay();
-    updateMediaSession();
+  set("pause", () => {
+    if (state.playing) {
+      void togglePlay().then(() => {
+        try {
+          navigator.mediaSession.playbackState = "paused";
+        } catch (_) {}
+        updateMediaSession();
+        bindMediaSession();
+      });
+    } else {
+      updateMediaSession();
+    }
   });
 
   set("previoustrack", () => {
@@ -9767,23 +9805,58 @@ function addAlbumToEnd(game) {
 function shuffleAlbumIntoQueue(game) {
   const items = albumQueueItems(game);
   if (!items.length) return;
-  // Fisher–Yates
-  for (let i = items.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [items[i], items[j]] = [items[j], items[i]];
-  }
-  if (state.queueIndex < 0 || !state.queue.length) {
-    state.queue = items;
-    state.queueIndex = 0;
-    playCurrent();
-  } else {
-    state.queue.splice(state.queueIndex + 1, 0, ...items);
-  }
+  shuffleItemsIntoQueueAfterCurrent(items);
   if (state.shuffle && unshuffledQueue) {
     unshuffledQueue = cloneQueue(state.queue);
   }
   renderQueue();
   updatePlayerUI();
+}
+
+/** Shuffle `incoming` and interleave into the tail after the current song.
+ *  Softly avoids consecutive same gameId (not guaranteed impossible). */
+function shuffleItemsIntoQueueAfterCurrent(incoming) {
+  const items = incoming.map((x) => ({ ...x }));
+  if (!items.length) return;
+
+  for (let i = items.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [items[i], items[j]] = [items[j], items[i]];
+  }
+
+  if (state.queueIndex < 0 || !state.queue.length) {
+    state.queue = items;
+    state.queueIndex = 0;
+    playCurrent();
+    return;
+  }
+
+  const head = state.queue.slice(0, state.queueIndex + 1);
+  const tail = state.queue.slice(state.queueIndex + 1);
+  const pool = [...tail, ...items];
+
+  // Fisher–Yates whole pool
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+
+  // A few passes to break adjacent same-game pairs when possible
+  for (let pass = 0; pass < 4; pass++) {
+    for (let i = 0; i < pool.length - 1; i++) {
+      if (pool[i].gameId !== pool[i + 1].gameId) continue;
+      for (let k = i + 2; k < pool.length; k++) {
+        const okPrev = i === 0 || pool[k].gameId !== pool[i - 1]?.gameId;
+        const okNext = k + 1 >= pool.length || pool[k].gameId !== pool[k + 1]?.gameId;
+        if (pool[k].gameId !== pool[i].gameId && okPrev && okNext) {
+          [pool[i + 1], pool[k]] = [pool[k], pool[i + 1]];
+          break;
+        }
+      }
+    }
+  }
+
+  state.queue = [...head, ...pool];
 }
 
 function renderQueue() {
