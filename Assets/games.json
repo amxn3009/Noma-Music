@@ -1465,24 +1465,193 @@
     ]
   },
 
+{
+  "id": "donkeykongcountry",
+  "title": "Donkey Kong Country",
+  "short": "DK Country",
+  "fullscreenName": "Donkey Kong Country",
+  "composer": "David Wise, Eveline Novakovic, Robin Beanland",
+  "console": "snes",
+  "franchise": "donkeykong",
+  "cover": "Assets/Games/DonkeyKongCountry/AlbumCover/AlbumCover_DKC.png",
+  "tracks": [
     {
-    "id": "donkeykongcountry",
-    "title": "Donkey Kong Country",
-    "short": "Donkey Kong Country",
-    "fullscreenName": "Donkey Kong Country",
-    "composer": "David Wise",
-    "console": "snes",
-    "franchise": "donkeykong",
-    "cover": "Assets/Games/DonkeyKongCountry/AlbumCover/AlbumCover_DKC.png",
-    "tracks": [
-      {
-        "id": "dkc-title",
-        "title": "Title Theme",
-        "file": "Assets/Games/DonkeyKongCountry/Tracks/Title Theme.bfstm",
-        "duration": 78.8
-      }
-    ]
-  }
+      "id": "dkc-opening-fanfare",
+      "title": "Opening Fanfare",
+      "file": "Assets/Games/DonkeyKongCountry/Tracks/Opening Fanfare.bfstm",
+      "duration": 6.673
+    },
+    {
+      "id": "dkc-theme",
+      "title": "Theme",
+      "file": "Assets/Games/DonkeyKongCountry/Tracks/Theme.bfstm",
+      "duration": 63.7
+    },
+    {
+      "id": "dkc-simian-segue",
+      "title": "Simian Segue",
+      "file": "Assets/Games/DonkeyKongCountry/Tracks/Simian Segue.bfstm",
+      "duration": 74.378
+    },
+    {
+      "id": "dkc-dk-island-swing",
+      "title": "DK Island Swing",
+      "file": "Assets/Games/DonkeyKongCountry/Tracks/DK Island Swing.bfstm",
+      "duration": 221.618
+    },
+    {
+      "id": "dkc-cave-dweller-concert",
+      "title": "Cave Dweller Concert",
+      "file": "Assets/Games/DonkeyKongCountry/Tracks/Cave Dweller Concert.bfstm",
+      "duration": 197.985
+    },
+    {
+      "id": "dkc-aquatic-ambiance",
+      "title": "Aquatic Ambiance",
+      "file": "Assets/Games/DonkeyKongCountry/Tracks/Aquatic Ambiance.bfstm",
+      "duration": 122.197
+    },
+    {
+      "id": "dkc-well-done",
+      "title": "Well Done",
+      "file": "Assets/Games/DonkeyKongCountry/Tracks/Well Done.bfstm",
+      "duration": 6.865
+    },
+    {
+      "id": "dkc-crankys-theme",
+      "title": "Cranky's Theme",
+      "file": "Assets/Games/DonkeyKongCountry/Tracks/Cranky's Theme.bfstm",
+      "duration": 74.458
+    },
+    {
+      "id": "dkc-life-in-the-mines",
+      "title": "Life in the Mines",
+      "file": "Assets/Games/DonkeyKongCountry/Tracks/Life in the Mines.bfstm",
+      "duration": 201.719
+    },
+    {
+      "id": "dkc-mine-cart-madness",
+      "title": "Mine Cart Madness",
+      "file": "Assets/Games/DonkeyKongCountry/Tracks/Mine Cart Madness.bfstm",
+      "duration": 94.943
+    },
+    {
+      "id": "dkc-misty-menace",
+      "title": "Misty Menace",
+      "file": "Assets/Games/DonkeyKongCountry/Tracks/Misty Menace.bfstm",
+      "duration": 129.195
+    },
+    {
+      "id": "dkc-voices-of-the-temple",
+      "title": "Voices of the Temple",
+      "file": "Assets/Games/DonkeyKongCountry/Tracks/Voices of the Temple.bfstm",
+      "duration": 139.455
+    },
+    {
+      "id": "dkc-lost-a-balloon",
+      "title": "Lost a Balloon",
+      "file": "Assets/Games/DonkeyKongCountry/Tracks/Lost a Balloon.bfstm",
+      "duration": 5.004
+    },
+    {
+      "id": "dkc-funkys-fugue",
+      "title": "Funky's Fugue",
+      "file": "Assets/Games/DonkeyKongCountry/Tracks/Funky's Fugue.bfstm",
+      "duration": 95.829
+    },
+    {
+      "id": "dkc-forest-frenzy",
+      "title": "Forest Frenzy",
+      "file": "Assets/Games/DonkeyKongCountry/Tracks/Forest Frenzy.bfstm",
+      "duration": 68.82
+    },
+    {
+      "id": "dkc-treetop-rock",
+      "title": "Treetop Rock",
+      "file": "Assets/Games/DonkeyKongCountry/Tracks/Treetop Rock.bfstm",
+      "duration": 90.477
+    },
+    {
+      "id": "dkc-bonus-room-blitz",
+      "title": "Bonus Room Blitz",
+      "file": "Assets/Games/DonkeyKongCountry/Tracks/Bonus Room Blitz.bfstm",
+      "duration": 29.113
+    },
+    {
+      "id": "dkc-better-luck-next-time",
+      "title": "Better Luck Next Time",
+      "file": "Assets/Games/DonkeyKongCountry/Tracks/Better Luck Next Time.bfstm",
+      "duration": 6.623
+    },
+    {
+      "id": "dkc-candys-love-song",
+      "title": "Candy's Love Song",
+      "file": "Assets/Games/DonkeyKongCountry/Tracks/Candy's Love Song.bfstm",
+      "duration": 63.82
+    },
+    {
+      "id": "dkc-northern-hemispheres",
+      "title": "Northern Hemispheres",
+      "file": "Assets/Games/DonkeyKongCountry/Tracks/Northern Hemispheres.bfstm",
+      "duration": 130.655
+    },
+    {
+      "id": "dkc-ice-cave-chant",
+      "title": "Ice Cave Chant",
+      "file": "Assets/Games/DonkeyKongCountry/Tracks/Ice Cave Chant.bfstm",
+      "duration": 112.704
+    },
+    {
+      "id": "dkc-fear-factory",
+      "title": "Fear Factory",
+      "file": "Assets/Games/DonkeyKongCountry/Tracks/Fear Factory.bfstm",
+      "duration": 115.572
+    },
+    {
+      "id": "dkc-bad-boss-boogie",
+      "title": "Bad Boss Boogie",
+      "file": "Assets/Games/DonkeyKongCountry/Tracks/Bad Boss Boogie.bfstm",
+      "duration": 109.219
+    },
+    {
+      "id": "dkc-k-rools-cacophony",
+      "title": "K. Rool's Cacophony",
+      "file": "Assets/Games/DonkeyKongCountry/Tracks/K. Rool's Cacophony.bfstm",
+      "duration": 22.036
+    },
+    {
+      "id": "dkc-gang-plank-galleon",
+      "title": "Gang-Plank Galleon",
+      "file": "Assets/Games/DonkeyKongCountry/Tracks/Gang-Plank Galleon.bfstm",
+      "duration": 106.224
+    },
+    {
+      "id": "dkc-the-credits-concerto",
+      "title": "The Credits Concerto",
+      "file": "Assets/Games/DonkeyKongCountry/Tracks/The Credits Concerto.bfstm",
+      "duration": 54.609
+    }
+  ]
+},
+
+{
+  "id": "donkeykongcountry2",
+  "title": "Donkey Kong Country 2: Diddy's Kong Quest",
+  "short": "DK Country 2",
+  "fullscreenName": "Donkey Kong Country 2",
+  "composer": "David Wise",
+  "console": "snes",
+  "franchise": "donkeykong",
+  "cover": "Assets/Games/DonkeyKongCountry2/AlbumCover/AlbumCover_DKC2.jpg",
+  "tracks": [
+    {
+      "id": "dkc-opening-fanfare",
+      "title": "Opening Fanfare",
+      "file": "Assets/Games/DonkeyKongCountry2/Tracks/Opening Fanfare.bfstm",
+      "duration": 0
+    }
+  ]
+}
 
 
 
