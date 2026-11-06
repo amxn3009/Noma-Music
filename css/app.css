@@ -8698,3 +8698,22 @@ body.fs-closing-layout .fs-cover {
     max-width: min(300px, 40vw) !important;
   }
 }
+
+.fs-lyrics-btn .fs-lyrics-icon {
+  width: 20px;
+  height: 20px;
+  display: block;
+  /* white SVG → follows button color (muted / accent when active) */
+  filter: brightness(0) invert(1);
+  opacity: 0.92;
+  pointer-events: none;
+}
+.fs-lyrics-btn.active .fs-lyrics-icon,
+.fs-lyrics-btn[aria-pressed="true"] .fs-lyrics-icon {
+  /* approx accent #7c9cff */
+  filter: invert(58%) sepia(42%) saturate(650%) hue-rotate(193deg) brightness(101%) contrast(101%);
+  opacity: 1;
+}
+.fs-lyrics-btn:disabled .fs-lyrics-icon {
+  opacity: 0.35;
+}

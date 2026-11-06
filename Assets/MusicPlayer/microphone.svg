@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" width="1000" height="1000">
+  <title>Microphone</title>
+  <defs>
+    <mask id="cut" maskUnits="userSpaceOnUse" x="0" y="0" width="1000" height="1000">
+      <!-- handle -->
+      <path fill="#fff" d="M490 303 L630 447 L280 742 Q255 745 230 735 Q195 720 195 680 Q195 655 207 638 Z"/>
+      <!-- gap between handle and head -->
+      <ellipse cx="675" cy="253" rx="188" ry="196" fill="#000"/>
+      <!-- head -->
+      <ellipse cx="675" cy="253" rx="160" ry="168" fill="#fff"/>
+      <!-- band across head -->
+      <path d="M560 130 Q640 262 802 360" fill="none" stroke="#000" stroke-width="36"/>
+    </mask>
+  </defs>
+  <g fill="#fff" mask="url(#cut)">
+    <rect width="1000" height="1000"/>
+  </g>
+  <!-- cable -->
+  <path d="M205 705 C150 760 160 820 235 880 C300 925 340 880 400 790 C470 690 520 660 590 665 C690 670 770 750 815 845"
+        fill="none" stroke="#fff" stroke-width="50" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

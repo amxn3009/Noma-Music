@@ -11,11 +11,11 @@ const supabase =
     : null;
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = "6.11.26, Log in CLoud sync Behaviour changed";
+const APP_VERSION = "7.11.26, Updated Icons, added DKC 1 & 2, Scroll QOL";
 
 let LIBRARY = [];
 
-const DEV_DURATION_TOOL = true; // true only when scanning
+const DEV_DURATION_TOOL = false; // true only when scanning
 
 const state = {
   currentGame: null,
@@ -1406,6 +1406,50 @@ const gsPrefs = {
   sort: "relevance", // relevance | az | length | year
   dir: "desc", // desc default
 };
+
+/** Scroll positions for list pages (restored when leaving a game/playlist). */
+const listScrollMemory = {
+  games: 0,
+  library: 0,
+  category: Object.create(null), // `${mode}:${catKey}` → scrollTop
+};
+
+function getGamesBrowseEl() {
+  return $("#games-browse");
+}
+function getLibBrowseEl() {
+  return $("#lib-browse");
+}
+
+function saveListScroll(kind, key) {
+  if (kind === "games") {
+    const el = getGamesBrowseEl();
+    if (el) listScrollMemory.games = el.scrollTop || 0;
+  } else if (kind === "library") {
+    const el = getLibBrowseEl();
+    if (el) listScrollMemory.library = el.scrollTop || 0;
+  } else if (kind === "category" && key) {
+    const el = getGamesBrowseEl();
+    if (el) listScrollMemory.category[key] = el.scrollTop || 0;
+  }
+}
+
+function restoreListScroll(kind, key) {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      if (kind === "games") {
+        const el = getGamesBrowseEl();
+        if (el) el.scrollTop = listScrollMemory.games || 0;
+      } else if (kind === "library") {
+        const el = getLibBrowseEl();
+        if (el) el.scrollTop = listScrollMemory.library || 0;
+      } else if (kind === "category" && key) {
+        const el = getGamesBrowseEl();
+        if (el) el.scrollTop = listScrollMemory.category[key] || 0;
+      }
+    });
+  });
+}
 
 let settings = { ...DEFAULT_SETTINGS };
 
@@ -3600,6 +3644,22 @@ function bindHotkeys() {
         $("#btn-queue")?.click();
         handled = true;
         break;
+      case "KeyT": {
+        e.preventDefault();
+        const lyricsBtn = $("#btn-fs-lyrics");
+        // same rules as the mic: only when FS is open and the track has lyrics
+        if (
+          document.body.classList.contains("fs-open") &&
+          lyricsBtn &&
+          !lyricsBtn.disabled
+        ) {
+          setFsLyricsOpen(!document.body.classList.contains("fs-lyrics-open"), {
+            fromUser: true,
+          });
+        }
+        handled = true;
+        break;
+      }
       case "KeyL":
         e.preventDefault();
         toggleLoop();
@@ -4864,6 +4924,11 @@ function resolveLoopsForQueueItem(item) {
 function openPlaylistDetail(id) {
   const pl = getPlaylist(id);
   if (!pl) return;
+
+  // Leaving library list → remember scroll
+  if ($("#tab-playlists")?.classList.contains("active") && !gameDetail?.classList.contains("active")) {
+    saveListScroll("library");
+  }
 
   const items = resolvePlaylistTracks(pl);
 
@@ -6665,8 +6730,23 @@ function bindLibraryUI() {
     if (mode === "new") {
       const pl = createPlaylist();
       if (!pl) return;
+      // Always show Playlists filter and jump to the new card
+      libPrefs.filter = "playlists";
+      syncLibToolbar?.();
       renderLibrary({ animate: true });
       showToast?.(`„${pl.name}“ erstellt`);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          const card =
+            $(`#lib-browse [data-kind="playlist"][data-pl-id="${CSS.escape(pl.id)}"]`) ||
+            $(`#lib-browse [data-pl-id="${CSS.escape(pl.id)}"]`);
+          const browse = getLibBrowseEl?.() || $("#lib-browse");
+          if (card && browse) {
+            card.scrollIntoView({ block: "center", behavior: "smooth" });
+            listScrollMemory.library = browse.scrollTop;
+          }
+        });
+      });
     } else if (mode === "import") {
       $("#lib-import-file")?.click();
     }
@@ -6973,6 +7053,11 @@ function openCategoryFullscreen(catKey, mode, opts = {}) {
   const browse = $("#games-browse");
   if (!browse) return;
 
+  // Remember main games list scroll before expanding a category
+  if (!document.body.classList.contains("games-cat-open")) {
+    saveListScroll("games");
+  }
+
   const inject = () => {
     browse.dataset.catOpen = catKey;
     browse.dataset.catMode = mode;
@@ -7049,6 +7134,7 @@ function openCategoryFullscreen(catKey, mode, opts = {}) {
     bindPressMinHold(browse);
     applyGamesLocalFilter();
     bindAllScrollFades(); // add this at end of inject()
+    restoreListScroll("category", `${mode}:${catKey}`);
   };
 
   if (opts.instant) {
@@ -7111,6 +7197,7 @@ function closeCategoryFullscreen() {
     mainClear?.classList.toggle("hidden", !(gamesLocalQuery || "").trim());
 
     renderGames({ animate: true });
+    restoreListScroll("games");
 
     // Heading + Konsole/Franchise fade in
     const top = document.querySelector(".games-page-top");
@@ -7997,6 +8084,24 @@ function openGame(id) {
   }
   // else: leave existing searchReturn (library / playlist) alone
 
+  // Save list scroll of the page we're leaving
+  if (searchReturn?.type === "library") {
+    saveListScroll("library");
+  } else if (
+    searchReturn?.type === "category" ||
+    document.body.classList.contains("games-cat-open")
+  ) {
+    const browse = $("#games-browse");
+    const catKey = browse?.dataset.catOpen;
+    const catMode = browse?.dataset.catMode || gamesViewMode;
+    if (catKey) saveListScroll("category", `${catMode}:${catKey}`);
+    else saveListScroll("games");
+  } else if (!globalSearchOpen) {
+    if ($("#tab-games")?.classList.contains("active") || !searchReturn) {
+      saveListScroll("games");
+    }
+  }
+
   // Remember previous album (scroll + its own search), not a global one
   if (state.currentGame && state.currentGame.id !== id) {
     saveAlbumViewState();
@@ -8357,10 +8462,14 @@ document.querySelectorAll(".tab").forEach((tab) => {
       if (panel) panel.classList.add("active");
 
       if (name === "playlists") {
-        setTimeout(() => renderLibrary({ animate: false }), 0);
+        setTimeout(() => {
+          renderLibrary({ animate: false });
+          restoreListScroll("library");
+        }, 0);
       }
       if (name === "games") {
         renderGames({ animate: false });
+        restoreListScroll("games");
       }
     });
   });
@@ -8387,6 +8496,7 @@ document.querySelectorAll(".tab").forEach((tab) => {
       const libBtn = $("#album-lib-btn");
       if (libBtn) libBtn.style.display = "";
       renderLibrary({ animate: false });
+      restoreListScroll("library");
       return;
     }
 
@@ -8403,6 +8513,7 @@ document.querySelectorAll(".tab").forEach((tab) => {
       document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
       $("#tab-playlists")?.classList.add("active");
       renderLibrary({ animate: false });
+      restoreListScroll("library");
       return;
     }
 
@@ -8489,6 +8600,7 @@ document.querySelectorAll(".tab").forEach((tab) => {
 
     searchReturn = null;
     renderGames({ animate: true });
+    restoreListScroll("games");
   });
 }
 

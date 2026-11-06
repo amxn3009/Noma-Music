@@ -1645,10 +1645,178 @@
   "cover": "Assets/Games/DonkeyKongCountry2/AlbumCover/AlbumCover_DKC2.jpg",
   "tracks": [
     {
-      "id": "dkc-opening-fanfare",
-      "title": "Opening Fanfare",
-      "file": "Assets/Games/DonkeyKongCountry2/Tracks/Opening Fanfare.bfstm",
-      "duration": 0
+      "id": "dkc2-k-rool-returns",
+      "title": "K. Rool Returns",
+      "file": "Assets/Games/DonkeyKongCountry2/Tracks/K. Rool Returns.bfstm",
+      "duration": 38.931
+    },
+    {
+      "id": "dkc2-welcome-to-crocodile-isle",
+      "title": "Welcome to Crocodile Isle",
+      "file": "Assets/Games/DonkeyKongCountry2/Tracks/Welcome to Crocodile Isle.bfstm",
+      "duration": 32.867
+    },
+    {
+      "id": "dkc2-klomps-romp",
+      "title": "Klomp's Romp",
+      "file": "Assets/Games/DonkeyKongCountry2/Tracks/Klomp's Romp.bfstm",
+      "duration": 67.741
+    },
+    {
+      "id": "dkc2-lockjaws-saga",
+      "title": "Lockjaw's Saga",
+      "file": "Assets/Games/DonkeyKongCountry2/Tracks/Lockjaw's Saga.bfstm",
+      "duration": 53.84
+    },
+    {
+      "id": "dkc2-jib-jig",
+      "title": "Jib Jig",
+      "file": "Assets/Games/DonkeyKongCountry2/Tracks/Jib Jig.bfstm",
+      "duration": 58.228
+    },
+    {
+      "id": "dkc2-swanky-swing",
+      "title": "Swanky Swing",
+      "file": "Assets/Games/DonkeyKongCountry2/Tracks/Swanky's Swing.bfstm",
+      "duration": 24.469
+    },
+    {
+      "id": "dkc2-snakey-chantey",
+      "title": "Snakey Chantey",
+      "file": "Assets/Games/DonkeyKongCountry2/Tracks/Snakey Chantey.bfstm",
+      "duration": 52.797
+    },
+    {
+      "id": "dkc2-bayou-boogie",
+      "title": "Bayou Boogie",
+      "file": "Assets/Games/DonkeyKongCountry2/Tracks/Bayou Boogie.bfstm",
+      "duration": 148.731
+    },
+    {
+      "id": "dkc2-school-house-harmony",
+      "title": "School House Harmony",
+      "file": "Assets/Games/DonkeyKongCountry2/Tracks/School House Harmony.bfstm",
+      "duration": 52.061
+    },
+    {
+      "id": "dkc2-forest-interlude",
+      "title": "Forest Interlude",
+      "file": "Assets/Games/DonkeyKongCountry2/Tracks/Forest Interlude.bfstm",
+      "duration": 141.713
+    },
+    {
+      "id": "dkc2-funky-the-main-monkey",
+      "title": "Funky the Main Monkey",
+      "file": "Assets/Games/DonkeyKongCountry2/Tracks/Funky the Main Monkey.bfstm",
+      "duration": 43.339
+    },
+    {
+      "id": "dkc2-flight-of-the-zinger",
+      "title": "Flight of the Zinger",
+      "file": "Assets/Games/DonkeyKongCountry2/Tracks/Flight of the Zinger.bfstm",
+      "duration": 118.656
+    },
+    {
+      "id": "dkc2-crankys-conga",
+      "title": "Cranky's Conga",
+      "file": "Assets/Games/DonkeyKongCountry2/Tracks/Cranky's Conga.bfstm",
+      "duration": 76.937
+    },
+    {
+      "id": "dkc2-hot-head-bop",
+      "title": "Hot-Head Bop",
+      "file": "Assets/Games/DonkeyKongCountry2/Tracks/Hot-Head Hop.bfstm",
+      "duration": 211.636
+    },
+    {
+      "id": "dkc2-run-rambi-run",
+      "title": "Run, Rambi! Run!",
+      "file": "Assets/Games/DonkeyKongCountry2/Tracks/Run, Rambi! Run!.bfstm",
+      "duration": 22.835
+    },
+    {
+      "id": "dkc2-token-tango",
+      "title": "Token Tango",
+      "file": "Assets/Games/DonkeyKongCountry2/Tracks/Token Tango.bfstm",
+      "duration": 21.833
+    },
+    {
+      "id": "dkc2-stickerbush-symphony",
+      "title": "Stickerbush Symphony",
+      "file": "Assets/Games/DonkeyKongCountry2/Tracks/Stickerbrush Symphony.bfstm",
+      "duration": 146.487
+    },
+    {
+      "id": "dkc2-bad-bird-rag",
+      "title": "Bad Bird Rag",
+      "file": "Assets/Games/DonkeyKongCountry2/Tracks/Bad Bird Rag.bfstm",
+      "duration": 102.852
+    },
+    {
+      "id": "dkc2-disco-train",
+      "title": "Disco Train",
+      "file": "Assets/Games/DonkeyKongCountry2/Tracks/Disco Train.bfstm",
+      "duration": 98.325
+    },
+    {
+      "id": "dkc2-boss-bossanova",
+      "title": "Boss Bossanova",
+      "file": "Assets/Games/DonkeyKongCountry2/Tracks/Boss Bossanova.bfstm",
+      "duration": 32.267
+    },
+    {
+      "id": "dkc2-steel-drum-rhumba",
+      "title": "Steel Drum Rhumba",
+      "file": "Assets/Games/DonkeyKongCountry2/Tracks/Steel Drum Rhumba.bfstm",
+      "duration": 38.475
+    },
+    {
+      "id": "dkc2-krooks-march",
+      "title": "Krook's March",
+      "file": "Assets/Games/DonkeyKongCountry2/Tracks/Krook's March.bfstm",
+      "duration": 179.346
+    },
+    {
+      "id": "dkc2-klubbas-reveille",
+      "title": "Klubba's Reveille",
+      "file": "Assets/Games/DonkeyKongCountry2/Tracks/Klubba's Reveille.bfstm",
+      "duration": 29.132
+    },
+    {
+      "id": "dkc2-haunted-chase",
+      "title": "Haunted Chase",
+      "file": "Assets/Games/DonkeyKongCountry2/Tracks/Haunted Chase.bfstm",
+      "duration": 65.792
+    },
+    {
+      "id": "dkc2-in-a-snow-bound-land",
+      "title": "In a Snow-Bound Land",
+      "file": "Assets/Games/DonkeyKongCountry2/Tracks/In a Snow-Bound Land.bfstm",
+      "duration": 92.229
+    },
+    {
+      "id": "dkc2-lost-world-anthem",
+      "title": "Lost World Anthem",
+      "file": "Assets/Games/DonkeyKongCountry2/Tracks/Lost World Anthem.bfstm",
+      "duration": 45.83
+    },
+    {
+      "id": "dkc2-primal-rave",
+      "title": "Primal Rave",
+      "file": "Assets/Games/DonkeyKongCountry2/Tracks/Primal Rave.bfstm",
+      "duration": 98.095
+    },
+    {
+      "id": "dkc2-crocodile-cacophony",
+      "title": "Crocodile Cacophony",
+      "file": "Assets/Games/DonkeyKongCountry2/Tracks/Crocodile Cacophony.bfstm",
+      "duration": 57.392
+    },
+    {
+      "id": "dkc2-donkey-kong-rescued",
+      "title": "Donkey Kong Rescued",
+      "file": "Assets/Games/DonkeyKongCountry2/Tracks/Donkey Kong Rescued.bfstm",
+      "duration": 86.016
     }
   ]
 }
