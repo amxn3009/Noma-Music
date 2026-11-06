@@ -11,7 +11,7 @@ const supabase =
     : null;
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = "7.11.26, Updated Icons, added DKC 1 & 2, Scroll QOL";
+const APP_VERSION = "7.11.26, Updated Icons, added DKC 1 & 2, Scroll QOL + fix games C/F tab sync";
 
 let LIBRARY = [];
 
@@ -4443,6 +4443,7 @@ browse.querySelectorAll(".games-row-scroll").forEach((el) => {
    // was: bindPressMinHold(gamesGrid);
   bindPressMinHold(browse);
   applyGamesLocalFilter();
+  syncGamesViewToggle();
 }
 
 function markPlayingGameCards() {
@@ -7228,12 +7229,20 @@ function closeCategoryFullscreen() {
   setTimeout(finish, 300);
 }
 
+function syncGamesViewToggle() {
+  // Only the Konsole / Franchise chips — not library filters that also use .games-view-btn
+  document.querySelectorAll("[data-games-view]").forEach((b) => {
+    b.classList.toggle("active", b.dataset.gamesView === gamesViewMode);
+  });
+}
+
 function bindGamesViewToggle() {
-  document.querySelectorAll(".games-view-btn").forEach((btn) => {
+  document.querySelectorAll("[data-games-view]").forEach((btn) => {
     if (btn.dataset.bound) return;
     btn.dataset.bound = "1";
     btn.addEventListener("click", () => {
-      const next = btn.dataset.gamesView === "franchise" ? "franchise" : "console";
+      const next = btn.dataset.gamesView;
+      if (next !== "console" && next !== "franchise") return;
       if (next === gamesViewMode) return;
       if (gamesNavLocked) return;
 
@@ -7242,9 +7251,8 @@ function bindGamesViewToggle() {
         gamesNavLocked = false;
       }, 480);
 
-      document.querySelectorAll(".games-view-btn").forEach((b) => b.classList.remove("active"));
-      btn.classList.add("active");
       gamesViewMode = next;
+      syncGamesViewToggle();
 
       if (document.body.classList.contains("games-cat-open")) {
         document.body.classList.remove("games-cat-open");
@@ -7261,6 +7269,7 @@ function bindGamesViewToggle() {
       });
     });
   });
+  syncGamesViewToggle();
 }
 
 function norm(s) {
