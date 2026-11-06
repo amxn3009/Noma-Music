@@ -11,7 +11,7 @@ const supabase =
     : null;
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = "3.11.26, bug fixes, synced lyircs more accurately";
+const APP_VERSION = "6.11.26, Log in CLoud sync Behaviour changed";
 
 let LIBRARY = [];
 
@@ -351,6 +351,7 @@ async function syncNow() {
       .maybeSingle();
     if (error) throw error;
 
+    // Manual "Sync now": keep bidirectional smart sync
     const meta = loadSyncMeta();
     const cloudUpdated = data?.updated_at ? new Date(data.updated_at).getTime() : 0;
     const localMark = Math.max(meta.lastPushAt || 0, meta.lastPullAt || 0, meta.localDirtyAt || 0);
@@ -408,6 +409,88 @@ async function syncNow() {
   }
 }
 
+/** Login / session restore: prefer cloud → device if a row exists. */
+async function syncOnLogin() {
+  if (!supabase) return;
+  const user = await getAuthUser();
+  if (!user) return;
+
+  setProfileSyncUI({ status: "Sync…", hint: "Cloud laden…" });
+  try {
+    const { data, error } = await supabase
+      .from("user_sync")
+      .select("updated_at")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (error) throw error;
+
+    if (data) {
+      await pullCloudSync();
+      setProfileSyncUI({
+        status: "Aktualisiert",
+        hint: "Cloud → Gerät",
+        last: formatSyncTime(Date.now()),
+      });
+      showToast?.("Cloud-Sync: heruntergeladen");
+    } else {
+      // Account exists but never synced → seed cloud from this device
+      await pushCloudSync();
+      setProfileSyncUI({
+        status: "Hochgeladen",
+        hint: "Erster Cloud-Stand angelegt",
+        last: formatSyncTime(Date.now()),
+      });
+      showToast?.("Cloud-Sync: hochgeladen");
+    }
+    saveSyncMeta({ localDirtyAt: 0 });
+
+    if (
+      typeof syncProfileForm === "function" &&
+      !$("#profile-view")?.classList.contains("hidden")
+    ) {
+      syncProfileForm();
+    }
+  } catch (err) {
+    console.warn("[Noma sync login]", err);
+    setProfileSyncUI({
+      status: "Fehler",
+      hint: err?.message || "Sync fehlgeschlagen",
+    });
+  }
+}
+
+/** Register: always push local → cloud. */
+async function syncOnRegister() {
+  if (!supabase) return;
+  const user = await getAuthUser();
+  if (!user) return;
+
+  setProfileSyncUI({ status: "Sync…", hint: "Cloud anlegen…" });
+  try {
+    await pushCloudSync();
+    setProfileSyncUI({
+      status: "Hochgeladen",
+      hint: "Konto + lokaler Stand in der Cloud",
+      last: formatSyncTime(Date.now()),
+    });
+    showToast?.("Cloud-Sync: hochgeladen");
+    saveSyncMeta({ localDirtyAt: 0 });
+
+    if (
+      typeof syncProfileForm === "function" &&
+      !$("#profile-view")?.classList.contains("hidden")
+    ) {
+      syncProfileForm();
+    }
+  } catch (err) {
+    console.warn("[Noma sync register]", err);
+    setProfileSyncUI({
+      status: "Fehler",
+      hint: err?.message || "Sync fehlgeschlagen",
+    });
+  }
+}
+
 let _syncDebounce = null;
 function scheduleCloudSync() {
   if (!supabase) return;
@@ -435,24 +518,29 @@ function scheduleCloudSync() {
   }, 2000);
 }
 
+let pendingAuthSync = "login"; // "login" | "register" | null
+
 async function initCloudAuth() {
   if (!supabase) return;
 
   const { data } = await supabase.auth.getSession();
   updateAuthPanels(data?.session?.user || null);
 
-  // After login: pull if cloud ahead, else push
+  // Returning session: always prefer cloud → device
   if (data?.session?.user) {
     try {
-      await syncNow();
+      await syncOnLogin();
     } catch {}
   }
 
   supabase.auth.onAuthStateChange(async (event, session) => {
     updateAuthPanels(session?.user || null);
     if (event === "SIGNED_IN" && session?.user) {
+      const mode = pendingAuthSync || "login";
+      pendingAuthSync = "login";
       try {
-        await syncNow();
+        if (mode === "register") await syncOnRegister();
+        else await syncOnLogin();
       } catch {}
     }
   });
@@ -484,6 +572,7 @@ function bindProfileAuth() {
       if (errEl) errEl.textContent = "E-Mail und Passwort (min. 6) nötig.";
       return;
     }
+    pendingAuthSync = "login";
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       if (errEl) errEl.textContent = error.message;
@@ -491,6 +580,7 @@ function bindProfileAuth() {
     }
     showToast?.("Angemeldet");
     if ($("#profile-password")) $("#profile-password").value = "";
+    // SIGNED_IN → syncOnLogin (pull if cloud has data)
   });
 
   $("#profile-signup-btn")?.addEventListener("click", async () => {
@@ -502,12 +592,13 @@ function bindProfileAuth() {
       if (errEl) errEl.textContent = "E-Mail und Passwort (min. 6) nötig.";
       return;
     }
+    pendingAuthSync = "register";
     const { data, error } = await supabase.auth.signUp({ email, password });
     if (error) {
       if (errEl) errEl.textContent = error.message;
       return;
     }
-    // If confirm-email is ON, session may be null
+    // If confirm-email is ON, session may be null — push happens on first real login
     if (!data.session) {
       if (errEl) errEl.textContent = "Konto erstellt – bitte E-Mail bestätigen, dann anmelden.";
       showToast?.("Bitte E-Mail bestätigen");
@@ -515,6 +606,7 @@ function bindProfileAuth() {
     }
     showToast?.("Konto erstellt");
     if ($("#profile-password")) $("#profile-password").value = "";
+    // SIGNED_IN → syncOnRegister (push local → cloud)
   });
 
   $("#profile-signout-btn")?.addEventListener("click", async () => {
