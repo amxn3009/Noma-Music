@@ -1463,6 +1463,25 @@
         "duration": 433.2
       }
     ]
+  },
+
+    {
+    "id": "donkeykongcountry",
+    "title": "Donkey Kong Country",
+    "short": "Donkey Kong Country",
+    "fullscreenName": "Donkey Kong Country",
+    "composer": "David Wise",
+    "console": "snes",
+    "franchise": "donkeykong",
+    "cover": "Assets/Games/DonkeyKongCountry/AlbumCover/AlbumCover_DKC.png",
+    "tracks": [
+      {
+        "id": "dkc-title",
+        "title": "Title Theme",
+        "file": "Assets/Games/DonkeyKongCountry/Tracks/Title Theme.bfstm",
+        "duration": 78.8
+      }
+    ]
   }
 
 

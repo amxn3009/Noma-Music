@@ -15,7 +15,7 @@ const APP_VERSION = "6.11.26, Log in CLoud sync Behaviour changed";
 
 let LIBRARY = [];
 
-const DEV_DURATION_TOOL = false; // true only when scanning
+const DEV_DURATION_TOOL = true; // true only when scanning
 
 const state = {
   currentGame: null,
