@@ -11,7 +11,7 @@ const supabase =
     : null;
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = "7.11.26, Updated Icons, added DKC 1 & 2, Scroll QOL + fix games C/F tab sync";
+const APP_VERSION = "8.11.26, attempt to fix lag after longer sessions";
 
 let LIBRARY = [];
 
@@ -2105,8 +2105,9 @@ async function resumeAudio() {
 
 const durationCache = new Map(); // url → seconds
 
-// Decode cache (BFSTM / web audio). Cap memory — long tracks are heavy.
-const DECODE_CACHE_MAX = isIOS() ? 4 : 10;
+// Decode cache (BFSTM / web audio). Cap is TRACK COUNT, not bytes.
+// Each entry ≈ 50–100 MB of PCM; keep this low on 3 GB iPads.
+const DECODE_CACHE_MAX = isIOS() ? 3 : 7;
 const decodeCache = new Map(); // url → { audioBuffer, loopStartSample, sampleRate, loopFlag? }
 
 function decodeCacheGet(url) {
@@ -2125,6 +2126,11 @@ function decodeCacheSet(url, entry) {
     const oldest = decodeCache.keys().next().value;
     decodeCache.delete(oldest);
   }
+}
+
+/** Drop every cached buffer (call on memory pressure / long sessions). */
+function clearDecodeCache() {
+  decodeCache.clear();
 }
 
 async function getTrackDuration(url, track) {
@@ -3921,6 +3927,13 @@ async function decodeBfstm(url) {
     meta.sampleRate
   );
 
+  // after the channel copy loops, before decodeCacheSet:
+  // drop large intermediates so GC can reclaim sooner (important on iPad)
+  try {
+    for (let c = 0; c < channels.length; c++) channels[c] = null;
+  } catch (_) {}
+  // arrayBuffer / bfstm fall out of scope; no need to keep them on `out`
+
   const scale = 0.98 / 32768;
   for (let c = 0; c < meta.numberChannels; c++) {
     const channelData = audioBuffer.getChannelData(c);
@@ -4063,6 +4076,14 @@ async function init() {
         flushListenTime({ force: true });
         listenClock.lastTs = Date.now();
       }
+
+      // keep current song; drop the rest
+    const curUrl = state.queue[state.queueIndex]?.track
+      ? getTrackUrl(state.queue[state.queueIndex].track)
+      : null;
+    for (const url of [...decodeCache.keys()]) {
+      if (url !== curUrl) decodeCache.delete(url);
+    }
       return;
     }
 
