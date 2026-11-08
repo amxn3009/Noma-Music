@@ -1460,7 +1460,8 @@
         "title": "Credits",
         "file": "Assets/Games/OOT/Tracks/Credits.opus",
         "fileIos": "Assets/Games/OOT/Tracks/Credits.m4a",
-        "duration": 433.2
+        "duration": 433.2,
+        "playback": "stream"
       }
     ]
   },

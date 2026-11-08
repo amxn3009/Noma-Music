@@ -11,7 +11,7 @@ const supabase =
     : null;
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = "8.11.26, attempt to fix lag after longer sessions + fix playback";
+const APP_VERSION = "8.11.26, Fix non BFSTM bugs, added SilentS to every Device.";
 
 let LIBRARY = [];
 
@@ -1766,7 +1766,9 @@ function getSilentShieldEl() {
 }
 
 async function startSilentShield() {
-  if (!isIOS()) return;
+  // All devices: near-silent loop so Media Session / auto-advance stay alive for Web Audio.
+  // Skip when HTMLAudio is already the main output (stream/m4a).
+  if (useMediaEl) return;
   ensurePlaybackAudioSession();
   const el = getSilentShieldEl();
   try {
@@ -2622,10 +2624,11 @@ function seekToSeconds(sec) {
   }
   lastLoopCycle = -1;
 
+  const item = state.queue[state.queueIndex];
   const duration = useMediaEl && mediaEl
-    ? (mediaEl.duration || state.duration || 0)
+    ? resolveMediaDuration(mediaEl, item?.track)
     : (decodedBuffer?.duration || state.duration || 0);
-  if (!duration && !Number.isFinite(sec)) return;
+  if (!(duration > 0) && !Number.isFinite(sec)) return;
 
   const safeEnd = duration > 0 ? Math.max(0, duration - 0.05) : Number(sec) || 0;
   const pos = Math.max(0, Math.min(Number(sec) || 0, safeEnd));
@@ -2686,8 +2689,9 @@ function updateMediaProgress() {
     return;
   }
 
-  const duration = mediaEl.duration || state.duration || 0;
-  let t = mediaEl.currentTime;
+  const item = state.queue[state.queueIndex];
+  const duration = resolveMediaDuration(mediaEl, item?.track);
+  let t = mediaEl.currentTime || 0;
 
     if (
     state.playing &&
@@ -2727,15 +2731,7 @@ function updateMediaProgress() {
     }
   }
 
-  state.currentTime = t;
-  state.duration = duration;
-  const ratio = duration > 0 ? Math.min(1, t / duration) : 0;
-  const fill = $("#progress-fill");
-  if (fill) fill.style.width = `${ratio * 100}%`;
-  const tCur = $("#time-current");
-  if (tCur) tCur.textContent = formatTime(t);
-  const tTot = $("#time-total");
-  if (tTot) tTot.textContent = formatTime(duration);
+  paintMediaProgress(t, duration);
 
   if (state.playing) {
     mediaRaf = requestAnimationFrame(updateMediaProgress);
@@ -2790,6 +2786,9 @@ async function playMediaUrl(url, track, offsetSec = 0) {
     try {
       mediaEl.pause();
     } catch (_) {}
+    try {
+      mediaEl.volume = 0;
+    } catch (_) {}
     mediaEl.src = abs;
   }
 
@@ -2816,11 +2815,9 @@ async function playMediaUrl(url, track, offsetSec = 0) {
     mediaEl.load();
   });
 
-  state.duration =
-    Number.isFinite(track.duration) && track.duration > 0
-      ? track.duration
-      : mediaEl.duration;
+  state.duration = resolveMediaDuration(mediaEl, track);
   decodedBuffer = null;
+  paintMediaProgress(Math.max(0, offsetSec || 0), state.duration);
 
   const startAt = Math.max(0, Math.min(offsetSec, (state.duration || 1) - 0.05));
   try {
@@ -2839,17 +2836,38 @@ async function playMediaUrl(url, track, offsetSec = 0) {
   };
 
   try {
-   setTrackGainForPlay(track, null);
-  // then mediaEl.volume = effectiveVolume();
-    mediaEl.volume = effectiveVolume();
+    setTrackGainForPlay(track, null);
+    // Start muted — setting full volume in the same tick as play() crackles on m4a/ogg
+    try {
+      mediaEl.volume = 0;
+    } catch (_) {}
     await mediaEl.play();
     mediaEl.dataset.unlocked = "1";
+    // One delayed volume set after the decoder is actually outputting
+    const target = effectiveVolume();
+    setTimeout(() => {
+      if (!useMediaEl || mediaEl !== getPersistentMedia()) return;
+      if (!state.playing) return;
+      try {
+        mediaEl.volume = target;
+      } catch (_) {}
+    }, 45);
   } catch (err) {
     if (err && (err.name === "NotAllowedError" || err.name === "AbortError")) {
       await resumeAudio();
       try {
+        try {
+          mediaEl.volume = 0;
+        } catch (_) {}
         await mediaEl.play();
         mediaEl.dataset.unlocked = "1";
+        const target = effectiveVolume();
+        setTimeout(() => {
+          if (!useMediaEl || !state.playing) return;
+          try {
+            mediaEl.volume = target;
+          } catch (_) {}
+        }, 45);
       } catch (err2) {
         console.warn("[Noma] media play blocked:", err2);
         state.playing = false;
@@ -2870,6 +2888,29 @@ async function playMediaUrl(url, track, offsetSec = 0) {
   syncKawarpPlayback();
   bindMediaSession();
   updateMediaSession();
+}
+
+/** Prefer JSON duration; fall back to element when finite. */
+function resolveMediaDuration(el, track) {
+  const fromJson = Number(track?.duration);
+  if (Number.isFinite(fromJson) && fromJson > 0) return fromJson;
+  const d = el && el.duration;
+  if (Number.isFinite(d) && d > 0 && d !== Infinity) return d;
+  const s = Number(state.duration);
+  if (Number.isFinite(s) && s > 0) return s;
+  return 0;
+}
+
+function paintMediaProgress(t, duration) {
+  state.currentTime = t;
+  if (duration > 0) state.duration = duration;
+  const ratio = duration > 0 ? Math.min(1, t / duration) : 0;
+  const fill = $("#progress-fill");
+  if (fill) fill.style.width = `${ratio * 100}%`;
+  const tCur = $("#time-current");
+  if (tCur) tCur.textContent = formatTime(t);
+  const tTot = $("#time-total");
+  if (tTot) tTot.textContent = duration > 0 ? formatTime(duration) : "–:––";
 }
 
 function getPlaybackMode(track) {
@@ -2933,7 +2974,8 @@ function bindStreamProgress() {
     const cur = activeMedia();
     if (!cur) return;
 
-    const duration = cur.duration || state.duration || 0;
+    const item = state.queue[state.queueIndex];
+    const duration = resolveMediaDuration(cur, item?.track);
     let t = cur.currentTime || 0;
 
     // handoff ~120ms before end
@@ -2955,15 +2997,7 @@ function bindStreamProgress() {
       }
     }
 
-    state.currentTime = t;
-    state.duration = duration;
-    const ratio = duration > 0 ? Math.min(1, t / duration) : 0;
-    const fill = $("#progress-fill");
-    if (fill) fill.style.width = `${ratio * 100}%`;
-    const tCur = $("#time-current");
-    if (tCur) tCur.textContent = formatTime(t);
-    const tTot = $("#time-total");
-    if (tTot) tTot.textContent = formatTime(duration);
+    paintMediaProgress(t, duration);
 
     if (state.playing) mediaRaf = requestAnimationFrame(tick);
   };
@@ -3043,15 +3077,15 @@ async function playMediaUrlStreamLoop(url, track, offsetSec = 0) {
     }),
   ]);
 
-  state.duration =
-    Number.isFinite(track.duration) && track.duration > 0
-      ? track.duration
-      : mediaA.duration;
+  state.duration = resolveMediaDuration(mediaA, track);
+  paintMediaProgress(Math.max(0, offsetSec || 0), state.duration);
 
-  const startAt = Math.max(0, Math.min(offsetSec, state.duration - 0.05));
+  const startAt = Math.max(0, Math.min(offsetSec, (state.duration || 1) - 0.05)); 
   mediaA.currentTime = startAt;
   setTrackGainForPlay(track, null);
-  mediaA.volume = effectiveVolume();
+  try {
+    mediaA.volume = 0;
+  } catch (_) {}
   mediaB.currentTime = mediaLoopStart;
   mediaB.volume = 0;
   pauseOffset = startAt;
@@ -3067,6 +3101,15 @@ async function playMediaUrlStreamLoop(url, track, offsetSec = 0) {
   };
 
   await mediaA.play();
+  const targetVol = effectiveVolume();
+  setTimeout(() => {
+    if (!useMediaEl || !state.playing) return;
+    const cur = activeMedia() || mediaA;
+    try {
+      cur.volume = targetVol;
+    } catch (_) {}
+  }, 45);
+
   state.playing = true;
   document.body.classList.add("is-playing");
   updatePlayerUI();
@@ -3476,6 +3519,45 @@ let trackGain = 1; // per-track multiplier (peak normalize or JSON)
 
 function effectiveVolume() {
   return Math.min(1, Math.max(0, masterVolume * trackGain));
+}
+
+/** Smooth HTMLAudio volume (avoids the 6-step crackle). */
+let mediaVolRampGen = 0;
+function rampMediaVolume(el, target, ms) {
+  if (!el) return Promise.resolve();
+  const durationMs = Math.max(20, (ms != null ? ms : CLICK_RAMP * 1000));
+  const from = Number(el.volume) || 0;
+  const to = Math.min(1, Math.max(0, target));
+  if (Math.abs(from - to) < 0.004) {
+    try {
+      el.volume = to;
+    } catch (_) {}
+    return Promise.resolve();
+  }
+  const myGen = ++mediaVolRampGen;
+  const t0 = performance.now();
+  return new Promise((resolve) => {
+    const tick = (now) => {
+      if (myGen !== mediaVolRampGen) {
+        resolve();
+        return;
+      }
+      const p = Math.min(1, (now - t0) / durationMs);
+      // ease-out — softer than linear steps
+      const e = 1 - (1 - p) * (1 - p);
+      try {
+        el.volume = from + (to - from) * e;
+      } catch (_) {}
+      if (p < 1) requestAnimationFrame(tick);
+      else {
+        try {
+          el.volume = to;
+        } catch (_) {}
+        resolve();
+      }
+    };
+    requestAnimationFrame(tick);
+  });
 }
 
 /** Peak-based gain so quieter songs sit near the same level (buffer path). */
@@ -8931,14 +9013,33 @@ async function togglePlay() {
   if (state.playing) {
     if (useMediaEl && mediaEl) {
       const cur = activeMedia() || mediaEl;
-      pauseOffset = cur.currentTime;
-      cur.pause();
-      if (mediaA && mediaA !== cur) mediaA.pause();
-      if (mediaB && mediaB !== cur) mediaB.pause();
+      pauseOffset = cur.currentTime || 0;
       if (mediaRaf) {
         cancelAnimationFrame(mediaRaf);
         mediaRaf = null;
       }
+      // Cancel any in-flight volume ramp
+      mediaVolRampGen++;
+
+      // Native pause — volume ramps on HTMLAudio crackle; BFSTM uses GainNode instead
+      try {
+        cur.pause();
+      } catch (_) {}
+      if (mediaA && mediaA !== cur) {
+        try {
+          mediaA.pause();
+        } catch (_) {}
+      }
+      if (mediaB && mediaB !== cur) {
+        try {
+          mediaB.pause();
+        } catch (_) {}
+      }
+      // Keep target volume so resume is instant and clean
+      try {
+        cur.volume = effectiveVolume();
+      } catch (_) {}
+
       state.playing = false;
       document.body.classList.remove("is-playing");
       endListenSession();
@@ -9054,32 +9155,44 @@ async function togglePlay() {
   // ── Resume / start ──
   if (useMediaEl && mediaEl) {
     try {
-      unlockMediaElement().catch(() => {});
-      const cur = activeMedia() || mediaEl;
-      cur.currentTime = pauseOffset;
-      cur.volume = 0;
+      // Only unlock when we never successfully played this element yet
+      const cur = (typeof activeMedia === "function" && activeMedia()) || mediaEl;
+      if (cur.dataset?.unlocked !== "1" && !cur.src) {
+        unlockMediaElement().catch(() => {});
+      }
+      mediaVolRampGen++; // cancel any leftover ramp
+      // Only seek if we're actually off
+      const want = Number(pauseOffset) || 0;
+      const nowT = Number(cur.currentTime) || 0;
+      if (Math.abs(nowT - want) > 0.08) {
+        try {
+          cur.currentTime = want;
+        } catch (_) {}
+      }
+      try {
+        cur.volume = effectiveVolume();
+      } catch (_) {}
       await cur.play();
-      // short volume ramp
-      const target = effectiveVolume();
-      const steps = 6;
-      let i = 0;
-      const tick = () => {
-        i++;
-        cur.volume = target * (i / steps);
-        if (i < steps) requestAnimationFrame(tick);
-        else cur.volume = target;
-      };
-      requestAnimationFrame(tick);
+      try {
+        cur.dataset.unlocked = "1";
+      } catch (_) {}
       state.playing = true;
       document.body.classList.add("is-playing");
       markPlayingTrack(getCurrentTrackId());
       updatePlayerUI();
-      syncKawarpPlayback()
+      syncKawarpPlayback();
       if (mediaA && mediaB) {
-        bindStreamProgress(); // dual
+        bindStreamProgress();
       } else {
-        updateMediaProgress(); // single
+        updateMediaProgress();
       }
+      try {
+        if ("mediaSession" in navigator) {
+          navigator.mediaSession.playbackState = "playing";
+        }
+      } catch (_) {}
+      updateMediaSession();
+      bindMediaSession();
     } catch (err) {
       console.warn("[Noma] media resume failed", err);
     }
@@ -9790,17 +9903,66 @@ function bindMediaSession() {
   });
 
   set("play", () => {
-    if (!state.playing) {
-      void togglePlay().then(() => {
+    if (state.playing) {
+      updateMediaSession();
+      return;
+    }
+
+    // Stream/m4a: must call play() in this turn — a nested async IIFE loses the
+    // Media Session activation on Windows, so resume never starts.
+    if (useMediaEl && mediaEl) {
+      const cur = (typeof activeMedia === "function" && activeMedia()) || mediaEl;
+      try {
+        const want = Number(pauseOffset) || 0;
+        const nowT = Number(cur.currentTime) || 0;
+        if (Math.abs(nowT - want) > 0.08) {
+          cur.currentTime = want;
+        }
+        cur.volume = effectiveVolume();
+      } catch (_) {}
+
+      let playPromise;
+      try {
+        playPromise = cur.play();
+      } catch (err) {
+        console.warn("[Noma] media session play failed", err);
+        void togglePlay();
+        return;
+      }
+
+      const afterPlay = () => {
+        state.playing = true;
+        document.body.classList.add("is-playing");
+        markPlayingTrack(getCurrentTrackId());
+        updatePlayerUI();
+        syncKawarpPlayback();
+        if (mediaA && mediaB) bindStreamProgress();
+        else updateMediaProgress();
         try {
           navigator.mediaSession.playbackState = "playing";
         } catch (_) {}
         updateMediaSession();
         bindMediaSession();
-      });
-    } else {
-      updateMediaSession();
+      };
+
+      if (playPromise && typeof playPromise.then === "function") {
+        playPromise.then(afterPlay).catch((err) => {
+          console.warn("[Noma] media session play failed", err);
+          void togglePlay();
+        });
+      } else {
+        afterPlay();
+      }
+      return;
     }
+
+    void togglePlay().then(() => {
+      try {
+        navigator.mediaSession.playbackState = "playing";
+      } catch (_) {}
+      updateMediaSession();
+      bindMediaSession();
+    });
   });
 
   set("pause", () => {
@@ -12296,9 +12458,10 @@ function bindPlayerChrome() {
 
   function currentDuration() {
     if (useMediaEl && mediaEl) {
-      return mediaEl.duration || state.duration || 0;
+      const item = state.queue[state.queueIndex];
+      return resolveMediaDuration(mediaEl, item?.track);
     }
-    return decodedBuffer?.duration || 0;
+    return decodedBuffer?.duration || state.duration || 0;
   }
 
   function paintSeek(ratio) {
@@ -12336,7 +12499,7 @@ function bindPlayerChrome() {
     lastLoopCycle = -1;
 
     const duration = currentDuration();
-    if (!duration) return;
+    if (!(duration > 0)) return;
 
     const seekTo = paintSeek(ratioFromClientX(e.clientX));
     const safeEnd = Math.max(0, duration - 0.05);
@@ -12344,12 +12507,17 @@ function bindPlayerChrome() {
 
     if (useMediaEl && mediaEl) {
       const cur = activeMedia() || mediaEl;
-      cur.currentTime = pos;
+      try {
+        cur.currentTime = pos;
+      } catch (_) {}
       pauseOffset = pos;
+      state.currentTime = pos;
       if (mediaA && mediaB) {
         const other = standbyMedia();
         if (other) {
-          other.currentTime = mediaForceFullLoop ? 0 : mediaLoopStart;
+          try {
+            other.currentTime = mediaForceFullLoop ? 0 : mediaLoopStart;
+          } catch (_) {}
           other.volume = 0;
         }
       }
@@ -12357,7 +12525,10 @@ function bindPlayerChrome() {
         cur.play().catch(() => {});
         if (mediaA && mediaB) bindStreamProgress();
         else updateMediaProgress();
+      } else {
+        paintMediaProgress(pos, duration);
       }
+      if (typeof updateMediaSession === "function") updateMediaSession();
       return;
     }
 
@@ -12366,6 +12537,11 @@ function bindPlayerChrome() {
       playBuffer(decodedBuffer, pos);
     } else {
       pauseOffset = pos;
+      state.currentTime = pos;
+      const fill = $("#progress-fill");
+      if (fill) fill.style.width = `${(pos / duration) * 100}%`;
+      const tCur = $("#time-current");
+      if (tCur) tCur.textContent = formatTime(pos);
     }
   });
 
