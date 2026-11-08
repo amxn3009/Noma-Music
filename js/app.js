@@ -11,7 +11,7 @@ const supabase =
     : null;
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = "8.11.26, attempt to fix lag after longer sessions";
+const APP_VERSION = "8.11.26, attempt to fix lag after longer sessions + fix playback";
 
 let LIBRARY = [];
 
@@ -3927,23 +3927,22 @@ async function decodeBfstm(url) {
     meta.sampleRate
   );
 
-  // after the channel copy loops, before decodeCacheSet:
-  // drop large intermediates so GC can reclaim sooner (important on iPad)
-  try {
-    for (let c = 0; c < channels.length; c++) channels[c] = null;
-  } catch (_) {}
-  // arrayBuffer / bfstm fall out of scope; no need to keep them on `out`
-
   const scale = 0.98 / 32768;
   for (let c = 0; c < meta.numberChannels; c++) {
     const channelData = audioBuffer.getChannelData(c);
     const src = channels[c];
+    if (!src) continue;
     const n = src.length;
     // tight loop — avoids repeated / 32768
     for (let i = 0; i < n; i++) {
       channelData[i] = src[i] * scale;
     }
   }
+
+  // Drop large intermediates AFTER the copy so GC can reclaim sooner (iPad)
+  try {
+    for (let c = 0; c < channels.length; c++) channels[c] = null;
+  } catch (_) {}
 
   const out = {
     audioBuffer,
