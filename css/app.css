@@ -8119,40 +8119,47 @@ body.pl-editing .track-list.is-editing .track-row:not(.playing):hover .track-num
     box-shadow: none !important;
   }
 
-  /* --- Multiselect: transform while pressing; if already active keep blue --- */
+  /* --- Multiselect / select-all / add-pl: same press as multi --- */
   #pl-multi-btn.is-pressed,
-  #pl-multi-btn:active {
+  #pl-multi-btn:active,
+  #pl-multi-select-all.is-pressed,
+  #pl-multi-select-all:active,
+  #pl-multi-add-pl.is-pressed,
+  #pl-multi-add-pl:active {
     transform: scale(0.92) !important;
   }
   #pl-multi-btn.is-active.is-pressed,
-  #pl-multi-btn.is-active:active {
+  #pl-multi-btn.is-active:active,
+  #pl-multi-select-all.is-active.is-pressed,
+  #pl-multi-select-all.is-active:active {
     background: rgba(124, 156, 255, 0.4) !important;
     color: var(--accent) !important;
     box-shadow: 0 0 18px rgba(124, 156, 255, 0.45) !important;
+    transform: scale(0.92) !important;
   }
 
   /*
    * Sticky :hover on iPad can override .is-active after release.
-   * Force active look for multi + x-loop even under :hover.
+   * Force active look — but NOT while pressing (keep scale).
    */
-  #pl-multi-btn.is-active,
-  #pl-multi-btn.is-active:hover,
-  #pl-multi-btn.is-active:focus,
-  #pl-multi-select-all.is-active,
-  #pl-multi-select-all.is-active:hover,
-  #pl-multi-select-all.is-active:focus,
-  #pl-loops-btn.is-active,
-  #pl-loops-btn.is-active:hover,
-  #pl-loops-btn.is-active:focus,
-  .pl-loops-btn.is-active,
-  .pl-loops-btn.is-active:hover {
+  #pl-multi-btn.is-active:not(.is-pressed),
+  #pl-multi-btn.is-active:hover:not(.is-pressed),
+  #pl-multi-btn.is-active:focus:not(.is-pressed),
+  #pl-multi-select-all.is-active:not(.is-pressed),
+  #pl-multi-select-all.is-active:hover:not(.is-pressed),
+  #pl-multi-select-all.is-active:focus:not(.is-pressed),
+  #pl-loops-btn.is-active:not(.is-pressed),
+  #pl-loops-btn.is-active:hover:not(.is-pressed),
+  #pl-loops-btn.is-active:focus:not(.is-pressed),
+  .pl-loops-btn.is-active:not(.is-pressed),
+  .pl-loops-btn.is-active:hover:not(.is-pressed) {
     color: var(--accent) !important;
     background: rgba(124, 156, 255, 0.22) !important;
     box-shadow: 0 0 16px rgba(124, 156, 255, 0.28) !important;
     transform: none;
   }
 
-  /* --- Delete selected: all three --- */
+  /* --- Delete selected --- */
   #pl-multi-trash.is-pressed,
   #pl-multi-trash:active {
     transform: scale(0.92) !important;

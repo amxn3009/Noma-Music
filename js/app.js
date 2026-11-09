@@ -11,7 +11,7 @@ const supabase =
     : null;
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = "9.11.26, Multi-select: select-all + bulk add-to-pl, collection toasts & locked playlist targets + fix button anims mobile";
+const APP_VERSION = "9.11.26, Multi-select: select-all + bulk add-to-pl, collection toasts & locked playlist targets + fix button anims mobile 2";
 
 let LIBRARY = [];
 
