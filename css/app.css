@@ -1180,6 +1180,8 @@ body.search-mode #global-search-results {
 #pl-edit-save.is-pressed,
 #pl-edit-cancel.is-pressed,
 #pl-multi-btn.is-pressed,
+#pl-multi-select-all.is-pressed,
+#pl-multi-add-pl.is-pressed,
 #pl-clear-loops-btn.is-pressed,
 #pl-add-songs-chip.is-pressed,
 #pl-loops-btn.is-pressed,

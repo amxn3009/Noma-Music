@@ -11,7 +11,7 @@ const supabase =
     : null;
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = "9.11.26, Multi-select: select-all + bulk add-to-pl, collection toasts & locked playlist targets";
+const APP_VERSION = "9.11.26, Multi-select: select-all + bulk add-to-pl, collection toasts & locked playlist targets + fix button anims mobile";
 
 let LIBRARY = [];
 
@@ -5814,7 +5814,7 @@ function enterPlaylistEditMode() {
   });
 
   if (typeof bindPressMinHold === "function") {
-    ["pl-edit-save", "pl-edit-cancel", "pl-multi-btn", "pl-clear-loops-btn", "pl-multi-trash"].forEach((id) => {
+    ["pl-edit-save", "pl-edit-cancel", "pl-multi-btn", "pl-multi-select-all", "pl-multi-add-pl", "pl-clear-loops-btn", "pl-multi-trash"].forEach((id) => {
       const el = document.getElementById(id);
       if (el) delete el.dataset.pressBound;
     });
@@ -12518,7 +12518,7 @@ function pressMinMs(e) {
 
 function bindPressMinHold(root = document) {
   const selector =
-  ".ctrl-btn, .play-btn, #btn-play, .primary-btn, .tab, .back-btn, .settings-btn, .circle-btn, .header-toggle-btn, .fs-back-btn, .confirm-btn, .game-card, .games-view-btn, .games-row-title, #play-all-btn, #shuffle-all-btn, #album-menu-btn, #album-lib-btn, #pl-loops-btn, #pl-edit-btn, #pl-edit-save, #pl-edit-cancel, #pl-add-songs-chip, #pl-multi-btn, #pl-multi-trash, #pl-clear-loops-btn, #settings-reset-btn, .gs-tool-btn, .gs-chip, .gs-fav-btn, .gs-lib-btn, .track-fav-btn, .context-menu button, #loop-menu button, [data-loop-delta], .card-hover-play, .card-hover-menu, .pl-list-menu, .lib-create-chip, .lib-filter-btn, .pl-card, .pl-list-row, #btn-play, #btn-sleep, #btn-settings, #btn-profile, .sleep-btn, .settings-btn, .topbar .tab, .play-btn";
+  ".ctrl-btn, .play-btn, #btn-play, .primary-btn, .tab, .back-btn, .settings-btn, .circle-btn, .header-toggle-btn, .fs-back-btn, .confirm-btn, .game-card, .games-view-btn, .games-row-title, #play-all-btn, #shuffle-all-btn, #album-menu-btn, #album-lib-btn, #pl-loops-btn, #pl-edit-btn, #pl-edit-save, #pl-edit-cancel, #pl-add-songs-chip, #pl-multi-btn, #pl-multi-select-all, #pl-multi-add-pl, #pl-multi-trash, #pl-clear-loops-btn, #settings-reset-btn, .gs-tool-btn, .gs-chip, .gs-fav-btn, .gs-lib-btn, .track-fav-btn, .context-menu button, #loop-menu button, [data-loop-delta], .card-hover-play, .card-hover-menu, .pl-list-menu, .lib-create-chip, .lib-filter-btn, .pl-card, .pl-list-row, #btn-play, #btn-sleep, #btn-settings, #btn-profile, .sleep-btn, .settings-btn, .topbar .tab, .play-btn";
   root.querySelectorAll(selector).forEach((btn) => {
     if (btn.dataset.pressBound === "1") return;
     btn.dataset.pressBound = "1";
