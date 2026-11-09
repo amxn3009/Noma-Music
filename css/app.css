@@ -6541,6 +6541,14 @@ body.fs-open .noma-toast {
 .add-to-pl-item:hover {
   background: rgba(255, 255, 255, 0.06);
 }
+.add-to-pl-item.is-locked {
+  opacity: 0.45;
+  pointer-events: none;
+  cursor: default;
+}
+.add-to-pl-item.is-locked:hover {
+  background: transparent;
+}
 .add-to-pl-item > img,
 .add-to-pl-item > .pl-cover-mosaic,
 .add-to-pl-item > .add-to-pl-cover {
@@ -7297,7 +7305,9 @@ body.pl-editing .pl-cover-edit-hit:hover { background: rgba(0,0,0,0.55); }
   to   { opacity: 1; }
 }
 #pl-multi-trash.chip-out,
-#pl-multi-loops.chip-out {
+#pl-multi-loops.chip-out,
+#pl-multi-select-all.chip-out,
+#pl-multi-add-pl.chip-out {
   animation: chipOut 0.22s var(--ease) both;
   pointer-events: none;
 }
@@ -7517,19 +7527,38 @@ body.pl-editing .track-list.is-playlist .track-row.playing .track-num .eq {
 }
 #pl-multi-loops.chip-enter,
 #pl-multi-trash.chip-enter,
+#pl-multi-select-all.chip-enter,
+#pl-multi-add-pl.chip-enter,
 #pl-clear-loops-btn.chip-enter {
   animation: chipIn 0.28s var(--ease) both;
 }
-#pl-multi-btn.is-active {
+#pl-multi-btn.is-active,
+#pl-multi-select-all.is-active {
   color: var(--accent) !important;
   background: rgba(124, 156, 255, 0.22) !important;
   box-shadow: 0 0 16px rgba(124, 156, 255, 0.28) !important;
 }
 #pl-multi-btn.is-active.is-pressed,
-#pl-multi-btn.is-active:active {
+#pl-multi-btn.is-active:active,
+#pl-multi-select-all.is-active.is-pressed,
+#pl-multi-select-all.is-active:active {
   background: rgba(124, 156, 255, 0.4) !important;
   box-shadow: 0 0 18px rgba(124, 156, 255, 0.45) !important;
   transform: scale(0.92);
+}
+#pl-multi-btn .pl-ms-icon,
+#pl-multi-select-all .pl-ms-icon {
+  width: 18px;
+  height: 18px;
+  display: block;
+  pointer-events: none;
+  filter: brightness(0) invert(1);
+  opacity: 0.92;
+}
+#pl-multi-btn.is-active .pl-ms-icon,
+#pl-multi-select-all.is-active .pl-ms-icon {
+  filter: invert(58%) sepia(42%) saturate(650%) hue-rotate(193deg) brightness(101%) contrast(101%);
+  opacity: 1;
 }
 #pl-clear-loops-btn .pl-track-loops-icon {
   pointer-events: none;
@@ -8107,6 +8136,9 @@ body.pl-editing .track-list.is-editing .track-row:not(.playing):hover .track-num
   #pl-multi-btn.is-active,
   #pl-multi-btn.is-active:hover,
   #pl-multi-btn.is-active:focus,
+  #pl-multi-select-all.is-active,
+  #pl-multi-select-all.is-active:hover,
+  #pl-multi-select-all.is-active:focus,
   #pl-loops-btn.is-active,
   #pl-loops-btn.is-active:hover,
   #pl-loops-btn.is-active:focus,
@@ -8130,6 +8162,7 @@ body.pl-editing .track-list.is-editing .track-row:not(.playing):hover .track-num
 
 /* Active toggles always beat sticky hover (iPad) */
 #pl-multi-btn.is-active:hover,
+#pl-multi-select-all.is-active:hover,
 #pl-loops-btn.is-active:hover,
 .pl-loops-btn.is-active:hover {
   color: var(--accent) !important;

@@ -11,7 +11,7 @@ const supabase =
     : null;
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = "8.11.26, Fix non BFSTM bugs, added SilentS to every Device.";
+const APP_VERSION = "9.11.26, Multi-select: select-all + bulk add-to-pl, collection toasts & locked playlist targets";
 
 let LIBRARY = [];
 
@@ -5090,7 +5090,7 @@ function openPlaylistDetail(id) {
     addSongsChip.setAttribute("aria-label", "Songs hinzufügen");
     addSongsChip.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>`;
   }
-  addSongsChip.classList.toggle("hidden", pl.id === FAVORITES_ID);
+  addSongsChip.classList.remove("hidden");
   addSongsChip.onclick = () => {
     if (plEdit.active) exitPlaylistEditMode(true);
     searchReturn = { type: "playlist", playlistId: pl.id, stayInSearch: true };
@@ -5199,15 +5199,10 @@ function openPlaylistDetail(id) {
     .join("");
 
   if (!items.length) {
-    const canAdd = pl.id !== FAVORITES_ID; // or always allow
     trackListEl.innerHTML = `
       <div class="pl-empty">
         <p class="muted">Keine Songs in dieser Playlist.</p>
-        ${
-          canAdd
-            ? `<button type="button" class="primary-btn" id="pl-add-songs-btn">Songs hinzufügen</button>`
-            : ""
-        }
+        <button type="button" class="primary-btn" id="pl-add-songs-btn">Songs hinzufügen</button>
       </div>`;
     $("#pl-add-songs-btn")?.addEventListener("click", () => {
       searchReturn = { type: "playlist", playlistId: pl.id, stayInSearch: true };
@@ -5692,7 +5687,9 @@ function openAddCollectionToPlaylistMenu(target) {
     title.textContent =
       target.type === "playlist"
         ? "Playlist zu Playlist hinzufügen"
-        : "Album zu Playlist hinzufügen";
+        : target.type === "tracks"
+          ? target.title || "Auswahl zu Playlist hinzufügen"
+          : "Album zu Playlist hinzufügen";
   }
   renderAddToPlList();
   const ov = document.getElementById("add-to-pl-overlay");
@@ -5749,6 +5746,13 @@ function enterPlaylistEditMode() {
   plEdit.selected = new Set();
   plEdit.multi = false;
   document.getElementById("pl-multi-btn")?.classList.remove("is-active");
+  // Snap-hide secondary multi chips (no chip-out flash on enter)
+  ["pl-multi-select-all", "pl-multi-add-pl", "pl-multi-trash", "pl-multi-loops"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.remove("chip-enter", "chip-out", "is-active");
+    el.classList.add("hidden");
+  });
   plEdit.snapshot = {
     name: pl.name,
     coverMode: pl.coverMode,
@@ -5875,12 +5879,7 @@ function enterPlaylistEditMode() {
     void multiBtn.offsetWidth;
     multiBtn.classList.add("chip-enter");
   }
-  const trash = document.getElementById("pl-multi-trash");
-  if (trash && !trash.classList.contains("hidden")) {
-    trash.classList.remove("chip-enter");
-    void trash.offsetWidth;
-    trash.classList.add("chip-enter");
-  }
+  // trash / select-all / add-pl stay hidden until multi is turned on
   renderPlaylistEditUI();
 }
 
@@ -6422,7 +6421,10 @@ function ensureMultiSelectChrome() {
         </span>
       </button>
       <button type="button" id="pl-multi-btn" class="circle-btn" title="Mehrfachauswahl" aria-label="Mehrfachauswahl">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M4 7h4v2H4V7zm6 0h10v2H10V7zM4 11h4v2H4v-2zm6 0h10v2H10v-2zM4 15h4v2H4v-2zm6 0h10v2H10v-2z"/></svg>
+        <img src="Assets/Common/multiselect.svg" alt="" width="18" height="18" class="pl-ms-icon" draggable="false">
+      </button>
+      <button type="button" id="pl-multi-select-all" class="circle-btn hidden" title="Alle auswählen" aria-label="Alle auswählen">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M3 5h2v2H3V5zm4 0h14v2H7V5zM3 11h2v2H3v-2zm4 0h14v2H7v-2zM3 17h2v2H3v-2zm4 0h14v2H7v-2z"/></svg>
       </button>
       <label id="pl-multi-loops" class="pl-track-loops pl-multi-loops hidden" title="Loops für Auswahl">
         <span class="pl-track-loops-icon" aria-hidden="true">
@@ -6433,6 +6435,9 @@ function ensureMultiSelectChrome() {
       </label>
       <button type="button" id="pl-multi-trash" class="circle-btn pl-edit-cancel hidden" title="Auswahl löschen" aria-label="Auswahl löschen">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+      </button>
+      <button type="button" id="pl-multi-add-pl" class="circle-btn hidden" title="Auswahl zu Playlist" aria-label="Auswahl zu Playlist">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
       </button>`;
     const chrome = document.getElementById("pl-edit-chrome");
     chrome?.appendChild(ms);
@@ -6465,6 +6470,37 @@ function ensureMultiSelectChrome() {
       renderPlaylistEditUI();
       syncMultiTrash();
       resyncQueueAfterPlaylistChange(pl.id);
+    });
+
+    document.getElementById("pl-multi-select-all")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const pl = state.currentPlaylist && getPlaylist(state.currentPlaylist.id);
+      if (!pl || !plEdit.multi) return;
+      const allKeys = (pl.tracks || []).map((r) => `${r.gameId}::${r.trackId}`);
+      const allSelected =
+        allKeys.length > 0 && allKeys.every((k) => plEdit.selected?.has(k));
+      if (allSelected) {
+        plEdit.selected = new Set();
+      } else {
+        plEdit.selected = new Set(allKeys);
+      }
+      renderPlaylistEditUI();
+      syncMultiTrash();
+    });
+
+    document.getElementById("pl-multi-add-pl")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const pl = state.currentPlaylist && getPlaylist(state.currentPlaylist.id);
+      if (!pl || (plEdit.selected?.size || 0) < 1) return;
+      const tracks = [...plEdit.selected].map((key) => {
+        const [gameId, trackId] = key.split("::");
+        return { gameId, trackId };
+      });
+      openAddCollectionToPlaylistMenu({
+        type: "tracks",
+        tracks,
+        title: "Auswahl zu Playlist hinzufügen",
+      });
     });
 
     const bulk = document.getElementById("pl-multi-loops-input");
@@ -6502,6 +6538,8 @@ function ensureMultiSelectChrome() {
   if (typeof bindPressMinHold === "function") {
     [
       "pl-multi-btn",
+      "pl-multi-select-all",
+      "pl-multi-add-pl",
       "pl-multi-trash",
       "pl-clear-loops-btn",
       "pl-edit-save",
@@ -6542,15 +6580,41 @@ function hideChip(el) {
 function syncMultiTrash() {
   const trash = document.getElementById("pl-multi-trash");
   const loopsWrap = document.getElementById("pl-multi-loops");
+  const selectAll = document.getElementById("pl-multi-select-all");
+  const addPl = document.getElementById("pl-multi-add-pl");
   const n = plEdit.selected?.size || 0;
   const show = !!(plEdit.multi && n > 0);
+  const showSelectAll = !!plEdit.multi;
+  const showAdd = !!(plEdit.multi && n >= 1);
+
+  // Select-all sits next to multi: same pop/hide as trash
+  if (showSelectAll) {
+    if (selectAll?.classList.contains("hidden")) popChip(selectAll);
+    const pl = state.currentPlaylist && getPlaylist(state.currentPlaylist.id);
+    const total = pl?.tracks?.length || 0;
+    const allOn = total > 0 && n >= total;
+    if (selectAll) {
+      selectAll.title = allOn ? "Auswahl aufheben" : "Alle auswählen";
+      selectAll.setAttribute("aria-label", selectAll.title);
+      selectAll.classList.toggle("is-active", allOn);
+    }
+  } else if (selectAll && !selectAll.classList.contains("hidden")) {
+    selectAll.classList.remove("is-active");
+    hideChip(selectAll);
+  }
 
   if (show) {
     if (trash?.classList.contains("hidden")) popChip(trash);
     if (loopsWrap?.classList.contains("hidden")) popChip(loopsWrap);
   } else {
-    hideChip(trash);
-    hideChip(loopsWrap);
+    if (trash && !trash.classList.contains("hidden")) hideChip(trash);
+    if (loopsWrap && !loopsWrap.classList.contains("hidden")) hideChip(loopsWrap);
+  }
+
+  if (showAdd) {
+    if (addPl?.classList.contains("hidden")) popChip(addPl);
+  } else if (addPl && !addPl.classList.contains("hidden")) {
+    hideChip(addPl);
   }
 }
 
@@ -7027,6 +7091,31 @@ function closeAddToPlMenu() {
   addToPlSelected.clear();
 }
 
+function getAddCollectionTracks() {
+  if (!addCollectionTarget) return null;
+  if (addCollectionTarget.type === "album" && addCollectionTarget.game) {
+    return (addCollectionTarget.game.tracks || []).map((t) => ({
+      gameId: addCollectionTarget.game.id,
+      trackId: t.id,
+    }));
+  }
+  if (addCollectionTarget.type === "playlist" && addCollectionTarget.playlist) {
+    return (addCollectionTarget.playlist.tracks || []).map((r) => ({
+      gameId: r.gameId,
+      trackId: r.trackId,
+    }));
+  }
+  if (addCollectionTarget.type === "tracks" && Array.isArray(addCollectionTarget.tracks)) {
+    return addCollectionTarget.tracks;
+  }
+  return null;
+}
+
+function collectionTracksAllInPlaylist(plId, tracks) {
+  if (!tracks?.length) return false;
+  return tracks.every((ref) => isTrackInPlaylist(plId, ref.gameId, ref.trackId));
+}
+
 function renderAddToPlList() {
   const list = $("#add-to-pl-list");
   if (!list) return;
@@ -7036,14 +7125,29 @@ function renderAddToPlList() {
   const ordered = [...pinned, ...rest].filter(
     (p) => !q || p.name.toLowerCase().includes(q)
   );
-    list.innerHTML = ordered
+
+  // Collection mode: lock playlists that already contain every source track
+  const colTracks = getAddCollectionTracks();
+  const sourcePlId =
+    addCollectionTarget?.type === "playlist"
+      ? addCollectionTarget.playlist?.id
+      : addCollectionTarget?.type === "tracks" && state.currentPlaylist
+        ? state.currentPlaylist.id
+        : null;
+
+  list.innerHTML = ordered
     .map((pl) => {
-      const sel = addToPlSelected.has(pl.id) ? "is-selected" : "";
+      const locked =
+        !!colTracks &&
+        (pl.id === sourcePlId || collectionTracksAllInPlaylist(pl.id, colTracks));
+      if (locked) addToPlSelected.add(pl.id); // show check
+      const sel = addToPlSelected.has(pl.id) || locked ? "is-selected" : "";
+      const lockCls = locked ? "is-locked" : "";
       const pin = pl.pinned
         ? `<span class="add-to-pl-pin" title="Angepinnt"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg></span>`
         : "";
       return `<li>
-        <button type="button" class="add-to-pl-item ${sel}" data-pl-id="${escapeHtml(pl.id)}">
+        <button type="button" class="add-to-pl-item ${sel} ${lockCls}" data-pl-id="${escapeHtml(pl.id)}" ${locked ? 'aria-disabled="true"' : ""}>
           ${playlistThumbHtml(pl, "add-to-pl-cover")}
           <span class="add-to-pl-name">${escapeHtml(pl.name)}${pin}</span>
           <span class="pl-check"></span>
@@ -7051,8 +7155,10 @@ function renderAddToPlList() {
       </li>`;
     })
     .join("");
+
   list.querySelectorAll(".add-to-pl-item").forEach((btn) => {
     btn.addEventListener("click", () => {
+      if (btn.classList.contains("is-locked")) return;
       const id = btn.dataset.plId;
       if (addToPlSelected.has(id)) addToPlSelected.delete(id);
       else addToPlSelected.add(id);
@@ -7078,30 +7184,85 @@ function bindAddToPlaylistUI() {
     if (!addToPlTarget) return closeAddToPlMenu();
     if (addCollectionTarget) {
       const selected = [...addToPlSelected];
-      let tracks = [];
-      if (addCollectionTarget.type === "album" && addCollectionTarget.game) {
-        tracks = (addCollectionTarget.game.tracks || []).map((t) => ({
-          gameId: addCollectionTarget.game.id,
-          trackId: t.id,
-        }));
-      } else if (addCollectionTarget.type === "playlist" && addCollectionTarget.playlist) {
-        tracks = (addCollectionTarget.playlist.tracks || []).map((r) => ({
-          gameId: r.gameId,
-          trackId: r.trackId,
-        }));
-      }
-      for (const plId of selected) {
+      const tracks = getAddCollectionTracks() || [];
+      const sourcePlId =
+        addCollectionTarget.type === "playlist"
+          ? addCollectionTarget.playlist?.id
+          : addCollectionTarget.type === "tracks" && state.currentPlaylist
+            ? state.currentPlaylist.id
+            : null;
+
+      // Skip locked targets (source playlist / already complete)
+      const targets = selected.filter((plId) => {
+        if (plId === sourcePlId) return false;
+        return !collectionTracksAllInPlaylist(plId, tracks);
+      });
+
+      let totalAdded = 0;
+      let totalAlready = 0;
+      let toastPl = null;
+
+      for (const plId of targets) {
+        let added = 0;
+        let already = 0;
         for (const ref of tracks) {
-          setTrackInPlaylist(plId, ref.gameId, ref.trackId, true);
+          if (isTrackInPlaylist(plId, ref.gameId, ref.trackId)) {
+            already += 1;
+          } else if (setTrackInPlaylist(plId, ref.gameId, ref.trackId, true)) {
+            added += 1;
+          }
         }
+        totalAdded += added;
+        totalAlready += already;
+        if (!toastPl && (added > 0 || already > 0)) toastPl = getPlaylist(plId);
       }
+
+      // Count pure “already in locked targets” for toast clarity when nothing selectable
+      if (!targets.length && selected.length) {
+        totalAlready = tracks.length * selected.length;
+        toastPl = getPlaylist(selected[0]);
+      }
+
       addCollectionTarget = null;
       const t = $("#add-to-pl-title");
       if (t) t.textContent = "Zu Playlist hinzufügen";
       closeAddToPlMenu();
       renderLibrary({ animate: false });
-      if (state.currentPlaylist) refreshOpenPlaylistDetail();
-      showToast?.("Zu Playlists hinzugefügt");
+
+      if (plEdit.active && state.currentPlaylist) {
+        const cur = getPlaylist(state.currentPlaylist.id);
+        if (cur) {
+          state.currentPlaylist = cur;
+          if (plEdit.snapshot) {
+            plEdit.snapshot.tracks = structuredClone
+              ? structuredClone(cur.tracks)
+              : JSON.parse(JSON.stringify(cur.tracks));
+          }
+          renderPlaylistEditUI();
+          syncMultiTrash();
+        }
+      } else if (state.currentPlaylist) {
+        refreshOpenPlaylistDetail();
+      }
+
+      if (typeof showToast === "function") {
+        const name = toastPl?.name || "Playlist";
+        const cover =
+          toastPl && typeof playlistThumbUrl === "function"
+            ? playlistThumbUrl(toastPl)
+            : undefined;
+        let sub;
+        if (totalAdded > 0 && totalAlready > 0) {
+          sub = `${totalAdded} hinzugefügt · ${totalAlready} bereits enthalten`;
+        } else if (totalAdded > 0) {
+          sub = `${totalAdded} Song${totalAdded === 1 ? "" : "s"} hinzugefügt`;
+        } else if (totalAlready > 0) {
+          sub = `${totalAlready} bereits in „${name}“`;
+        } else {
+          sub = "Keine Änderung";
+        }
+        showToast({ cover, title: name, sub });
+      }
       return;
     }
     const { gameId, trackId } = addToPlTarget;
@@ -8232,6 +8393,8 @@ function openGame(id) {
   $("#pl-multi-wrap")?.classList.add("hidden");
   $("#pl-multi-btn")?.classList.add("hidden");
   $("#pl-multi-trash")?.classList.add("hidden");
+  $("#pl-multi-select-all")?.classList.add("hidden");
+  $("#pl-multi-add-pl")?.classList.add("hidden");
   $("#pl-clear-loops-btn")?.classList.add("hidden");
   $("#pl-loops-btn")?.classList.add("hidden");
 
@@ -11980,7 +12143,13 @@ function showContextMenu(x, y, payload, anchorEl = null) {
 
   // shared album OR playlist actions
   contextMenu?.querySelectorAll(".ctx-album-or-playlist").forEach((btn) => {
-    btn.classList.toggle("hidden", !(isAlbum || isPlaylist));
+    let show = isAlbum || isPlaylist;
+    // "Playlist zu Playlist" only if the source playlist actually has songs
+    if (show && btn.dataset.action === "add-collection-to-playlist" && isPlaylist) {
+      const n = payload?.playlist?.tracks?.length || 0;
+      if (n < 1) show = false;
+    }
+    btn.classList.toggle("hidden", !show);
   });
 
   contextMenu?.querySelectorAll(".ctx-track-only").forEach((btn) => {
