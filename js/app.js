@@ -11,7 +11,7 @@ const supabase =
     : null;
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = "9.11.26, Multi-select: select-all + bulk add-to-pl, collection toasts & locked playlist targets + fix button anims mobile 2";
+const APP_VERSION = "12.11.26, added link songs feature to playlist";
 
 let LIBRARY = [];
 
@@ -822,6 +822,8 @@ function exportPlaylistToFile(pl) {
           const n = Math.min(99, Math.max(0, Math.floor(Number(t.loops))));
           if (Number.isFinite(n)) entry.loops = n;
         }
+        // Preserve link groups
+        if (t.linkId) entry.linkId = String(t.linkId);
         return entry;
       }),
     },
@@ -896,6 +898,8 @@ async function importPlaylistFromFile(file) {
       const n = Math.min(99, Math.max(0, Math.floor(Number(t.loops))));
       if (Number.isFinite(n)) ref.loops = n;
     }
+    // Restore link groups
+    if (t.linkId) ref.linkId = String(t.linkId);
     pl.tracks.push(ref);
     kept++;
   }
@@ -3922,22 +3926,45 @@ function cloneQueue(q) {
     gameId: item.gameId,
     track: item.track,
     insert: item.insert ?? null,
+    linkId: item.linkId ?? null,
   }));
 }
 
 function toggleShuffle() {
   if (!state.shuffle) {
-    // Save current order, then shuffle view under current song
+    // Save current order, then shuffle under current song (link groups stay together)
     unshuffledQueue = cloneQueue(state.queue);
 
-    if (state.queue.length > 1 && state.queueIndex >= 0) {
-      const current = state.queue[state.queueIndex];
-      const rest = state.queue.filter((_, i) => i !== state.queueIndex);
-      for (let i = rest.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [rest[i], rest[j]] = [rest[j], rest[i]];
+    // Re-stamp linkIds from current playlist if missing (older queue items)
+    if (state.playingPlaylistId) {
+      const pl = getPlaylist(state.playingPlaylistId);
+      if (pl?.tracks?.length) {
+        const byKey = new Map(
+          (pl.tracks || []).map((r) => [`${r.gameId}::${r.trackId}`, r.linkId || null])
+        );
+        state.queue.forEach((item) => {
+          if (item.linkId) return;
+          const k = `${item.gameId}::${item.track?.id}`;
+          const lid = byKey.get(k);
+          if (lid) item.linkId = lid;
+        });
       }
-      state.queue = [current, ...rest];
+    }
+
+    if (state.queue.length > 1 && state.queueIndex >= 0) {
+      const units = groupQueueByLink(state.queue);
+      let startUnit = 0;
+      let offset = 0;
+      for (let u = 0; u < units.length; u++) {
+        if (offset + units[u].length > state.queueIndex) {
+          startUnit = u;
+          break;
+        }
+        offset += units[u].length;
+      }
+      const head = units[startUnit];
+      const others = units.filter((_, u) => u !== startUnit);
+      state.queue = [...head, ...shuffleUnits(others)];
       state.queueIndex = 0;
     }
     state.shuffle = true;
@@ -5328,17 +5355,15 @@ function openPlaylistDetail(id) {
     shuffleAllBtn.onclick = () => {
       if (!items.length) return;
       unlockMediaElement().catch(() => {});
-      const q = items.map((it) => ({
+      const tracks = pl?.tracks || [];
+      const q = items.map((it, i) => ({
         gameId: it.gameId,
         track: it.track,
         insert: null,
+        linkId: tracks[i]?.linkId || null,
       }));
       unshuffledQueue = cloneQueue(q);
-      for (let i = q.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [q[i], q[j]] = [q[j], q[i]];
-      }
-      state.queue = q;
+      state.queue = shuffleUnits(groupQueueByLink(q));
       state.queueIndex = 0;
       state.shuffle = true;
       if (state.loopMode === "count") {
@@ -5444,21 +5469,29 @@ function refreshOpenPlaylistDetail({ flashTrackId = null, flashType = null } = {
 
 function playFromPlaylist(pl, items, index) {
   unlockMediaElement().catch(() => {});
-  const queueItems = items.map((it) => ({
+  const tracks = pl?.tracks || [];
+  const queueItems = items.map((it, i) => ({
     gameId: it.gameId,
     track: it.track,
     insert: null,
+    linkId: tracks[i]?.linkId || null,
   }));
   unshuffledQueue = cloneQueue(queueItems);
 
   if (state.shuffle) {
-    const current = queueItems[index];
-    const rest = queueItems.filter((_, i) => i !== index);
-    for (let i = rest.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [rest[i], rest[j]] = [rest[j], rest[i]];
+    const units = groupQueueByLink(queueItems);
+    let startUnit = 0;
+    let offset = 0;
+    for (let u = 0; u < units.length; u++) {
+      if (offset + units[u].length > index) {
+        startUnit = u;
+        break;
+      }
+      offset += units[u].length;
     }
-    state.queue = [current, ...rest];
+    const head = units[startUnit];
+    const others = units.filter((_, u) => u !== startUnit);
+    state.queue = [...head, ...shuffleUnits(others)];
     state.queueIndex = 0;
   } else {
     unshuffledQueue = null;
@@ -5528,9 +5561,21 @@ function addPlaylistToEnd(pl) {
 }
 
 function shufflePlaylistIntoQueue(pl) {
-  const items = playlistQueueItems(pl);
+  const tracks = pl?.tracks || [];
+  let items = playlistQueueItems(pl).map((it, i) => ({
+    ...it,
+    linkId: tracks[i]?.linkId || null,
+  }));
   if (!items.length) return;
-  shuffleItemsIntoQueueAfterCurrent(items);
+  items = shuffleUnits(groupQueueByLink(items));
+  // Insert as-is (already shuffled / unit-shuffled) after current
+  if (state.queueIndex < 0 || !state.queue.length) {
+    state.queue = items;
+    state.queueIndex = 0;
+    playCurrent();
+  } else {
+    state.queue.splice(state.queueIndex + 1, 0, ...items);
+  }
   if (state.shuffle && unshuffledQueue) {
     unshuffledQueue = cloneQueue(state.queue);
   }
@@ -5703,7 +5748,188 @@ let plEdit = {
   active: false,
   snapshot: null, // { name, coverMode, coverSrc, tracks: [...] }
   multi: false,
+  selected: null, // Set of "gameId::trackId"
+  selectOrder: [], // first selected = link anchor
 };
+
+function trackKey(gameId, trackId) {
+  return `${gameId}::${trackId}`;
+}
+
+function newLinkId() {
+  return `lnk_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
+}
+
+function getTrackLinkId(pl, index) {
+  const ref = pl?.tracks?.[index];
+  return ref?.linkId || null;
+}
+
+function indicesForLinkId(pl, linkId) {
+  if (!pl?.tracks || !linkId) return [];
+  const out = [];
+  (pl.tracks || []).forEach((ref, i) => {
+    if (ref.linkId === linkId) out.push(i);
+  });
+  return out;
+}
+
+/** Toggle multi-select key and keep first-selected order for linking. */
+function togglePlEditSelect(key) {
+  if (!plEdit.selected) plEdit.selected = new Set();
+  if (!plEdit.selectOrder) plEdit.selectOrder = [];
+  if (plEdit.selected.has(key)) {
+    plEdit.selected.delete(key);
+    plEdit.selectOrder = plEdit.selectOrder.filter((k) => k !== key);
+  } else {
+    plEdit.selected.add(key);
+    plEdit.selectOrder.push(key);
+  }
+}
+
+function clearPlEditSelection() {
+  plEdit.selected = new Set();
+  plEdit.selectOrder = [];
+}
+
+/** Cluster selected tracks around the first selected (anchor). */
+function linkSelectedPlaylistTracks(pl) {
+  if (!pl?.tracks?.length || (plEdit.selected?.size || 0) < 2) return false;
+  const keys = plEdit.selectOrder?.length
+    ? plEdit.selectOrder.filter((k) => plEdit.selected.has(k))
+    : [...plEdit.selected];
+  if (keys.length < 2) return false;
+
+  const keyToIndex = new Map();
+  (pl.tracks || []).forEach((ref, i) => {
+    keyToIndex.set(trackKey(ref.gameId, ref.trackId), i);
+  });
+
+  const anchorKey = keys[0];
+  const anchorIdx = keyToIndex.get(anchorKey);
+  if (anchorIdx == null) return false;
+
+  const selectedIdx = keys
+    .map((k) => keyToIndex.get(k))
+    .filter((i) => i != null)
+    .sort((a, b) => a - b);
+  if (selectedIdx.length < 2) return false;
+
+  const above = selectedIdx.filter((i) => i < anchorIdx).sort((a, b) => a - b);
+  const below = selectedIdx.filter((i) => i > anchorIdx).sort((a, b) => a - b);
+
+  const movingSet = new Set(selectedIdx);
+  const kept = [];
+  const picked = selectedIdx.map((i) => pl.tracks[i]);
+  const pickByOld = new Map(selectedIdx.map((i, n) => [i, picked[n]]));
+
+  (pl.tracks || []).forEach((ref, i) => {
+    if (!movingSet.has(i)) kept.push({ ref, old: i });
+  });
+
+  const ordered = [
+    ...above.map((i) => pickByOld.get(i)),
+    pickByOld.get(anchorIdx),
+    ...below.map((i) => pickByOld.get(i)),
+  ].filter(Boolean);
+
+  // Insert cluster where anchor used to sit among non-selected
+  let insertAt = 0;
+  for (const k of kept) {
+    if (k.old < anchorIdx) insertAt++;
+    else break;
+  }
+
+  const lid = newLinkId();
+  ordered.forEach((ref) => {
+    ref.linkId = lid;
+  });
+
+  const next = [
+    ...kept.slice(0, insertAt).map((k) => k.ref),
+    ...ordered,
+    ...kept.slice(insertAt).map((k) => k.ref),
+  ];
+  pl.tracks = next;
+  pl.updatedAt = Date.now();
+  return true;
+}
+
+function unlinkSelectedPlaylistTracks(pl) {
+  if (!pl?.tracks || !plEdit.selected?.size) return false;
+  let changed = false;
+  for (const ref of pl.tracks) {
+    const k = trackKey(ref.gameId, ref.trackId);
+    if (plEdit.selected.has(k) && ref.linkId) {
+      delete ref.linkId;
+      changed = true;
+    }
+  }
+  if (changed) pl.updatedAt = Date.now();
+  return changed;
+}
+
+function selectionHasLinks(pl) {
+  if (!pl?.tracks || !plEdit.selected?.size) return false;
+  return (pl.tracks || []).some(
+    (ref) => plEdit.selected.has(trackKey(ref.gameId, ref.trackId)) && ref.linkId
+  );
+}
+
+/** Shuffle array of units (each unit is a non-empty array of queue items). */
+function shuffleUnits(units) {
+  const u = units.slice();
+  for (let i = u.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [u[i], u[j]] = [u[j], u[i]];
+  }
+  return u.flat();
+}
+
+/** Group consecutive queue items that share the same linkId. */
+function groupQueueByLink(queue) {
+  const units = [];
+  let i = 0;
+  const q = queue || [];
+  while (i < q.length) {
+    const lid = q[i]?.linkId || null;
+    if (!lid) {
+      units.push([q[i]]);
+      i++;
+      continue;
+    }
+    const group = [q[i]];
+    i++;
+    while (i < q.length && q[i]?.linkId === lid) {
+      group.push(q[i]);
+      i++;
+    }
+    units.push(group);
+  }
+  return units;
+}
+
+/** Build shuffle units from playlist track list (linked groups stay together). */
+function playlistShuffleUnits(pl, queueItems) {
+  const tracks = pl?.tracks || [];
+  const units = [];
+  let i = 0;
+  while (i < queueItems.length) {
+    const lid = tracks[i]?.linkId;
+    if (!lid) {
+      units.push([queueItems[i]]);
+      i++;
+      continue;
+    }
+    const group = [];
+    while (i < queueItems.length && tracks[i]?.linkId === lid) {
+      group.push(queueItems[i]);
+      i++;
+    }
+    units.push(group);
+  }
+  return units;
+}
 
 function bindPlaylistEditChrome() {
   // Delegation: button is created later inside openPlaylistDetail
@@ -5743,14 +5969,14 @@ function enterPlaylistEditMode() {
   const pl = state.currentPlaylist && getPlaylist(state.currentPlaylist.id);
   if (!pl) return;
   plEdit.active = true;
-  plEdit.selected = new Set();
+  clearPlEditSelection();
   plEdit.multi = false;
   document.getElementById("pl-multi-btn")?.classList.remove("is-active");
   // Snap-hide secondary multi chips (no chip-out flash on enter)
-  ["pl-multi-select-all", "pl-multi-add-pl", "pl-multi-trash", "pl-multi-loops"].forEach((id) => {
+  ["pl-multi-select-all", "pl-multi-add-pl", "pl-multi-link", "pl-multi-trash", "pl-multi-loops"].forEach((id) => {
     const el = document.getElementById(id);
     if (!el) return;
-    el.classList.remove("chip-enter", "chip-out", "is-active");
+    el.classList.remove("chip-enter", "chip-out", "is-active", "is-unlink");
     el.classList.add("hidden");
   });
   plEdit.snapshot = {
@@ -5814,7 +6040,7 @@ function enterPlaylistEditMode() {
   });
 
   if (typeof bindPressMinHold === "function") {
-    ["pl-edit-save", "pl-edit-cancel", "pl-multi-btn", "pl-multi-select-all", "pl-multi-add-pl", "pl-clear-loops-btn", "pl-multi-trash"].forEach((id) => {
+    ["pl-edit-save", "pl-edit-cancel", "pl-multi-btn", "pl-multi-select-all", "pl-multi-add-pl", "pl-multi-link", "pl-clear-loops-btn", "pl-multi-trash"].forEach((id) => {
       const el = document.getElementById(id);
       if (el) delete el.dataset.pressBound;
     });
@@ -6241,6 +6467,14 @@ function renderPlaylistEditUI() {
       const key = `${g.id}::${t.id}`;
       const sel = plEdit.selected.has(key) ? "is-selected" : "";
       const ref = (pl.tracks || [])[i];
+      const linkId = ref?.linkId || null;
+      const prevLink = i > 0 ? (pl.tracks || [])[i - 1]?.linkId : null;
+      const linkBridge =
+        linkId && prevLink && linkId === prevLink
+          ? `<span class="pl-link-bridge" aria-hidden="true" title="Verknüpft">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/></svg>
+            </span>`
+          : "";
       const hasLoops = ref && ref.loops !== undefined && ref.loops !== null && ref.loops !== "";
       const loopsVal = hasLoops
         ? String(Math.min(99, Math.max(0, Math.floor(Number(ref.loops)))))
@@ -6249,7 +6483,8 @@ function renderPlaylistEditUI() {
       const isPlaying = playingId && t.id === playingId;
       const audioOn = isPlaying && state.playing;
       return `
-    <div class="track-row ${sel}${isPlaying ? " playing" : ""}${audioOn ? " audio-on" : ""}" data-track-id="${escapeHtml(t.id)}" data-game-id="${escapeHtml(g.id)}" data-index="${i}" data-key="${escapeHtml(key)}">
+    <div class="track-row ${sel}${isPlaying ? " playing" : ""}${audioOn ? " audio-on" : ""}${linkId ? " is-linked" : ""}" data-track-id="${escapeHtml(t.id)}" data-game-id="${escapeHtml(g.id)}" data-index="${i}" data-key="${escapeHtml(key)}"${linkId ? ` data-link-id="${escapeHtml(linkId)}"` : ""}>
+      ${linkBridge}
       <span class="pl-edit-drag q-drag" title="Ziehen" data-drag-handle="1">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M9 5h2v2H9V5zm0 6h2v2H9v-2zm0 6h2v2H9v-2zm4-12h2v2h-2V5zm0 6h2v2h-2v-2zm0 6h2v2h-2v-2z"/></svg>
       </span>
@@ -6308,8 +6543,7 @@ function renderPlaylistEditUI() {
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
       const k = btn.getAttribute("data-ms");
-      if (plEdit.selected.has(k)) plEdit.selected.delete(k);
-      else plEdit.selected.add(k);
+      togglePlEditSelect(k);
       btn.classList.toggle("is-selected", plEdit.selected.has(k));
       btn.closest(".track-row")?.classList.toggle("is-selected", plEdit.selected.has(k));
       syncMultiTrash();
@@ -6381,8 +6615,7 @@ function renderPlaylistEditUI() {
       }
       const key = row.dataset.key;
       if (plEdit.multi) {
-        if (plEdit.selected.has(key)) plEdit.selected.delete(key);
-        else plEdit.selected.add(key);
+        togglePlEditSelect(key);
         row.classList.toggle("is-selected", plEdit.selected.has(key));
         row.querySelector(".pl-ms-check")?.classList.toggle(
           "is-selected",
@@ -6433,6 +6666,9 @@ function ensureMultiSelectChrome() {
         </span>
         <input type="number" id="pl-multi-loops-input" class="settings-number pl-track-loops-input" min="0" max="99" step="1" inputmode="numeric" placeholder="0–99" aria-label="Loops für Auswahl">
       </label>
+      <button type="button" id="pl-multi-link" class="circle-btn hidden" title="Songs verknüpfen" aria-label="Songs verknüpfen">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/></svg>
+      </button>
       <button type="button" id="pl-multi-trash" class="circle-btn pl-edit-cancel hidden" title="Auswahl löschen" aria-label="Auswahl löschen">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
       </button>
@@ -6451,7 +6687,7 @@ function ensureMultiSelectChrome() {
     document.getElementById("pl-multi-btn")?.addEventListener("click", (e) => {
       e.stopPropagation();
       plEdit.multi = !plEdit.multi;
-      if (!plEdit.multi) plEdit.selected = new Set();
+      if (!plEdit.multi) clearPlEditSelection();
       document.getElementById("pl-multi-btn")?.classList.toggle("is-active", plEdit.multi);
       renderPlaylistEditUI();
       syncMultiTrash();
@@ -6466,7 +6702,7 @@ function ensureMultiSelectChrome() {
       );
       pl.updatedAt = Date.now();
       saveUserLibrary();
-      plEdit.selected = new Set();
+      clearPlEditSelection();
       renderPlaylistEditUI();
       syncMultiTrash();
       resyncQueueAfterPlaylistChange(pl.id);
@@ -6480,9 +6716,10 @@ function ensureMultiSelectChrome() {
       const allSelected =
         allKeys.length > 0 && allKeys.every((k) => plEdit.selected?.has(k));
       if (allSelected) {
-        plEdit.selected = new Set();
+        clearPlEditSelection();
       } else {
         plEdit.selected = new Set(allKeys);
+        plEdit.selectOrder = allKeys.slice();
       }
       renderPlaylistEditUI();
       syncMultiTrash();
@@ -6501,6 +6738,32 @@ function ensureMultiSelectChrome() {
         tracks,
         title: "Auswahl zu Playlist hinzufügen",
       });
+    });
+
+    document.getElementById("pl-multi-link")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const pl = state.currentPlaylist && getPlaylist(state.currentPlaylist.id);
+      if (!pl || !plEdit.multi) return;
+      const hasLinks = selectionHasLinks(pl);
+      if (hasLinks) {
+        if (unlinkSelectedPlaylistTracks(pl)) {
+          saveUserLibrary();
+          showToast?.("Verknüpfung entfernt");
+          renderPlaylistEditUI();
+          syncMultiTrash();
+        }
+        return;
+      }
+      if ((plEdit.selected?.size || 0) < 2) {
+        showToast?.("Mindestens 2 Songs auswählen");
+        return;
+      }
+      if (linkSelectedPlaylistTracks(pl)) {
+        saveUserLibrary();
+        showToast?.("Songs verknüpft");
+        renderPlaylistEditUI();
+        syncMultiTrash();
+      }
     });
 
     const bulk = document.getElementById("pl-multi-loops-input");
@@ -6540,6 +6803,7 @@ function ensureMultiSelectChrome() {
       "pl-multi-btn",
       "pl-multi-select-all",
       "pl-multi-add-pl",
+      "pl-multi-link",
       "pl-multi-trash",
       "pl-clear-loops-btn",
       "pl-edit-save",
@@ -6582,15 +6846,17 @@ function syncMultiTrash() {
   const loopsWrap = document.getElementById("pl-multi-loops");
   const selectAll = document.getElementById("pl-multi-select-all");
   const addPl = document.getElementById("pl-multi-add-pl");
+  const linkBtn = document.getElementById("pl-multi-link");
   const n = plEdit.selected?.size || 0;
   const show = !!(plEdit.multi && n > 0);
   const showSelectAll = !!plEdit.multi;
   const showAdd = !!(plEdit.multi && n >= 1);
+  const pl = state.currentPlaylist && getPlaylist(state.currentPlaylist.id);
+  const hasLinks = selectionHasLinks(pl);
+  const showLink = !!(plEdit.multi && (hasLinks || n >= 2));
 
-  // Select-all sits next to multi: same pop/hide as trash
   if (showSelectAll) {
     if (selectAll?.classList.contains("hidden")) popChip(selectAll);
-    const pl = state.currentPlaylist && getPlaylist(state.currentPlaylist.id);
     const total = pl?.tracks?.length || 0;
     const allOn = total > 0 && n >= total;
     if (selectAll) {
@@ -6615,6 +6881,18 @@ function syncMultiTrash() {
     if (addPl?.classList.contains("hidden")) popChip(addPl);
   } else if (addPl && !addPl.classList.contains("hidden")) {
     hideChip(addPl);
+  }
+
+  if (showLink) {
+    if (linkBtn?.classList.contains("hidden")) popChip(linkBtn);
+    if (linkBtn) {
+      linkBtn.classList.toggle("is-unlink", hasLinks);
+      linkBtn.title = hasLinks ? "Verknüpfung lösen" : "Songs verknüpfen";
+      linkBtn.setAttribute("aria-label", linkBtn.title);
+    }
+  } else if (linkBtn && !linkBtn.classList.contains("hidden")) {
+    linkBtn.classList.remove("is-unlink");
+    hideChip(linkBtn);
   }
 }
 
@@ -6685,11 +6963,19 @@ function bindPlaylistTrackDrag(pl) {
   function computeDropIndex(clientY) {
     const rows = [...list.querySelectorAll(".track-row:not(.dragging)")];
     if (!rows.length) return 0;
+    let idx = +rows[rows.length - 1].dataset.index + 1;
     for (const row of rows) {
       const r = row.getBoundingClientRect();
-      if (clientY < r.top + r.height / 2) return +row.dataset.index;
+      if (clientY < r.top + r.height / 2) {
+        idx = +row.dataset.index;
+        break;
+      }
     }
-    return +rows[rows.length - 1].dataset.index + 1;
+    const scope = list._plLinkScope;
+    if (scope) {
+      idx = Math.max(scope.min, Math.min(scope.max, idx));
+    }
+    return idx;
   }
 
   function placeSlot(insertBeforeIndex) {
@@ -6748,7 +7034,10 @@ function bindPlaylistTrackDrag(pl) {
     ghost = null;
     stopAutoScroll();
     removeSlot();
-    list.querySelectorAll(".track-row").forEach((r) => r.classList.remove("dragging"));
+    list.querySelectorAll(".track-row").forEach((r) =>
+      r.classList.remove("dragging", "is-drag-dimmed")
+    );
+    list._plLinkScope = null;
     window.removeEventListener("pointermove", onMove);
     window.removeEventListener("pointerup", onUp);
     window.removeEventListener("pointercancel", onUp);
@@ -6762,7 +7051,7 @@ function bindPlaylistTrackDrag(pl) {
     const removedBefore = froms.filter((i) => i < to).length;
     to = Math.max(0, to - removedBefore);
     pl.tracks.splice(to, 0, ...moving);
-    plEdit.selected = new Set();
+    clearPlEditSelection();
     renderPlaylistEditUI();
     requestAnimationFrame(() => {
       for (let i = 0; i < moving.length; i++) {
@@ -6787,6 +7076,28 @@ function bindPlaylistTrackDrag(pl) {
       const idx = +row.dataset.index;
       const sel = selectedIndices();
       dragIndices = sel.length && sel.includes(idx) ? sel : [idx];
+      const livePl = getPlaylist(pl.id) || pl;
+      const lid = livePl.tracks?.[idx]?.linkId;
+      let linkScope = null;
+      list.querySelectorAll(".track-row").forEach((r) => r.classList.remove("is-drag-dimmed"));
+      if (lid) {
+        const groupIdx = indicesForLinkId(livePl, lid);
+        const groupSet = new Set(groupIdx);
+        const allGroupSelected = groupIdx.every((i) => dragIndices.includes(i));
+        if (!allGroupSelected) {
+          dragIndices = dragIndices.filter((i) => groupSet.has(i));
+          if (!dragIndices.length) dragIndices = [idx];
+          linkScope = {
+            min: Math.min(...groupIdx),
+            max: Math.max(...groupIdx) + 1,
+          };
+          list.querySelectorAll(".track-row").forEach((r) => {
+            const i = +r.dataset.index;
+            if (!groupSet.has(i)) r.classList.add("is-drag-dimmed");
+          });
+        }
+      }
+      list._plLinkScope = linkScope;
       dragFrom = idx;
       dropIndex = idx;
       lastDropIndex = -2;
@@ -8395,6 +8706,7 @@ function openGame(id) {
   $("#pl-multi-trash")?.classList.add("hidden");
   $("#pl-multi-select-all")?.classList.add("hidden");
   $("#pl-multi-add-pl")?.classList.add("hidden");
+  $("#pl-multi-link")?.classList.add("hidden");
   $("#pl-clear-loops-btn")?.classList.add("hidden");
   $("#pl-loops-btn")?.classList.add("hidden");
 

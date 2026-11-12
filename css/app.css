@@ -8179,6 +8179,66 @@ body.pl-editing .track-list.is-editing .track-row:not(.playing):hover .track-num
   box-shadow: 0 0 16px rgba(124, 156, 255, 0.28) !important;
 }
 
+#pl-multi-link.chip-enter {
+  animation: chipIn 0.28s var(--ease) both;
+}
+#pl-multi-link.chip-out {
+  animation: chipOut 0.22s var(--ease) both;
+  pointer-events: none;
+}
+#pl-multi-link {
+  color: var(--muted);
+}
+#pl-multi-link.is-unlink {
+  color: #ff6b6b !important;
+  background: rgba(255, 80, 80, 0.22) !important;
+  box-shadow: 0 0 16px rgba(255, 80, 80, 0.35) !important;
+}
+#pl-multi-link.is-pressed,
+#pl-multi-link:active {
+  transform: scale(0.92) !important;
+}
+#pl-multi-link.is-unlink.is-pressed,
+#pl-multi-link.is-unlink:active {
+  transform: scale(0.92) !important;
+  background: rgba(255, 80, 80, 0.4) !important;
+  color: #ff6b6b !important;
+  box-shadow: 0 0 18px rgba(255, 80, 80, 0.5) !important;
+}
+
+.track-row.is-linked {
+  position: relative;
+}
+/* Center of track-num in edit grid: pad 12 + drag 36 + gap 12 + half of 28 */
+.pl-link-bridge {
+  position: absolute;
+  left: 74px;
+  top: -8px;
+  transform: translateX(-50%);
+  z-index: 2;
+  width: 18px;
+  height: 14px;
+  display: grid;
+  place-items: center;
+  color: var(--accent);
+  pointer-events: none;
+  opacity: 0.9;
+}
+.pl-link-bridge svg {
+  display: block;
+}
+.track-row.is-linked {
+  position: relative;
+}
+.pl-link-bridge svg {
+  display: block;
+}
+.track-row.is-drag-dimmed {
+  opacity: 0.28;
+  pointer-events: none;
+  filter: grayscale(0.35);
+}
+
 .pl-cover-edit-hit,
 .pl-cover-hit-wrap .pl-cover-edit-hit,
 #game-cover .pl-cover-edit-hit {
