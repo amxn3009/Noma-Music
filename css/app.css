@@ -401,6 +401,8 @@ html.ios-standalone .fs-queue {
 body.games-cat-open #games-browse {
   overflow: hidden;
   padding-bottom: 0;
+  /* chrome + grid share the same right edge (no extra “filter/sort” gap) */
+  padding-right: 12px;
 }
 
 body.search-mode #global-search-results {
@@ -3184,6 +3186,15 @@ body.fs-open .sleep-chip {
   display: none !important;
 }
 
+.context-menu button[data-action="pl-pin-start"].is-on,
+.context-menu button[data-action="pl-pin-end"].is-on {
+  color: var(--accent) !important;
+}
+.context-menu button[data-action="pl-pin-start"].is-on .menu-icon,
+.context-menu button[data-action="pl-pin-end"].is-on .menu-icon {
+  color: var(--accent) !important;
+}
+
 /* ===== Sleep +5 bigger ===== */
 .sleep-chip-add {
   width: auto !important;
@@ -3888,9 +3899,10 @@ body.search-mode .search-close-btn {
 
 .games-cat-chrome-row .games-cat-search-wrap {
   margin-left: auto;
+  margin-right: 0;
   flex: 0 0 auto;
-  width: min(220px, 40vw);
-  max-width: 220px;
+  width: min(260px, 42vw);
+  max-width: 260px;
 }
 
 .games-cat-scroll {
@@ -8818,4 +8830,60 @@ body.fs-closing-layout .fs-cover {
 }
 .fs-lyrics-btn:disabled .fs-lyrics-icon {
   opacity: 0.35;
+}
+
+#btn-loop.is-xloop-disabled,
+#btn-loop.is-xloop-disabled.active {
+  opacity: 0.38 !important;
+  filter: grayscale(0.4);
+  cursor: pointer;
+  pointer-events: auto;
+  position: relative;
+}
+#btn-loop.is-xloop-disabled .loop-badge,
+#btn-loop.is-xloop-disabled #loop-badge {
+  opacity: 0.5;
+}
+
+/* Floating tip (body-level — never clipped by queue/overflow) */
+.noma-tip {
+  position: fixed;
+  z-index: 10000;
+  left: 0;
+  top: 0;
+  max-width: min(280px, calc(100vw - 16px));
+  padding: 7px 11px;
+  border-radius: 10px;
+  background: rgba(20, 20, 24, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text);
+  font-size: 0.78rem;
+  font-weight: 500;
+  line-height: 1.25;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(4px);
+  transition: opacity 0.16s var(--ease), visibility 0.16s, transform 0.16s var(--ease);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+  white-space: normal;
+}
+.noma-tip.is-below {
+  transform: translateY(-4px);
+}
+.noma-tip.is-visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+/* Keep duration / trash aligned when × loops is hidden */
+.pl-track-loops-spacer {
+  display: inline-flex;
+  flex-shrink: 0;
+  width: 80px;   /* icon 22 + gap 6 + input ~52 */
+  min-width: 80px;
+  height: 34px;
+  visibility: hidden;
+  pointer-events: none;
 }

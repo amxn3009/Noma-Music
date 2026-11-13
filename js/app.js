@@ -11,7 +11,7 @@ const supabase =
     : null;
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = "12.11.26, added link songs feature to playlist";
+const APP_VERSION = '13.11.26, added song "pins" in playlists, added custom tooltips, added clearer x loop compatibility css, fixed bugs.';
 
 let LIBRARY = [];
 
@@ -812,6 +812,8 @@ function exportPlaylistToFile(pl) {
       coverMode: pl.coverMode || "auto",
       coverSrc: pl.coverSrc ?? null,
       useTrackLoops: !!pl.useTrackLoops,
+      shuffleAnchorStart: pl.shuffleAnchorStart || null,
+      shuffleAnchorEnd: pl.shuffleAnchorEnd || null,
       tracks: (pl.tracks || []).map((t) => {
         const entry = {
           gameId: t.gameId,
@@ -876,6 +878,8 @@ async function importPlaylistFromFile(file) {
   if (src.useTrackLoops != null) {
     pl.useTrackLoops = !!src.useTrackLoops;
   }
+  if (src.shuffleAnchorStart) pl.shuffleAnchorStart = src.shuffleAnchorStart;
+  if (src.shuffleAnchorEnd) pl.shuffleAnchorEnd = src.shuffleAnchorEnd;
 
   let kept = 0;
   let skipped = 0;
@@ -903,6 +907,7 @@ async function importPlaylistFromFile(file) {
     pl.tracks.push(ref);
     kept++;
   }
+  refreshPlaylistShuffleAnchors(pl);
   pl.updatedAt = Date.now();
   saveUserLibrary();
   renderLibrary?.({ animate: true });
@@ -3952,6 +3957,8 @@ function toggleShuffle() {
     }
 
     if (state.queue.length > 1 && state.queueIndex >= 0) {
+      const pl =
+        state.playingPlaylistId && getPlaylist(state.playingPlaylistId);
       const units = groupQueueByLink(state.queue);
       let startUnit = 0;
       let offset = 0;
@@ -3962,9 +3969,30 @@ function toggleShuffle() {
         }
         offset += units[u].length;
       }
-      const head = units[startUnit];
-      const others = units.filter((_, u) => u !== startUnit);
-      state.queue = [...head, ...shuffleUnits(others)];
+      const playUnit = units[startUnit];
+      const pinStart =
+        pl?.shuffleAnchorStart &&
+        playlistAnchorMatchesEdge(pl, pl.shuffleAnchorStart, "start")
+          ? units[0]
+          : null;
+      const pinEnd =
+        pl?.shuffleAnchorEnd &&
+        playlistAnchorMatchesEdge(pl, pl.shuffleAnchorEnd, "end")
+          ? units[units.length - 1]
+          : null;
+      const rest = units.filter(
+        (u) => u !== playUnit && u !== pinStart && u !== pinEnd
+      );
+      for (let i = rest.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [rest[i], rest[j]] = [rest[j], rest[i]];
+      }
+      const out = [];
+      if (pinStart && playUnit !== pinStart) out.push(...pinStart);
+      out.push(...playUnit);
+      for (const u of rest) out.push(...u);
+      if (pinEnd && playUnit !== pinEnd) out.push(...pinEnd);
+      state.queue = out;
       state.queueIndex = 0;
     }
     state.shuffle = true;
@@ -4098,6 +4126,177 @@ async function runPrefetchNext() {
   }
 }
 
+/* ── Custom tooltips: floating #noma-tip (no clip, no flash) ── */
+const TIP_SHOW_DELAY_MS = 1000;
+const TIP_GRACE_MS = 1000;
+let _tipShowTimer = null;
+let _tipGraceUntil = 0;
+let _tipAnchor = null;
+
+function getNomaTipEl() {
+  let tip = document.getElementById("noma-tip");
+  if (tip) return tip;
+  tip = document.createElement("div");
+  tip.id = "noma-tip";
+  tip.className = "noma-tip";
+  tip.setAttribute("role", "tooltip");
+  tip.setAttribute("aria-hidden", "true");
+  document.body.appendChild(tip);
+  return tip;
+}
+
+function hideAllTips() {
+  const tip = document.getElementById("noma-tip");
+  if (tip) {
+    tip.classList.remove("is-visible", "is-below");
+    tip.setAttribute("aria-hidden", "true");
+  }
+  _tipAnchor = null;
+}
+
+function promoteTitleToDataTip(el) {
+  if (!el || el.nodeType !== 1) return null;
+  if (el.hasAttribute("data-tip")) return el;
+  const t = el.getAttribute("title");
+  if (t == null || t === "") return null;
+  el.setAttribute("data-tip", t);
+  el.removeAttribute("title");
+  return el;
+}
+
+function placeNomaTip(anchor) {
+  const tip = getNomaTipEl();
+  const text = anchor.getAttribute("data-tip") || "";
+  if (!text) {
+    hideAllTips();
+    return;
+  }
+  tip.textContent = text;
+  tip.classList.remove("is-visible", "is-below");
+
+  // measure after text set
+  tip.style.left = "0px";
+  tip.style.top = "0px";
+  const ar = anchor.getBoundingClientRect();
+  const tr = tip.getBoundingClientRect();
+  const gap = 10;
+  const pad = 8;
+
+  let below =
+    !!anchor.closest(".topbar, .sleep-wrap") || ar.top < tr.height + gap + pad;
+
+  let top = below ? ar.bottom + gap : ar.top - tr.height - gap;
+  let left = ar.left + ar.width / 2 - tr.width / 2;
+
+  // clamp horizontally
+  left = Math.max(pad, Math.min(left, window.innerWidth - tr.width - pad));
+
+  // if above would still clip top, force below
+  if (!below && top < pad) {
+    below = true;
+    top = ar.bottom + gap;
+  }
+  // if below would clip bottom, try above
+  if (below && top + tr.height > window.innerHeight - pad) {
+    const aboveTop = ar.top - tr.height - gap;
+    if (aboveTop >= pad) {
+      below = false;
+      top = aboveTop;
+    }
+  }
+
+  tip.style.left = `${Math.round(left)}px`;
+  tip.style.top = `${Math.round(top)}px`;
+  tip.classList.toggle("is-below", below);
+  tip.classList.add("is-visible");
+  tip.setAttribute("aria-hidden", "false");
+  _tipAnchor = anchor;
+}
+
+function bindCustomTips() {
+  // PC only
+  if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
+
+  getNomaTipEl();
+
+  document.addEventListener(
+    "pointerover",
+    (e) => {
+      const raw = e.target?.closest?.("[data-tip], [title]");
+      if (!raw) return;
+      const el = promoteTitleToDataTip(raw) || (raw.hasAttribute("data-tip") ? raw : null);
+      if (!el || !el.hasAttribute("data-tip")) return;
+
+      const from = e.relatedTarget?.closest?.("[data-tip]");
+      if (from === el) return;
+
+      clearTimeout(_tipShowTimer);
+      const delay = performance.now() < _tipGraceUntil ? 0 : TIP_SHOW_DELAY_MS;
+      _tipShowTimer = setTimeout(() => placeNomaTip(el), delay);
+    },
+    true
+  );
+
+  document.addEventListener(
+    "pointerout",
+    (e) => {
+      const el = e.target?.closest?.("[data-tip]");
+      if (!el) return;
+      const to = e.relatedTarget?.closest?.("[data-tip]");
+      if (to === el) return;
+
+      clearTimeout(_tipShowTimer);
+      // Grace only if tip was actually visible → hop to next is instant.
+      // Leave before show → full delay again.
+      const wasShown = _tipAnchor != null;
+      hideAllTips();
+      _tipGraceUntil = wasShown ? performance.now() + TIP_GRACE_MS : 0;
+    },
+    true
+  );
+
+  document.addEventListener(
+    "focusout",
+    (e) => {
+      const el = e.target?.closest?.("[data-tip]");
+      if (!el) return;
+      clearTimeout(_tipShowTimer);
+      const wasShown = _tipAnchor != null;
+      hideAllTips();
+      _tipGraceUntil = wasShown ? performance.now() + TIP_GRACE_MS : 0;
+    },
+    true
+  );
+
+  document.addEventListener(
+    "focusin",
+    (e) => {
+      const el = promoteTitleToDataTip(e.target?.closest?.("[data-tip], [title]"));
+      if (!el?.hasAttribute("data-tip")) return;
+      clearTimeout(_tipShowTimer);
+      const delay = performance.now() < _tipGraceUntil ? 0 : TIP_SHOW_DELAY_MS;
+      _tipShowTimer = setTimeout(() => placeNomaTip(el), delay);
+    },
+    true
+  );
+
+  // keep tip glued while scrolling / resizing
+  window.addEventListener(
+    "scroll",
+    () => {
+      if (_tipAnchor) placeNomaTip(_tipAnchor);
+    },
+    true
+  );
+  window.addEventListener(
+    "resize",
+    () => {
+      if (_tipAnchor) placeNomaTip(_tipAnchor);
+    },
+    { passive: true }
+  );
+}
+
 // ─── App UI ────────────────────────────────────────────────────
 
 async function init() {
@@ -4144,6 +4343,7 @@ async function init() {
   $("#volume-wrap")?.classList.toggle("is-muted", masterVolume <= 0.001);
   window.addEventListener("resize", onBgResize, { passive: true });
   bindSettings();
+  bindCustomTips();
   bindSleepTimer();
   updateSleepUI();
   $("#now-cover").src = PLACEHOLDER;
@@ -5013,9 +5213,31 @@ function resolvePlaylistTracks(pl) {
   return items;
 }
 
-/** Per-track X-loop count for a playlist ref (null = use settings.loopTimes). */
+/** True if this track has an internal loop point (X-count loops make sense). */
+function trackSupportsXLoops(track) {
+  if (!track) return false;
+  if (track.LoopFromStoE) return true;
+  if (Number.isFinite(Number(track.loopStart)) && Number(track.loopStart) > 0) return true;
+  if (track.loopFlag === true || track.loopFlag === 1) return true;
+  // BFSTM/BCSTM: loop point lives in the file, often not in games.json
+  const path = String(track.file || track.url || track.src || "").toLowerCase();
+  if (/\.(bfstm|bcstm)(\?|$)/.test(path)) return true;
+  return false;
+}
+
+/** Live current queue item: also use decoded loop state when known. */
+function currentTrackSupportsXLoops() {
+  const item = state.queue[state.queueIndex];
+  const track = item?.track;
+  if (trackSupportsXLoops(track)) return true;
+  if (!useMediaEl && (loopStartSample > 0 || forceFullLoop)) return true;
+  if (useMediaEl && ((typeof mediaLoopStart === "number" && mediaLoopStart > 0) || mediaForceFullLoop)) {
+    return true;
+  }
+  return false;
+}
+
 function getPlaylistTrackLoops(pl, gameId, trackId) {
-  if (!pl) return null;
   const ref = (pl.tracks || []).find(
     (t) => t.gameId === gameId && t.trackId === trackId
   );
@@ -5363,7 +5585,7 @@ function openPlaylistDetail(id) {
         linkId: tracks[i]?.linkId || null,
       }));
       unshuffledQueue = cloneQueue(q);
-      state.queue = shuffleUnits(groupQueueByLink(q));
+      state.queue = applyShuffleAnchors(pl, q);
       state.queueIndex = 0;
       state.shuffle = true;
       if (state.loopMode === "count") {
@@ -5489,9 +5711,29 @@ function playFromPlaylist(pl, items, index) {
       }
       offset += units[u].length;
     }
-    const head = units[startUnit];
-    const others = units.filter((_, u) => u !== startUnit);
-    state.queue = [...head, ...shuffleUnits(others)];
+    const playUnit = units[startUnit];
+    const pinStart =
+      pl?.shuffleAnchorStart && playlistAnchorMatchesEdge(pl, pl.shuffleAnchorStart, "start")
+        ? units[0]
+        : null;
+    const pinEnd =
+      pl?.shuffleAnchorEnd && playlistAnchorMatchesEdge(pl, pl.shuffleAnchorEnd, "end")
+        ? units[units.length - 1]
+        : null;
+    const rest = units.filter(
+      (u) => u !== playUnit && u !== pinStart && u !== pinEnd
+    );
+    for (let i = rest.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [rest[i], rest[j]] = [rest[j], rest[i]];
+    }
+    const out = [];
+    // If user started on the pinned-start unit, play it first (still "at start")
+    if (pinStart && playUnit !== pinStart) out.push(...pinStart);
+    out.push(...playUnit);
+    for (const u of rest) out.push(...u);
+    if (pinEnd && playUnit !== pinEnd) out.push(...pinEnd);
+    state.queue = out;
     state.queueIndex = 0;
   } else {
     unshuffledQueue = null;
@@ -5567,7 +5809,7 @@ function shufflePlaylistIntoQueue(pl) {
     linkId: tracks[i]?.linkId || null,
   }));
   if (!items.length) return;
-  items = shuffleUnits(groupQueueByLink(items));
+  items = applyShuffleAnchors(pl, items);
   // Insert as-is (already shuffled / unit-shuffled) after current
   if (state.queueIndex < 0 || !state.queue.length) {
     state.queue = items;
@@ -5852,6 +6094,7 @@ function linkSelectedPlaylistTracks(pl) {
   ];
   pl.tracks = next;
   pl.updatedAt = Date.now();
+  refreshPlaylistShuffleAnchors(pl);
   return true;
 }
 
@@ -5865,7 +6108,10 @@ function unlinkSelectedPlaylistTracks(pl) {
       changed = true;
     }
   }
-  if (changed) pl.updatedAt = Date.now();
+  if (changed) {
+    pl.updatedAt = Date.now();
+    refreshPlaylistShuffleAnchors(pl);
+  }
   return changed;
 }
 
@@ -5874,6 +6120,134 @@ function selectionHasLinks(pl) {
   return (pl.tracks || []).some(
     (ref) => plEdit.selected.has(trackKey(ref.gameId, ref.trackId)) && ref.linkId
   );
+}
+
+/** Edge unit of a playlist: first or last song, or whole link if that edge is linked. */
+function playlistEdgeUnit(pl, edge /* "start" | "end" */) {
+  const tracks = pl?.tracks || [];
+  if (!tracks.length) return null;
+  const idx = edge === "start" ? 0 : tracks.length - 1;
+  const ref = tracks[idx];
+  if (!ref) return null;
+  if (ref.linkId) {
+    const indices = indicesForLinkId(pl, ref.linkId);
+    return {
+      kind: "link",
+      linkId: ref.linkId,
+      indices,
+      keys: indices.map((i) => trackKey(tracks[i].gameId, tracks[i].trackId)),
+    };
+  }
+  return {
+    kind: "track",
+    gameId: ref.gameId,
+    trackId: ref.trackId,
+    indices: [idx],
+    keys: [trackKey(ref.gameId, ref.trackId)],
+  };
+}
+
+function anchorsEqual(a, b) {
+  if (!a || !b) return false;
+  if (a.kind !== b.kind) return false;
+  if (a.kind === "link") return a.linkId === b.linkId;
+  return a.gameId === b.gameId && a.trackId === b.trackId;
+}
+
+function playlistAnchorMatchesEdge(pl, anchor, edge) {
+  if (!anchor) return false;
+  const edgeUnit = playlistEdgeUnit(pl, edge);
+  if (!edgeUnit) return false;
+  return anchorsEqual(anchor, edgeUnit);
+}
+
+/** Clear start/end pins that no longer sit at the edge (after drag / link / delete). */
+function refreshPlaylistShuffleAnchors(pl) {
+  if (!pl) return false;
+  let changed = false;
+
+  for (const edge of ["start", "end"]) {
+    const key = edge === "start" ? "shuffleAnchorStart" : "shuffleAnchorEnd";
+    const anchor = pl[key];
+    if (!anchor) continue;
+
+    const edgeUnit = playlistEdgeUnit(pl, edge);
+    if (!edgeUnit) {
+      pl[key] = null;
+      changed = true;
+      continue;
+    }
+
+    // Still exact match (track↔track or link↔link)
+    if (anchorsEqual(anchor, edgeUnit)) continue;
+
+    // Track pin + song still at edge, but edge is now a link → upgrade to link pin
+    if (anchor.kind === "track") {
+      const k = trackKey(anchor.gameId, anchor.trackId);
+      if (edgeUnit.keys.includes(k) && edgeUnit.kind === "link") {
+        pl[key] = { kind: "link", linkId: edgeUnit.linkId };
+        changed = true;
+        continue;
+      }
+    }
+
+    // Link pin dissolved / moved off edge → drop
+    // (optional: if edge is a single track that was in the link, leave cleared)
+    pl[key] = null;
+    changed = true;
+  }
+
+  if (changed) pl.updatedAt = Date.now();
+  return changed;
+}
+
+function togglePlaylistShuffleAnchor(pl, edge /* "start" | "end" */) {
+  if (!pl) return false;
+  const unit = playlistEdgeUnit(pl, edge);
+  if (!unit) return false;
+  const key = edge === "start" ? "shuffleAnchorStart" : "shuffleAnchorEnd";
+  const next =
+    unit.kind === "link"
+      ? { kind: "link", linkId: unit.linkId }
+      : { kind: "track", gameId: unit.gameId, trackId: unit.trackId };
+  if (anchorsEqual(pl[key], next)) {
+    pl[key] = null;
+  } else {
+    pl[key] = next;
+  }
+  pl.updatedAt = Date.now();
+  return true;
+}
+
+function trackIsInPlaylistEdge(pl, gameId, trackId, edge) {
+  const unit = playlistEdgeUnit(pl, edge);
+  if (!unit) return false;
+  return unit.keys.includes(trackKey(gameId, trackId));
+}
+
+/** Apply start/end anchors when building a shuffled queue from a playlist. */
+function applyShuffleAnchors(pl, queueItems) {
+  if (!pl || !queueItems?.length) return queueItems;
+  const tracks = pl.tracks || [];
+  const stamped = queueItems.map((it, i) => ({
+    ...it,
+    linkId: it.linkId ?? tracks[i]?.linkId ?? null,
+  }));
+  let units = groupQueueByLink(stamped);
+  let head = [];
+  let tail = [];
+
+  if (pl.shuffleAnchorStart && playlistAnchorMatchesEdge(pl, pl.shuffleAnchorStart, "start")) {
+    head = units[0] || [];
+    units = units.slice(1);
+  }
+  if (pl.shuffleAnchorEnd && playlistAnchorMatchesEdge(pl, pl.shuffleAnchorEnd, "end")) {
+    if (units.length) {
+      tail = units[units.length - 1];
+      units = units.slice(0, -1);
+    }
+  }
+  return [...head, ...shuffleUnits(units), ...tail];
 }
 
 /** Shuffle array of units (each unit is a non-empty array of queue items). */
@@ -6497,7 +6871,9 @@ function renderPlaylistEditUI() {
         <span class="track-name">${escapeHtml(t.title)}</span>
         <span class="track-sub">${escapeHtml(gameLabel)}</span>
       </div>
-      <label class="pl-track-loops" title="Loops für diesen Song (X-Modus, 0 = einmal)">
+      ${
+        trackSupportsXLoops(t)
+          ? `<label class="pl-track-loops" title="Loops für diesen Song (X-Modus, 0 = einmal)">
         <span class="pl-track-loops-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
             <path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/>
@@ -6517,7 +6893,9 @@ function renderPlaylistEditUI() {
           data-track-id="${escapeHtml(t.id)}"
           aria-label="Loops"
         >
-      </label>
+      </label>`
+          : `<span class="pl-track-loops-spacer" aria-hidden="true"></span>`
+      }
       <span class="track-duration">${dur}</span>
       ${
         plEdit.multi
@@ -6774,8 +7152,11 @@ function ensureMultiSelectChrome() {
       if (raw === "") return;
       const n = clampInt(raw, 0, 99, 0);
       bulk.value = String(n);
-      for (const key of plEdit.selected) {
+            for (const key of plEdit.selected) {
         const [gameId, trackId] = key.split("::");
+        const g = LIBRARY.find((x) => x.id === gameId);
+        const t = g?.tracks?.find((x) => x.id === trackId);
+        if (!trackSupportsXLoops(t)) continue;
         setPlaylistTrackLoops(pl, gameId, trackId, n);
       }
       saveUserLibrary();
@@ -7051,6 +7432,8 @@ function bindPlaylistTrackDrag(pl) {
     const removedBefore = froms.filter((i) => i < to).length;
     to = Math.max(0, to - removedBefore);
     pl.tracks.splice(to, 0, ...moving);
+    refreshPlaylistShuffleAnchors(pl);
+    saveUserLibrary();
     clearPlEditSelection();
     renderPlaylistEditUI();
     requestAnimationFrame(() => {
@@ -10159,6 +10542,7 @@ function adjustLoopsRemaining(delta) {
 
 function showLoopMenu(x, y) {
   if (state.loopMode !== "count") return;
+  if (!currentTrackSupportsXLoops()) return;
   const menu = $("#loop-menu");
   const btn = $("#btn-loop");
   if (!menu) return;
@@ -10214,6 +10598,7 @@ function bindLoopMenu() {
     b.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
+      if (state.loopMode === "count" && !currentTrackSupportsXLoops()) return;
       if (state.loopMode !== "count") {
         closeLoopMenu();
         return;
@@ -10298,7 +10683,19 @@ function updatePlayerUI() {
     playIcon.classList.toggle("hidden", playing);
     pauseIcon.classList.toggle("hidden", !playing);
   }
-  $("#btn-loop")?.classList.toggle("active", state.loopMode !== "off");
+  const loopBtn = $("#btn-loop");
+  const xLoopsOk = currentTrackSupportsXLoops();
+  const countDisabled = state.loopMode === "count" && !xLoopsOk;
+  loopBtn?.classList.toggle("active", state.loopMode !== "off");
+  loopBtn?.classList.toggle("is-xloop-disabled", countDisabled);
+  loopBtn?.setAttribute("aria-disabled", countDisabled ? "true" : "false");
+  if (countDisabled) {
+    loopBtn?.setAttribute("data-tip", "Dieser Song hat keinen Loop-Punkt");
+    loopBtn?.removeAttribute("title");
+  } else {
+    loopBtn?.removeAttribute("data-tip");
+    loopBtn?.removeAttribute("title");
+  }
   $("#btn-shuffle")?.classList.toggle("active", state.shuffle);
 
   const badge = $("#loop-badge");
@@ -12483,6 +12880,74 @@ function showContextMenu(x, y, payload, anchorEl = null) {
     btn.classList.toggle("hidden", !inPlaylistDetail);
   });
 
+  // Pin start / end (only first / last edge of current playlist)
+  const pinPl =
+    inPlaylistDetail &&
+    getPlaylist(payload?.fromPlaylistId || state.currentPlaylist?.id);
+  const pinGameId = game?.id;
+  const pinTrackId = track?.id;
+  const canPinStart =
+    !!pinPl &&
+    !!pinGameId &&
+    !!pinTrackId &&
+    trackIsInPlaylistEdge(pinPl, pinGameId, pinTrackId, "start");
+  const canPinEnd =
+    !!pinPl &&
+    !!pinGameId &&
+    !!pinTrackId &&
+    trackIsInPlaylistEdge(pinPl, pinGameId, pinTrackId, "end");
+
+  const pinStartBtn = contextMenu?.querySelector('[data-action="pl-pin-start"]');
+  const pinEndBtn = contextMenu?.querySelector('[data-action="pl-pin-end"]');
+  if (pinStartBtn) {
+    pinStartBtn.classList.toggle("hidden", !canPinStart);
+    const startUnit = canPinStart ? playlistEdgeUnit(pinPl, "start") : null;
+    const startOn =
+      canPinStart &&
+      anchorsEqual(pinPl.shuffleAnchorStart, {
+        kind: startUnit.kind,
+        linkId: startUnit.linkId,
+        gameId: startUnit.gameId,
+        trackId: startUnit.trackId,
+      });
+    pinStartBtn.classList.toggle("is-on", !!startOn);
+    const lab = pinStartBtn.querySelector(".ctx-pl-pin-start-label");
+    if (lab && startUnit) {
+      lab.textContent =
+        startUnit.kind === "link"
+          ? startOn
+            ? "Link nicht mehr am Anfang fixieren"
+            : "Link immer am Anfang spielen"
+          : startOn
+            ? "Nicht mehr am Anfang fixieren"
+            : "Immer am Anfang spielen";
+    }
+  }
+  if (pinEndBtn) {
+    pinEndBtn.classList.toggle("hidden", !canPinEnd);
+    const endUnit = canPinEnd ? playlistEdgeUnit(pinPl, "end") : null;
+    const endOn =
+      canPinEnd &&
+      anchorsEqual(pinPl.shuffleAnchorEnd, {
+        kind: endUnit.kind,
+        linkId: endUnit.linkId,
+        gameId: endUnit.gameId,
+        trackId: endUnit.trackId,
+      });
+    pinEndBtn.classList.toggle("is-on", !!endOn);
+    const lab = pinEndBtn.querySelector(".ctx-pl-pin-end-label");
+    if (lab && endUnit) {
+      lab.textContent =
+        endUnit.kind === "link"
+          ? endOn
+            ? "Link nicht mehr am Ende fixieren"
+            : "Link immer am Ende spielen"
+          : endOn
+            ? "Nicht mehr am Ende fixieren"
+            : "Immer am Ende spielen";
+    }
+  }
+
   const playNextBtn = contextMenu?.querySelector('[data-action="play-next"]');
   if (playNextBtn) {
     playNextBtn.lastChild.textContent = isPlaylist
@@ -12669,6 +13134,8 @@ function bindContextMenu() {
           const pid = payload.fromPlaylistId || state.currentPlaylist?.id;
           if (pid) {
             setTrackInPlaylist(pid, game.id, track.id, false);
+            const live = getPlaylist(pid);
+            if (live) refreshPlaylistShuffleAnchors(live);
             hideContextMenu();
             syncTrackPlusButtons(game.id, track.id);
             if (state.currentPlaylist?.id === pid) {
@@ -12683,6 +13150,39 @@ function bindContextMenu() {
               sub: "Aus Playlist entfernt",
             });
           }
+          return;
+        }
+        if (action === "pl-pin-start" || action === "pl-pin-end") {
+          const pid = payload.fromPlaylistId || state.currentPlaylist?.id;
+          const live = pid && getPlaylist(pid);
+          if (!live) return;
+          const edge = action === "pl-pin-start" ? "start" : "end";
+          if (!trackIsInPlaylistEdge(live, game.id, track.id, edge)) return;
+          togglePlaylistShuffleAnchor(live, edge);
+          saveUserLibrary();
+          hideContextMenu();
+          const on =
+            edge === "start"
+              ? !!live.shuffleAnchorStart
+              : !!live.shuffleAnchorEnd;
+          const isLink =
+            (edge === "start"
+              ? live.shuffleAnchorStart?.kind
+              : live.shuffleAnchorEnd?.kind) === "link" ||
+            playlistEdgeUnit(live, edge)?.kind === "link";
+          showToast?.({
+            cover: game.cover || PLACEHOLDER,
+            title: track.title,
+            sub: on
+              ? isLink
+                ? edge === "start"
+                  ? "Link bleibt beim Mischen am Anfang"
+                  : "Link bleibt beim Mischen am Ende"
+                : edge === "start"
+                  ? "Song bleibt beim Mischen am Anfang"
+                  : "Song bleibt beim Mischen am Ende"
+              : "Fixierung aufgehoben",
+          });
           return;
         }
       }

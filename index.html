@@ -213,7 +213,7 @@
         <h1 class="page-title" id="lib-page-title">Bibliothek</h1>
         <div class="lib-title-actions">
           <div class="lib-create-wrap">
-            <button type="button" id="lib-create-btn" class="lib-create-chip" title="Playlist" aria-haspopup="true" aria-expanded="false">
+            <button type="button" id="lib-create-btn" class="lib-create-chip" title="Playlist erstellen / importieren" aria-haspopup="true" aria-expanded="false">
               <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
               Erstellen
             </button>
@@ -351,7 +351,7 @@
               <path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/>
             </svg>
           </button>
-          <button id="album-lib-btn" class="circle-btn" type="button" title="Zur Bibliothek" aria-label="Zur Bibliothek">
+          <button id="album-lib-btn" class="circle-btn" type="button" title="Zur Bibliothek hinzufügen" aria-label="Zur Bibliothek">
             <svg class="album-lib-plus" viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
             <svg class="album-lib-check hidden" viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
           </button>
@@ -387,20 +387,20 @@
 
       <div class="player-center">
         <div class="controls">
-    <button id="btn-shuffle" class="ctrl-btn" title="Shuffle" aria-label="Shuffle">
+    <button id="btn-shuffle" class="ctrl-btn" aria-label="Shuffle">
          <svg class="icon" viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
     </button>
-    <button id="btn-prev" class="ctrl-btn" title="Vorheriger" aria-label="Previous">
+    <button id="btn-prev" class="ctrl-btn" aria-label="Previous">
         <svg class="icon" viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
     </button>
-    <button id="btn-play" class="ctrl-btn play-btn" title="Play/Pause" aria-label="Play">
+    <button id="btn-play" class="ctrl-btn play-btn" aria-label="Play">
         <svg id="icon-play" class="icon" viewBox="0 0 24 24" width="28" height="28" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
         <svg id="icon-pause" class="icon hidden" viewBox="0 0 24 24" width="28" height="28" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
     </button>
-    <button id="btn-next" class="ctrl-btn" title="Nächster" aria-label="Next">
+    <button id="btn-next" class="ctrl-btn"  aria-label="Next">
         <svg class="icon" viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
     </button>
-    <button id="btn-loop" class="ctrl-btn" title="Loop" aria-label="Loop">
+    <button id="btn-loop" class="ctrl-btn" aria-label="Loop">
       <svg class="icon" viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>
       <span id="loop-badge" class="loop-badge hidden"></span>
     </button>
@@ -426,7 +426,7 @@
         </div>
         <button id="btn-queue" class="ctrl-btn" title="Warteschlange">☰</button>
         <button id="btn-fullscreen" class="ctrl-btn" title="Vollbild">⛶</button>
-        <button id="btn-minimize" class="ctrl-btn hidden" title="Verkleinern">
+        <button id="btn-minimize" class="ctrl-btn hidden" title="Vollbild beenden">
           <img src="Assets/MusicPlayer/Minimize.png" alt="" class="ctrl-img">
         </button>
     </footer>
@@ -856,6 +856,18 @@
     </svg>
       Spiel Album öffnen
   </button>
+    <button data-action="pl-pin-start" type="button" class="ctx-pl-pin-only hidden">
+      <svg class="menu-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M12 2l2.4 7.2H22l-6 4.8 2.3 7L12 16.8 5.7 21 8 14 2 9.2h7.6L12 2z"/>
+      </svg>
+      <span class="ctx-pl-pin-start-label">Immer am Anfang spielen</span>
+    </button>
+    <button data-action="pl-pin-end" type="button" class="ctx-pl-pin-only hidden">
+      <svg class="menu-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M12 2l2.4 7.2H22l-6 4.8 2.3 7L12 16.8 5.7 21 8 14 2 9.2h7.6L12 2z"/>
+      </svg>
+      <span class="ctx-pl-pin-end-label">Immer am Ende spielen</span>
+    </button>
         <button data-action="shuffle-into" type="button" class="ctx-album-or-playlist hidden">
       <svg class="menu-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
       In Queue mischen
