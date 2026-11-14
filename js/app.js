@@ -11,7 +11,7 @@ const supabase =
     : null;
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = '13.11.26, added song "pins" in playlists, added custom tooltips, added clearer x loop compatibility css, fixed bugs.';
+const APP_VERSION = '14.11.26, added bananza lyrics, fixed soft-end fade bug';
 
 let LIBRARY = [];
 
@@ -2920,6 +2920,11 @@ function paintMediaProgress(t, duration) {
   if (tCur) tCur.textContent = formatTime(t);
   const tTot = $("#time-total");
   if (tTot) tTot.textContent = duration > 0 ? formatTime(duration) : "–:––";
+
+  // Same path as BFSTM RAF — needed so loop wrap scrolls lyrics back
+  if (document.body.classList.contains("fs-lyrics-open")) {
+    updateFsLyricsHighlight(false);
+  }
 }
 
 function getPlaybackMode(track) {
@@ -3157,6 +3162,11 @@ function updateProgressUI() {
     if (tCur) tCur.textContent = formatTime(t);
     const tTot = $("#time-total");
     if (tTot) tTot.textContent = formatTime(sec);
+
+    // Keep lyrics on real song position until outro is fully done
+    if (document.body.classList.contains("fs-lyrics-open")) {
+      updateFsLyricsHighlight(false);
+    }
 
     if (t >= sec - 0.03) {
       finishTransition();
@@ -10347,6 +10357,16 @@ function toggleLoop() {
   softEndFadeAt = 0;
   softEndFadeSec = 0;
 
+  // Switching OFF soft-end (→ infinite / no loop) must cancel the already
+  // scheduled gain→0 ramp, or the track keeps fading with no transition UI.
+  if (!wantSoftEnd && currentGain && audioCtx) {
+    const now = audioCtx.currentTime;
+    try {
+      currentGain.gain.cancelScheduledValues(now);
+      currentGain.gain.setValueAtTime(effectiveVolume(), now);
+    } catch (_) {}
+  }
+
   if (wantSoftEnd && state.playing && audioCtx && currentGain && !bufferCtxSuspended) {
     const offset = getPlaybackPosition();
     const fadeSec = getTransitionSec();
@@ -12018,12 +12038,12 @@ function updateFsLyricsHighlight(forceScroll = false) {
       ? getPlaybackPosition()
       : state.currentTime || 0;
 
+  const prevIdx = lyricsActiveIndex;
+
   // Loop / big seek backward on same track
   let loopJump = false;
-  if (t < lastLyricsPlaybackT - 1.0) {
-    lyricsActiveIndex = -2;
+  if (t + 0.25 < lastLyricsPlaybackT) {
     loopJump = true;
-    if (!manual) forceScroll = true;
   }
   lastLyricsPlaybackT = t;
 
@@ -12034,12 +12054,36 @@ function updateFsLyricsHighlight(forceScroll = false) {
     else break;
   }
 
+  // Index jumped backward a lot → treat as loop even if time check was soft
+  if (
+    !loopJump &&
+    prevIdx >= 0 &&
+    idx >= 0 &&
+    idx < prevIdx - 1
+  ) {
+    loopJump = true;
+  }
+
+  if (loopJump) {
+    lyricsActiveIndex = -2;
+    if (!manual) forceScroll = true;
+  }
+
   const nodes = $("#fs-lyrics-list")?.querySelectorAll(".fs-lyrics-line");
   if (!nodes?.length) return;
 
   const lineChanged = idx !== lyricsActiveIndex;
 
   if (lineChanged) {
+    // Loop wrap: kill CSS transitions for one frame so active/past snap
+    // fully (no fade/scale cut). Normal line steps keep the soft anim.
+    if (loopJump) {
+      nodes.forEach((el) => {
+        el.style.transition = "none";
+        el.classList.remove("is-glow");
+      });
+    }
+
     nodes.forEach((el, i) => {
       const on = i === idx;
       const was = el.classList.contains("is-active");
@@ -12047,38 +12091,46 @@ function updateFsLyricsHighlight(forceScroll = false) {
       el.classList.toggle("is-past", idx >= 0 && i < idx);
       if (on && !was) {
         el.classList.remove("is-glow");
-        void el.offsetWidth;
-        el.classList.add("is-glow");
-        el.addEventListener(
-          "animationend",
-          () => el.classList.remove("is-glow"),
-          { once: true }
-        );
+        if (!loopJump) {
+          void el.offsetWidth;
+          el.classList.add("is-glow");
+          el.addEventListener(
+            "animationend",
+            () => el.classList.remove("is-glow"),
+            { once: true }
+          );
+        }
       } else if (!on) {
         el.classList.remove("is-glow");
       }
     });
     lyricsActiveIndex = idx;
+
+    if (loopJump) {
+      // force layout with transitions still off, then restore
+      void ($("#fs-lyrics-list")?.offsetWidth);
+      requestAnimationFrame(() => {
+        nodes.forEach((el) => {
+          el.style.transition = "";
+        });
+      });
+    }
   } else if (forceScroll) {
     nodes.forEach((el, i) => {
       el.classList.toggle("is-active", i === idx);
       el.classList.toggle("is-past", idx >= 0 && i < idx);
+      el.classList.remove("is-glow");
     });
   }
 
-  // Only move the scroller when the line changes / force / loop — NOT every RAF
+  // Auto-scroll only when needed
   if (!lineChanged && !forceScroll) return;
   if (manual && !forceScroll) return;
 
   const scroller = $("#fs-lyrics-scroll");
   if (!scroller) return;
 
-  // smooth for normal 1-line steps; instant for force / loop / big jumps
-  const jumpSize =
-    lyricsActiveIndex < 0 || idx < 0
-      ? 99
-      : Math.abs(idx - (typeof lyricsActiveIndex === "number" ? lyricsActiveIndex : idx));
-  // note: lyricsActiveIndex already equals idx after lineChanged; use force/loopJump
+  // Instant for force / loop / big jumps
   const instant = forceScroll || loopJump;
 
   lyricsProgrammaticScroll = true;
@@ -12098,7 +12150,6 @@ function updateFsLyricsHighlight(forceScroll = false) {
     });
   }
 
-  // Keep flag up long enough that smooth scroll events don't count as user scroll
   clearTimeout(window.__lyricsProgTimer);
   window.__lyricsProgTimer = setTimeout(() => {
     lyricsProgrammaticScroll = false;

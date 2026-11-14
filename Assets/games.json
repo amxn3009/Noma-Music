@@ -1,6 +1,6 @@
 [
   
-    {
+  {
     "id": "donkeykongbananza",
     "title": "Donkey Kong Bananza",
     "short": "DK Bananza",
@@ -14,7 +14,829 @@
         "id": "dkb-title-theme",
         "title": "Title Theme",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Title Theme.bfstm",
-        "duration": 0
+        "duration": 60.139
+      },
+      {
+        "id": "dkb-enter-dk",
+        "title": "Enter DK!",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Enter DK!.bfstm",
+        "duration": 13.533
+      },
+      {
+        "id": "dkb-ingot-isle",
+        "title": "Ingot Isle",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Ingot Isle.bfstm",
+        "duration": 144.112
+      },
+      {
+        "id": "dkb-oh-banana",
+        "title": "Oh, Banana!",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Oh Banana!.bfstm",
+        "duration": 3.408
+      },
+      {
+        "id": "dkb-you-got-a-banandium-gem",
+        "title": "You Got a Banandium Gem",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/You Got a Banandium Gem.bfstm",
+        "duration": 3.283
+      },
+      {
+        "id": "dkb-ingot-isle-cave-in",
+        "title": "Ingot Isle Cave-In",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Ingot Isle Cave-In.bfstm",
+        "duration": 163.731
+      },
+      {
+        "id": "dkb-ingot-isle-cave-in-battle",
+        "title": "Ingot Isle Cave-In Battle",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Ingot Isle Cave-In Battle.bfstm",
+        "duration": 59.05
+      },
+      {
+        "id": "dkb-entrance-to-the-underground-world",
+        "title": "Entrance to the Underground World",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Welcome to the Underground World.bfstm",
+        "duration": 20.033
+      },
+      {
+        "id": "dkb-donkey-kong-bananza",
+        "title": "Donkey Kong Bananza",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Donkey Kong Bananza (Title Drop Jingle).bfstm",
+        "duration": 15.7
+      },
+      {
+        "id": "dkb-lagoon-layer",
+        "title": "Lagoon Layer",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Lagoon Layer.bfstm",
+        "duration": 128.833
+      },
+      {
+        "id": "dkb-you-got-three-banandium-gems",
+        "title": "You Got Three Banandium Gems",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/You Got Three Banandium Gems.bfstm",
+        "duration": 5.7
+      },
+      {
+        "id": "dkb-battle-challenge",
+        "title": "Battle Challenge",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Battle Challenge.bfstm",
+        "duration": 46.167
+      },
+      {
+        "id": "dkb-battle-challenge-clear",
+        "title": "Battle Challenge Clear",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Battle Challenge Clear.bfstm",
+        "duration": 4.633
+      },
+      {
+        "id": "dkb-battle-challenge-lobby",
+        "title": "Battle Challenge Lobby",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Battle Challenge Lobby.bfstm",
+        "duration": 18.988
+      },
+      {
+        "id": "dkb-lagoon-layer-salvager-s-landing",
+        "title": "Lagoon Layer: Salvager's Landing",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Lagoon Layer - Salvager's Landing.bfstm",
+        "duration": 128.833
+      },
+      {
+        "id": "dkb-challenge-course-1",
+        "title": "Challenge Course #1",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Challenge Course 1.bfstm",
+        "duration": 86.748
+      },
+      {
+        "id": "dkb-kong-bananza",
+        "title": "Kong Bananza",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Kong Bananza.bfstm",
+        "duration": 62.879
+      },
+      {
+        "id": "dkb-void-kong-confrontation",
+        "title": "Void Kong Confrontation",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Void Kong Confrontation.bfstm",
+        "duration": 55.842
+      },
+      {
+        "id": "dkb-void-company-revealed",
+        "title": "Void Company Revealed",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Void Company Revealed.bfstm",
+        "duration": 96.017
+      },
+      {
+        "id": "dkb-showdown-with-peekabruiser",
+        "title": "Showdown with Peekabruiser!",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Showdown with Peekabruiser!.bfstm",
+        "duration": 7.517
+      },
+      {
+        "id": "dkb-boss-introduction",
+        "title": "Boss Introduction",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Boss Introduction.bfstm",
+        "duration": 3.45
+      },
+      {
+        "id": "dkb-peekabruiser-battle",
+        "title": "Peekabruiser Battle",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Peekabruiser Battle.bfstm",
+        "duration": 98.301
+      },
+      {
+        "id": "dkb-boss-defeated",
+        "title": "Boss Defeated",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Boss Defeated.bfstm",
+        "duration": 8.767
+      },
+      {
+        "id": "dkb-dk-and-pauline-dance",
+        "title": "DK & Pauline Dance",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/DK & Pauline Dance.bfstm",
+        "duration": 11.472
+      },
+      {
+        "id": "dkb-sinkhole",
+        "title": "Sinkhole",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Sinkhole.bfstm",
+        "duration": 72.359
+      },
+      {
+        "id": "dkb-sinkhole-dive",
+        "title": "Sinkhole Dive",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Sinkhole Dive.bfstm",
+        "duration": 100.954
+      },
+      {
+        "id": "dkb-hilltop-layer",
+        "title": "Hilltop Layer",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Hilltop Layer.bfstm",
+        "duration": 277.69
+      },
+      {
+        "id": "dkb-you-got-five-banandium-gems",
+        "title": "You Got Five Banandium Gems",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/You Got Five Banandium Gems.bfstm",
+        "duration": 6.65
+      },
+      {
+        "id": "dkb-you-got-a-skill-point",
+        "title": "You Got a Skill Point!",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/You Got a Skill Point!.bfstm",
+        "duration": 3.967
+      },
+      {
+        "id": "dkb-hilltop-layer-fractone-village",
+        "title": "Hilltop Layer: Fractone Village",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Hilltop Layer - Fractone Village.bfstm",
+        "duration": 55.802
+      },
+      {
+        "id": "dkb-closet",
+        "title": "Closet",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Closet.bfstm",
+        "duration": 23.785
+      },
+      {
+        "id": "dkb-getaway",
+        "title": "Getaway",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Getaway (DK Rap).bfstm",
+        "duration": 40.395
+      },
+      {
+        "id": "dkb-time-for-a-break",
+        "title": "Time for a Break",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Time for a Break.bfstm",
+        "duration": 6.267
+      },
+      {
+        "id": "dkb-2d-challenge-course-1-dk-island-swing",
+        "title": "2D Challenge Course #1 (DK Island Swing)",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/2D Challenge Course 1 (DK Island Swing).bfstm",
+        "duration": 155.125
+      },
+      {
+        "id": "dkb-canyon-layer",
+        "title": "Canyon Layer",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Canyon Layer.bfstm",
+        "duration": 125.956
+      },
+      {
+        "id": "dkb-challenge-course-2",
+        "title": "Challenge Course #2",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Challenge Course 2.bfstm",
+        "duration": 88.177
+      },
+      {
+        "id": "dkb-showdown-with-grumpy-kong",
+        "title": "Showdown with Grumpy Kong!",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Showdown with Grumpy Kong!.bfstm",
+        "duration": 12.183
+      },
+      {
+        "id": "dkb-grumpy-kong-battle",
+        "title": "Grumpy Kong Battle",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Grumpy Kong Battle.bfstm",
+        "duration": 78.136
+      },
+      {
+        "id": "dkb-canyon-layer-banandium-refinery",
+        "title": "Canyon Layer: Banandium Refinery",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Canyon Layer - Banandium Refinery.bfstm",
+        "duration": 88.827
+      },
+      {
+        "id": "dkb-mad-mixer-battle",
+        "title": "Mad Mixer Battle",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Mad Mixer Battle.bfstm",
+        "duration": 84.574
+      },
+      {
+        "id": "dkb-canyon-layer-smokestack-depths",
+        "title": "Canyon Layer: Smokestack Depths",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Canyon Layer - Smokestack Depths.bfstm",
+        "duration": 44.028
+      },
+      {
+        "id": "dkb-stompenclomper-battle",
+        "title": "Stompenclomper Battle",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Stompenclomper Battle.bfstm",
+        "duration": 97.204
+      },
+      {
+        "id": "dkb-the-divide",
+        "title": "The Divide",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/The Divide.bfstm",
+        "duration": 108.353
+      },
+      {
+        "id": "dkb-the-divide-freezer-path",
+        "title": "The Divide: Freezer Path",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/The Divide - Freezer Path.bfstm",
+        "duration": 89.153
+      },
+      {
+        "id": "dkb-freezer-layer-cold-colt-crest",
+        "title": "Freezer Layer: Cold-Colt Crest",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Freezer Layer - Cold-Colt Crest.bfstm",
+        "duration": 181.434
+      },
+      {
+        "id": "dkb-bonus-stage",
+        "title": "Bonus Stage",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Bonus Stage (Token Tango).bfstm",
+        "duration": 49.452
+      },
+      {
+        "id": "dkb-freezer-layer-chocolava-lake",
+        "title": "Freezer Layer: Chocolava Lake",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Freezer Layer - Chocolava Lake.bfstm",
+        "duration": 167.702
+      },
+      {
+        "id": "dkb-freezer-layer-canter-creamery",
+        "title": "Freezer Layer: Canter Creamery",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Freezer Layer - Canter Creamery.bfstm",
+        "duration": 166.398
+      },
+      {
+        "id": "dkb-zebra-bananza",
+        "title": "Zebra Bananza",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Zebra Bananza.bfstm",
+        "duration": 69.094
+      },
+      {
+        "id": "dkb-showdown-with-poppy-kong",
+        "title": "Showdown with Poppy Kong!",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Showdown with Poppy Kong!.bfstm",
+        "duration": 21.367
+      },
+      {
+        "id": "dkb-poppy-kong-battle",
+        "title": "Poppy Kong Battle",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Poppy Kong Battle.bfstm",
+        "duration": 72.825
+      },
+      {
+        "id": "dkb-freezer-layer-hot-hoof-heater",
+        "title": "Freezer Layer: Hot-Hoof Heater",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Freezer Layer - Hot-Hoof Heater.bfstm",
+        "duration": 169.323
+      },
+      {
+        "id": "dkb-inflammonite-battle",
+        "title": "Inflammonite Battle",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Inflammonite Battle.bfstm",
+        "duration": 99.148
+      },
+      {
+        "id": "dkb-the-divide-forest-path",
+        "title": "The Divide: Forest Path",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/The Divide - Forest Path.bfstm",
+        "duration": 82.001
+      },
+      {
+        "id": "dkb-forest-layer-beaky-thicket",
+        "title": "Forest Layer: Beaky Thicket",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Forest Layer - Beaky Thicket.bfstm",
+        "duration": 131.062
+      },
+      {
+        "id": "dkb-2d-challenge-course-2-stickerbush-symphony",
+        "title": "2D Challenge Course #2 (Stickerbush Symphony)",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/2D Challenge Course 2 (Stickerbrush Symphony).bfstm",
+        "duration": 146.505
+      },
+      {
+        "id": "dkb-forest-layer-eggshell-hotel",
+        "title": "Forest Layer: Eggshell Hotel",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Forest Layer - Eggshell Hotel.bfstm",
+        "duration": 126.186
+      },
+      {
+        "id": "dkb-ostrich-bananza",
+        "title": "Ostrich Bananza",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Ostrich Bananza.bfstm",
+        "duration": 78.949
+      },
+      {
+        "id": "dkb-forest-layer-mossplume-marsh",
+        "title": "Forest Layer: Mossplume Marsh",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Forest Layer - Mossplume Marsh.bfstm",
+        "duration": 129.829
+      },
+      {
+        "id": "dkb-forest-layer-eggshell-hotel-annex",
+        "title": "Forest Layer: Eggshell Hotel Annex",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Forest Layer - Eggshell Hotel Annex.bfstm",
+        "duration": 129.829
+      },
+      {
+        "id": "dkb-forest-layer-bramblenest-bog",
+        "title": "Forest Layer: Bramblenest Bog",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Forest Layer - Bramblenest Bog.bfstm",
+        "duration": 137.305
+      },
+      {
+        "id": "dkb-abracajabya-battle",
+        "title": "Abracajabya Battle",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Abracajabya Battle.bfstm",
+        "duration": 83.452
+      },
+      {
+        "id": "dkb-the-junction",
+        "title": "The Junction",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/The Junction.bfstm",
+        "duration": 79.155
+      },
+      {
+        "id": "dkb-the-junction-void-chase",
+        "title": "The Junction: Void Chase",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/The Junction - Void Chase.bfstm",
+        "duration": 32.869
+      },
+      {
+        "id": "dkb-void-kong-battle-1",
+        "title": "Void Kong Battle #1",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Void Kong Battle 1.bfstm",
+        "duration": 84.631
+      },
+      {
+        "id": "dkb-resort-layer",
+        "title": "Resort Layer",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Resort Layer.bfstm",
+        "duration": 148.079
+      },
+      {
+        "id": "dkb-2d-challenge-course-3-mine-cart-madness",
+        "title": "2D Challenge Course #3 (Mine Cart Madness)",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/2D Challenge Course 3 (Mine-Cart Madness).bfstm",
+        "duration": 104.795
+      },
+      {
+        "id": "dkb-tempest-layer-forecaster-refuge",
+        "title": "Tempest Layer: Forecaster Refuge",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Tempest Layer - Forecaster Refuge.bfstm",
+        "duration": 71.743
+      },
+      {
+        "id": "dkb-tempest-layer-lava-lake",
+        "title": "Tempest Layer: Lava Lake",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Tempest Layer - Lava Lake.bfstm",
+        "duration": 87.56
+      },
+      {
+        "id": "dkb-sinister-blusterwing-battle-1",
+        "title": "Sinister Blusterwing Battle #1",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Sinister Blusterwing Battle 1.bfstm",
+        "duration": 56.693
+      },
+      {
+        "id": "dkb-tempest-layer-hot-shower-cave",
+        "title": "Tempest Layer: Hot-Shower Cave",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Tempest Layer - Hot-Shower Cave.bfstm",
+        "duration": 150.278
+      },
+      {
+        "id": "dkb-elephant-bananza",
+        "title": "Elephant Bananza",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Elephant Bananza.bfstm",
+        "duration": 82.39
+      },
+      {
+        "id": "dkb-tempest-layer-jumbo-spa",
+        "title": "Tempest Layer: Jumbo Spa",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Tempest Layer - Jumbo Spa.bfstm",
+        "duration": 83.411
+      },
+      {
+        "id": "dkb-sinister-blusterwing-battle-2",
+        "title": "Sinister Blusterwing Battle #2",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Sinister Blusterwing Battle 2.bfstm",
+        "duration": 80.32
+      },
+      {
+        "id": "dkb-landfill-layer-forgotten-pit",
+        "title": "Landfill Layer: Forgotten Pit",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Landfill Layer - Forgotten Pit.bfstm",
+        "duration": 69.718
+      },
+      {
+        "id": "dkb-landfill-layer-trashtopia",
+        "title": "Landfill Layer: Trashtopia",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Landfill Layer - Trashtopia.bfstm",
+        "duration": 46.826
+      },
+      {
+        "id": "dkb-challenge-course-3",
+        "title": "Challenge Course #3",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Challenge Course 3.bfstm",
+        "duration": 43.41
+      },
+      {
+        "id": "dkb-challenge-course-4",
+        "title": "Challenge Course #4",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Challenge Course 4.bfstm",
+        "duration": 69.995
+      },
+      {
+        "id": "dkb-challenge-course-clear",
+        "title": "Challenge Course Clear",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Challenge Course Clear.bfstm",
+        "duration": 5.15
+      },
+      {
+        "id": "dkb-rambi-rumble-start",
+        "title": "Rambi Rumble Start",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Rambi Rumble Start.bfstm",
+        "duration": 7.25
+      },
+      {
+        "id": "dkb-racing-layer-rambi-rumble",
+        "title": "Racing Layer: Rambi Rumble",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Racing Layer - Rambi Rumble.bfstm",
+        "duration": 68.087
+      },
+      {
+        "id": "dkb-rambi-rumble-loss",
+        "title": "Rambi Rumble (Loss)",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Rambi Rumble (Loss).bfstm",
+        "duration": 3.883
+      },
+      {
+        "id": "dkb-rambi-rumble-win",
+        "title": "Rambi Rumble (Win)",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Rambi Rumble (Win).bfstm",
+        "duration": 5.017
+      },
+      {
+        "id": "dkb-racing-layer-rambi-rumble-results",
+        "title": "Racing Layer: Rambi Rumble (Results)",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Racing Layer_ Rambi Rumble (Results).bfstm",
+        "duration": 30.116
+      },
+      {
+        "id": "dkb-radiance-layer-darkness",
+        "title": "Radiance Layer: Darkness",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Radiance Layer - Darkness.bfstm",
+        "duration": 97.171
+      },
+      {
+        "id": "dkb-radiance-layer-elder-court",
+        "title": "Radiance Layer: Elder Court",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Radiance Layer - Elder Court.bfstm",
+        "duration": 97.171
+      },
+      {
+        "id": "dkb-snake-bananza",
+        "title": "Snake Bananza",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Snake Bananza.bfstm",
+        "duration": 74.836
+      },
+      {
+        "id": "dkb-radiance-layer-solar-control-tower",
+        "title": "Radiance Layer: Solar Control Tower",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Radiance Layer - Solar Control Tower.bfstm",
+        "duration": 134.348
+      },
+      {
+        "id": "dkb-2d-challenge-course-4-25m",
+        "title": "2D Challenge Course #4 (25m)",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/2D Challenge Course 4 (Donkey Kong BGM).bfstm",
+        "duration": 72.377
+      },
+      {
+        "id": "dkb-radiance-layer-solar-control-tower-synthetic-sun-restored",
+        "title": "Radiance Layer: Solar Control Tower (Synthetic Sun Restored)",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Radiance Layer - Solar Control Tower On.bfstm",
+        "duration": 122.897
+      },
+      {
+        "id": "dkb-radiance-layer-serpent-sands",
+        "title": "Radiance Layer: Serpent Sands",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Radiance Layer - Serpent Sands.bfstm",
+        "duration": 150.185
+      },
+      {
+        "id": "dkb-radiance-layer-hiss-hiss-oasis",
+        "title": "Radiance Layer: Hiss Hiss Oasis",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Radiance Layer - Hiss Hiss Oasis.bfstm",
+        "duration": 81.138
+      },
+      {
+        "id": "dkb-challenge-course-5",
+        "title": "Challenge Course #5",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Challenge Course 5.bfstm",
+        "duration": 88.683
+      },
+      {
+        "id": "dkb-radiance-layer-shade-clouds",
+        "title": "Radiance Layer: Shade Clouds",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Radiance Layer - Shade Clouds.bfstm",
+        "duration": 119.369
+      },
+      {
+        "id": "dkb-radiance-layer-crystal-cobra-den",
+        "title": "Radiance Layer: Crystal-Cobra Den",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Radiance Layer - Crystal-Cobra Den.bfstm",
+        "duration": 93.733
+      },
+      {
+        "id": "dkb-groove-layer-jail-hall",
+        "title": "Groove Layer: Jail Hall",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Groove Layer - Jail Hall.bfstm",
+        "duration": 56.127
+      },
+      {
+        "id": "dkb-groove-layer-disco-hall",
+        "title": "Groove Layer: Disco Hall",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Groove Layer - Disco Hall.bfstm",
+        "duration": 99.732
+      },
+      {
+        "id": "dkb-inside-the-great-harmoneel",
+        "title": "Inside the Great Harmoneel",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Inside The Great Harmoneel.bfstm",
+        "duration": 93.53
+      },
+      {
+        "id": "dkb-feast-layer-mane-gate-market",
+        "title": "Feast Layer: Mane Gate Market",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Feast Layer - Mane Gate Market.bfstm",
+        "duration": 110.88
+      },
+      {
+        "id": "dkb-feast-layer-fried-pride-plaza",
+        "title": "Feast Layer: Fried Pride Plaza",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Feast Layer - Fried Pride Plaza.bfstm",
+        "duration": 115.106
+      },
+      {
+        "id": "dkb-feast-layer-grater-go-round",
+        "title": "Feast Layer: Grater-Go-Round",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Feast Layer - Grater-Go-Round.bfstm",
+        "duration": 86.414
+      },
+      {
+        "id": "dkb-feast-layer-kingly-swings",
+        "title": "Feast Layer: Kingly Swings",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Feast Layer - Kingly Swings.bfstm",
+        "duration": 62.655
+      },
+      {
+        "id": "dkb-feast-layer-ferocious-fryhouse",
+        "title": "Feast Layer: Ferocious Fryhouse",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Feast Layer - Ferocious Fryhouse.bfstm",
+        "duration": 62.349
+      },
+      {
+        "id": "dkb-feast-layer-royal-oil-cruise",
+        "title": "Feast Layer: Royal Oil Cruise",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Feast Layer - Royal Oil Cruise.bfstm",
+        "duration": 87.799
+      },
+      {
+        "id": "dkb-feast-layer-cat-scratch-kitchen",
+        "title": "Feast Layer: Cat-Scratch Kitchen",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Feast Layer - Cat-Scratch Kitchen.bfstm",
+        "duration": 130.034
+      },
+      {
+        "id": "dkb-feast-layer-waste-oil-container",
+        "title": "Feast Layer: Waste-Oil Container",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Feast Layer - Waste-Oil Container.bfstm",
+        "duration": 130.032
+      },
+      {
+        "id": "dkb-muckety-muck-battle",
+        "title": "Muckety-Muck Battle",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Muckety-Muck Battle.bfstm",
+        "duration": 93.888
+      },
+      {
+        "id": "dkb-sinkhole-dive-forbidden-layer",
+        "title": "Sinkhole Dive: Forbidden Layer",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Sinkhole Dive - Forbidden Layer.bfstm",
+        "duration": 94.824
+      },
+      {
+        "id": "dkb-forbidden-layer-do-not-enter-depths",
+        "title": "Forbidden Layer: Do-Not-Enter Depths",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Forbidden Layer.bfstm",
+        "duration": 176.028
+      },
+      {
+        "id": "dkb-void-kong-battle-2",
+        "title": "Void Kong Battle #2",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Void Kong Battle 2.bfstm",
+        "duration": 94.969
+      },
+      {
+        "id": "dkb-sinkhole-dive-planet-core",
+        "title": "Sinkhole Dive: Planet Core",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Sinkhole Dive - Planet Core.bfstm",
+        "duration": 82.855
+      },
+      {
+        "id": "dkb-planet-core-kremling-kourtyard",
+        "title": "Planet Core: Kremling Kourtyard",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Planet Core - Kremling Kourtyard.bfstm",
+        "duration": 133.409
+      },
+      {
+        "id": "dkb-planet-core-first-half",
+        "title": "Planet Core: First Half",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Planet Core - First Half.bfstm",
+        "duration": 207.726
+      },
+      {
+        "id": "dkb-planet-core-first-half-battle",
+        "title": "Planet Core: First-Half Battle",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Planet Core - First Half Battle.bfstm",
+        "duration": 230.481
+      },
+      {
+        "id": "dkb-planet-core-mine-cart-ride",
+        "title": "Planet Core: Mine-Cart Ride",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Planet Core - Mine-Cart Ride.bfstm",
+        "duration": 58.433
+      },
+      {
+        "id": "dkb-planet-core-fractone-cradle",
+        "title": "Planet Core: Fractone Cradle",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Planet Core - Fractone Cradle.bfstm",
+        "duration": 80.293
+      },
+      {
+        "id": "dkb-planet-core-second-half",
+        "title": "Planet Core: Second Half",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Planet Core - Second Half.bfstm",
+        "duration": 101.807
+      },
+      {
+        "id": "dkb-planet-core-climactic-cliff",
+        "title": "Planet Core: Climactic Cliff",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Planet Core - Climactic Cliff.bfstm",
+        "duration": 144.457
+      },
+      {
+        "id": "dkb-planet-core-heart-of-gold",
+        "title": "Planet Core: Heart of Gold",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Planet Core - Heart of Gold.bfstm",
+        "duration": 153.884
+      },
+      {
+        "id": "dkb-showdown-with-king-k-rool",
+        "title": "Showdown with King K. Rool!",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Showdown with King K. Rool!.bfstm",
+        "duration": 67.167
+      },
+      {
+        "id": "dkb-donkey-k-ong-bananza",
+        "title": "Donkey K.ong Bananza",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Donkey K.ong Bananza (Title Drop Jingle).bfstm",
+        "duration": 9.733
+      },
+      {
+        "id": "dkb-banandium-root-tower",
+        "title": "Banandium Root Tower (Gangplank Galleon)",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Banandium Root Tower (Gangplank Galleon).bfstm",
+        "duration": 179.414
+      },
+      {
+        "id": "dkb-new-donk-city",
+        "title": "New Donk City",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/New Donk City.bfstm",
+        "duration": 88.47
+      },
+      {
+        "id": "dkb-showdown-with-k-rool-king-of-rot",
+        "title": "Showdown with K. Rool, King of Rot!",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Showdown with K. Rool, King of Rot!.bfstm",
+        "duration": 31.25
+      },
+      {
+        "id": "dkb-enter-k-rool-king-of-rot",
+        "title": "Enter K. Rool, King of Rot!",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Enter K. Rool, King of Rot!.bfstm",
+        "duration": 5.017
+      },
+      {
+        "id": "dkb-k-rool-king-of-rot-battle",
+        "title": "K. Rool, King of Rot Battle",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/K. Rool, King of Rot Battle.bfstm",
+        "duration": 128.738
+      },
+      {
+        "id": "dkb-breaking-through-heart-of-gold",
+        "title": "Breaking Through (Heart of Gold)",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Breaking Through (Heart of Gold).bfstm",
+        "duration": 282.559
+      },
+      {
+        "id": "dkb-dk-artist",
+        "title": "DK Artist (Simian Segue)",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/DK Artist (Simian Segue).bfstm",
+        "duration": 131.258
+      },
+      {
+        "id": "dkb-dk-island-daytime",
+        "title": "DK Island (Daytime)",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/DK Island - Daytime.bfstm",
+        "duration": 142.164
+      },
+      {
+        "id": "dkb-emerald-rush-1",
+        "title": "Emerald Rush #1",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Emerald Rush 1.bfstm",
+        "duration": 94.353
+      },
+      {
+        "id": "dkb-emerald-rush-round-clear",
+        "title": "Emerald Rush Round Clear",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Emerald Rush Round Clear.bfstm",
+        "duration": 2.233
+      },
+      {
+        "id": "dkb-emerald-rush-2",
+        "title": "Emerald Rush #2",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Emerald Rush 2.bfstm",
+        "duration": 105.176
+      },
+      {
+        "id": "dkb-emerald-rush-3",
+        "title": "Emerald Rush #3",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Emerald Rush 3.bfstm",
+        "duration": 100.053
+      },
+      {
+        "id": "dkb-emerald-rush-hurry-up",
+        "title": "Emerald Rush (Hurry Up!)",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Emerald Rush (Hurry Up!).bfstm",
+        "duration": 28.259
+      },
+      {
+        "id": "dkb-emerald-rush-results",
+        "title": "Emerald Rush Results",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Emerald Rush Results.bfstm",
+        "duration": 41.088
+      },
+      {
+        "id": "dkb-emerald-rush-staff-credits-score-display",
+        "title": "Emerald Rush Staff Credits (Score Display)",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Emerald Rush Staff Credits (Score Display).bfstm",
+        "duration": 5.417
+      },
+      {
+        "id": "dkb-dk-island-sunset",
+        "title": "DK Island (Sunset)",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/DK Island - Sunset.bfstm",
+        "duration": 120.194
+      },
+      {
+        "id": "dkb-void-kong-defeated-dk-island",
+        "title": "Void Kong Defeated (DK Island)",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Void Kong Defeated (DK Island).bfstm",
+        "duration": 5.167
       }
     ]
   },
