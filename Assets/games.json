@@ -1,5 +1,23 @@
 [
   
+    {
+    "id": "donkeykongbananza",
+    "title": "Donkey Kong Bananza",
+    "short": "DK Bananza",
+    "fullscreenName": "Donkey Kong Bananza",
+    "composer": "Naoto Kubo",
+    "console": "switch2",
+    "franchise": "donkeykong",
+    "cover": "Assets/Games/DonkeyKongBananza/AlbumCover/AlbumCover_DKB.png",
+    "tracks": [
+      {
+        "id": "dkb-title-theme",
+        "title": "Title Theme",
+        "file": "Assets/Games/DonkeyKongBananza/Tracks/Title Theme.bfstm",
+        "duration": 0
+      }
+    ]
+  },
 
   {
     "id": "marioodyssey",
