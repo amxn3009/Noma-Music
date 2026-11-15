@@ -2678,6 +2678,25 @@
     ]
   },
 
+    {
+    "id": "mario64",
+    "title": "Super Mario 64",
+    "short": "Super Mario 64",
+    "fullscreenName": "Super Mario 64",
+    "composer": "Koji Kondo",
+    "console": "n64",
+    "franchise": "mario",
+    "cover": "Assets/Games/SuperMario64/AlbumCover/AlbumCover_SM64.jpg",
+    "tracks": [
+      {
+        "id": "mario64-title",
+        "title": "Title Theme",
+        "file": "Assets/Games/SuperMario64/Tracks/Title Theme.bfstm",
+        "duration": 0
+      }
+    ]
+  },
+
   {
     "id": "donkeykongcountry",
     "title": "Donkey Kong Country",

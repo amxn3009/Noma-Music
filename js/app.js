@@ -11,7 +11,7 @@ const supabase =
     : null;
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = '15.11.26, added rest of lyrics, fixed loop detection added svgs for lyrics symbols';
+const APP_VERSION = '15.11.26, added rest of lyrics, fixed loop detection added svgs for lyrics symbols, added qol for lyrics opening';
 
 let LIBRARY = [];
 
@@ -3753,17 +3753,30 @@ function bindHotkeys() {
         break;
       case "KeyT": {
         e.preventDefault();
-        const lyricsBtn = $("#btn-fs-lyrics");
-        // same rules as the mic: only when FS is open and the track has lyrics
-        if (
-          document.body.classList.contains("fs-open") &&
-          lyricsBtn &&
-          !lyricsBtn.disabled
-        ) {
-          setFsLyricsOpen(!document.body.classList.contains("fs-lyrics-open"), {
-            fromUser: true,
-          });
+        if (!document.body.classList.contains("fs-open")) {
+          handled = true;
+          break;
         }
+        const lyricsBtn = $("#btn-fs-lyrics");
+        // No lyrics → same as grey mic: toggle prefer-open for next song
+        if (!currentTrackHasLyrics()) {
+          lyricsPreferOpen = !lyricsPreferOpen;
+          lyricsBtn?.classList.toggle("active", !!lyricsPreferOpen);
+          lyricsBtn?.setAttribute(
+            "aria-pressed",
+            lyricsPreferOpen ? "true" : "false"
+          );
+          showToast?.(
+            lyricsPreferOpen
+              ? "Lyrics: an — öffnen sich bei nächster Gelegenheit"
+              : "Lyrics: aus — bleiben geschlossen"
+          );
+          handled = true;
+          break;
+        }
+        setFsLyricsOpen(!document.body.classList.contains("fs-lyrics-open"), {
+          fromUser: true,
+        });
         handled = true;
         break;
       }
@@ -11978,8 +11991,12 @@ function setFsLyricsOpen(open, { fromUser = false } = {}) {
 
   const btn = $("#btn-fs-lyrics");
   if (btn) {
-    btn.classList.toggle("active", !!open);
-    btn.setAttribute("aria-pressed", open ? "true" : "false");
+    const has =
+      typeof currentTrackHasLyrics === "function" && currentTrackHasLyrics();
+    // Stay mild-blue when no lyrics but user still wants them next time
+    const preferShow = !open && !has && !!lyricsPreferOpen;
+    btn.classList.toggle("active", !!open || preferShow);
+    btn.setAttribute("aria-pressed", open || preferShow ? "true" : "false");
   }
 
   if (open) {
@@ -12023,11 +12040,18 @@ function updateFsLyricsButton() {
   const inFs = document.body.classList.contains("fs-open");
   btn.classList.toggle("hidden", !inFs);
   const has = currentTrackHasLyrics();
-  btn.disabled = !has;
+  // Keep clickable when greyed — click toggles “open next time”
+  btn.disabled = false;
   btn.classList.toggle("is-disabled", !has);
+  btn.setAttribute("aria-disabled", has ? "false" : "true");
   if (!has && document.body.classList.contains("fs-lyrics-open")) {
     setFsLyricsOpen(false);
   }
+  // Color: open panel, or (no lyrics + prefer next) stays blue so state is visible
+  const open = document.body.classList.contains("fs-lyrics-open");
+  const preferShow = !has && !!lyricsPreferOpen;
+  btn.classList.toggle("active", open || preferShow);
+  btn.setAttribute("aria-pressed", open || preferShow ? "true" : "false");
 }
 
 function formatLyricLineHtml(text) {
@@ -12239,7 +12263,22 @@ function updateFsLyricsHighlight(forceScroll = false) {
 function bindFsLyrics() {
   $("#btn-fs-lyrics")?.addEventListener("click", (e) => {
     e.stopPropagation();
-    if ($("#btn-fs-lyrics")?.disabled) return;
+    const btn = $("#btn-fs-lyrics");
+    if (!btn) return;
+
+    // No lyrics on this track → toggle prefer-open for the next song that has them
+    if (!currentTrackHasLyrics()) {
+      lyricsPreferOpen = !lyricsPreferOpen;
+      btn.classList.toggle("active", !!lyricsPreferOpen);
+      btn.setAttribute("aria-pressed", lyricsPreferOpen ? "true" : "false");
+      showToast?.(
+        lyricsPreferOpen
+          ? "Lyrics: an — öffnen sich bei nächster Gelegenheit"
+          : "Lyrics: aus — bleiben geschlossen"
+      );
+      return;
+    }
+
     setFsLyricsOpen(!document.body.classList.contains("fs-lyrics-open"), {
       fromUser: true,
     });
@@ -13350,7 +13389,15 @@ function bindContextMenu() {
     hideContextMenu();
   });
 
-  const closeOnScroll = () => {
+  const closeOnScroll = (e) => {
+    // Lyrics auto-scroll / center jumps must not dismiss the menu
+    if (typeof lyricsProgrammaticScroll !== "undefined" && lyricsProgrammaticScroll) {
+      return;
+    }
+    const t = e?.target;
+    if (t && (t.id === "fs-lyrics-scroll" || t.closest?.("#fs-lyrics-scroll"))) {
+      return;
+    }
     if (contextMenu && !contextMenu.classList.contains("hidden")) {
       hideContextMenu();
     }

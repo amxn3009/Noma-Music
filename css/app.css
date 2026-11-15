@@ -8383,12 +8383,25 @@ body:not(.fs-open) .fs-lyrics-btn {
 .fs-lyrics-btn:disabled,
 .fs-lyrics-btn.is-disabled {
   opacity: 0.35 !important;
-  pointer-events: none !important;
+  pointer-events: auto !important; /* still tappable → toggle prefer-open */
   color: var(--muted) !important;
+  cursor: pointer;
 }
 .fs-lyrics-btn.active {
   color: var(--accent) !important;
   background: var(--accent-soft) !important;
+}
+/* no lyrics, but pre-open is on → mild blue, not full mute */
+.fs-lyrics-btn.is-disabled.active,
+.fs-lyrics-btn:disabled.active {
+  opacity: 0.55 !important;
+  color: var(--accent) !important;
+  background: var(--accent-soft) !important;
+}
+.fs-lyrics-btn.is-disabled.active .fs-lyrics-icon,
+.fs-lyrics-btn:disabled.active .fs-lyrics-icon {
+  filter: invert(58%) sepia(42%) saturate(650%) hue-rotate(193deg) brightness(101%) contrast(101%);
+  opacity: 0.85;
 }
 
 .fs-lyrics {
