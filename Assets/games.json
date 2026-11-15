@@ -980,6 +980,25 @@
   },
 
   {
+    "id": "mariobroswonder",
+    "title": "Super Mario Bros. Wonder",
+    "short": "Mario Bros. Wonder",
+    "fullscreenName": "Super Mario Bros. Wonder",
+    "composer": "Shiho Fujii, Sayako Doi, Chisaki Shimazu, Koji Kondo",
+    "console": "switch",
+    "franchise": "mario",
+    "cover": "Assets/Games/SuperMarioBros.Wonder/AlbumCover/AlbumCover_MarioWonder.png",
+    "tracks": [
+      {
+        "id": "smo-title-screen",
+        "title": "Title Screen",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Title Screen.bfstm",
+        "duration": 0
+      }
+    ]
+  },
+
+  {
     "id": "marioodyssey",
     "title": "Super Mario Odyssey",
     "short": "Mario Odyssey",
@@ -2678,7 +2697,7 @@
     ]
   },
 
-    {
+  {
     "id": "mario64",
     "title": "Super Mario 64",
     "short": "Super Mario 64",
@@ -2689,10 +2708,242 @@
     "cover": "Assets/Games/SuperMario64/AlbumCover/AlbumCover_SM64.jpg",
     "tracks": [
       {
-        "id": "mario64-title",
+        "id": "mario64-title-theme",
         "title": "Title Theme",
         "file": "Assets/Games/SuperMario64/Tracks/Title Theme.bfstm",
-        "duration": 0
+        "duration": 108.693,
+        "xLoops": true
+      },
+      {
+        "id": "mario64-peach-s-message",
+        "title": "Peach's Message",
+        "file": "Assets/Games/SuperMario64/Tracks/Peach's Letter.bfstm",
+        "duration": 5.791,
+        "xLoops": false
+      },
+      {
+        "id": "mario64-opening",
+        "title": "Opening",
+        "file": "Assets/Games/SuperMario64/Tracks/Opening.bfstm",
+        "duration": 30.97,
+        "xLoops": false
+      },
+      {
+        "id": "mario64-super-mario-64-main-theme",
+        "title": "Super Mario 64 Main Theme",
+        "file": "Assets/Games/SuperMario64/Tracks/Bob-omb Battlefield _ Main Theme.bfstm",
+        "duration": 74.051,
+        "xLoops": true
+      },
+      {
+        "id": "mario64-slider",
+        "title": "Slider",
+        "file": "Assets/Games/SuperMario64/Tracks/Slider.bfstm",
+        "duration": 78.11,
+        "xLoops": true
+      },
+      {
+        "id": "mario64-inside-the-castle-walls",
+        "title": "Inside the Castle Walls",
+        "file": "Assets/Games/SuperMario64/Tracks/Peach's Castle.bfstm",
+        "duration": 62.415,
+        "xLoops": true
+      },
+      {
+        "id": "mario64-looping-steps",
+        "title": "Looping Steps",
+        "file": "Assets/Games/SuperMario64/Tracks/The Endless Stairs.bfstm",
+        "duration": 18.385,
+        "xLoops": true
+      },
+      {
+        "id": "mario64-dire-dire-docks",
+        "title": "Dire, Dire Docks",
+        "file": "Assets/Games/SuperMario64/Tracks/Dire, Dire Docks.bfstm",
+        "duration": 104.756,
+        "xLoops": true
+      },
+      {
+        "id": "mario64-lethal-lava-land",
+        "title": "Lethal Lava Land",
+        "file": "Assets/Games/SuperMario64/Tracks/Lethal Lava Land.bfstm",
+        "duration": 102.622,
+        "xLoops": true
+      },
+      {
+        "id": "mario64-snow-mountain",
+        "title": "Snow Mountain",
+        "file": "Assets/Games/SuperMario64/Tracks/Snow Mountain.bfstm",
+        "duration": 92.076,
+        "xLoops": true
+      },
+      {
+        "id": "mario64-haunted-house",
+        "title": "Haunted House",
+        "file": "Assets/Games/SuperMario64/Tracks/Haunted House.bfstm",
+        "duration": 105.831,
+        "xLoops": true
+      },
+      {
+        "id": "mario64-merry-go-round",
+        "title": "Merry-Go-Round",
+        "file": "Assets/Games/SuperMario64/Tracks/Merry-Go-Round.bfstm",
+        "duration": 41.263,
+        "xLoops": true
+      },
+      {
+        "id": "mario64-cave-dungeon",
+        "title": "Cave Dungeon",
+        "file": "Assets/Games/SuperMario64/Tracks/Cave Dungeon (Medley).bfstm",
+        "duration": 296.317,
+        "xLoops": true
+      },
+      {
+        "id": "mario64-piranha-plant-s-lullaby",
+        "title": "Piranha Plant's Lullaby",
+        "file": "Assets/Games/SuperMario64/Tracks/Piranha Plant Lullaby.bfstm",
+        "duration": 70.668,
+        "xLoops": false
+      },
+      {
+        "id": "mario64-powerful-mario",
+        "title": "Powerful Mario",
+        "file": "Assets/Games/SuperMario64/Tracks/Powerful Mario.bfstm",
+        "duration": 31.602,
+        "xLoops": true
+      },
+      {
+        "id": "mario64-metallic-mario",
+        "title": "Metallic Mario",
+        "file": "Assets/Games/SuperMario64/Tracks/Metallic Mario.bfstm",
+        "duration": 28.166,
+        "xLoops": true
+      },
+      {
+        "id": "mario64-file-select",
+        "title": "File Select",
+        "file": "Assets/Games/SuperMario64/Tracks/File Select.bfstm",
+        "duration": 24.072,
+        "xLoops": true
+      },
+      {
+        "id": "mario64-correct-solution",
+        "title": "Correct Solution",
+        "file": "Assets/Games/SuperMario64/Tracks/Correct Solution.bfstm",
+        "duration": 2.783,
+        "xLoops": false
+      },
+      {
+        "id": "mario64-toad-s-message",
+        "title": "Toad's Message",
+        "file": "Assets/Games/SuperMario64/Tracks/Toad's Message.bfstm",
+        "duration": 3.219,
+        "xLoops": false
+      },
+      {
+        "id": "mario64-power-star",
+        "title": "Power Star",
+        "file": "Assets/Games/SuperMario64/Tracks/Power Star.bfstm",
+        "duration": 4.319,
+        "xLoops": false
+      },
+      {
+        "id": "mario64-race-fanfare",
+        "title": "Race Fanfare",
+        "file": "Assets/Games/SuperMario64/Tracks/Race Fanfare.bfstm",
+        "duration": 3.007,
+        "xLoops": false
+      },
+      {
+        "id": "mario64-star-catch-fanfare",
+        "title": "Star Catch Fanfare",
+        "file": "Assets/Games/SuperMario64/Tracks/Star Catch Fanfare.bfstm",
+        "duration": 2.719,
+        "xLoops": false
+      },
+      {
+        "id": "mario64-game-start",
+        "title": "Game Start",
+        "file": "Assets/Games/SuperMario64/Tracks/Game Start.bfstm",
+        "duration": 3.484,
+        "xLoops": false
+      },
+      {
+        "id": "mario64-course-clear",
+        "title": "Course Clear",
+        "file": "Assets/Games/SuperMario64/Tracks/Course Clear.bfstm",
+        "duration": 3.391,
+        "xLoops": false
+      },
+      {
+        "id": "mario64-game-over",
+        "title": "Game Over",
+        "file": "Assets/Games/SuperMario64/Tracks/Game Over.bfstm",
+        "duration": 5.873,
+        "xLoops": false
+      },
+      {
+        "id": "mario64-stage-boss",
+        "title": "Stage Boss",
+        "file": "Assets/Games/SuperMario64/Tracks/Stage Boss.bfstm",
+        "duration": 47.054,
+        "xLoops": true
+      },
+      {
+        "id": "mario64-koopa-s-message",
+        "title": "Koopa's Message",
+        "file": "Assets/Games/SuperMario64/Tracks/Bowser's Message.bfstm",
+        "duration": 3.007,
+        "xLoops": false
+      },
+      {
+        "id": "mario64-koopa-s-road",
+        "title": "Koopa's Road",
+        "file": "Assets/Games/SuperMario64/Tracks/Bowser's Road.bfstm",
+        "duration": 85.283,
+        "xLoops": true
+      },
+      {
+        "id": "mario64-koopa-s-theme",
+        "title": "Koopa's Theme",
+        "file": "Assets/Games/SuperMario64/Tracks/Bowser's Theme.bfstm",
+        "duration": 73.763,
+        "xLoops": true
+      },
+      {
+        "id": "mario64-koopa-clear",
+        "title": "Koopa Clear",
+        "file": "Assets/Games/SuperMario64/Tracks/Bowser Clear.bfstm",
+        "duration": 2.943,
+        "xLoops": false
+      },
+      {
+        "id": "mario64-ultimate-koopa",
+        "title": "Ultimate Koopa",
+        "file": "Assets/Games/SuperMario64/Tracks/The Final Battle.bfstm",
+        "duration": 101.332,
+        "xLoops": true
+      },
+      {
+        "id": "mario64-ultimate-koopa-clear",
+        "title": "Ultimate Koopa Clear",
+        "file": "Assets/Games/SuperMario64/Tracks/Final Battle Clear.bfstm",
+        "duration": 24.955,
+        "xLoops": false
+      },
+      {
+        "id": "mario64-ending-demo",
+        "title": "Ending Demo",
+        "file": "Assets/Games/SuperMario64/Tracks/Ending.bfstm",
+        "duration": 73.024,
+        "xLoops": false
+      },
+      {
+        "id": "mario64-staff-roll",
+        "title": "Staff Roll",
+        "file": "Assets/Games/SuperMario64/Tracks/Staff Roll.bfstm",
+        "duration": 200.634,
+        "xLoops": false
       }
     ]
   },
