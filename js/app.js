@@ -15,7 +15,7 @@ const APP_VERSION = '15.11.26, added rest of lyrics, fixed loop detection added 
 
 let LIBRARY = [];
 
-const DEV_DURATION_TOOL = true; // true only when scanning
+const DEV_DURATION_TOOL = false; // true only when scanning
 
 const state = {
   currentGame: null,
