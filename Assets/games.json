@@ -987,16 +987,753 @@
     "composer": "Shiho Fujii, Sayako Doi, Chisaki Shimazu, Koji Kondo",
     "console": "switch",
     "franchise": "mario",
-    "cover": "Assets/Games/SuperMarioBros.Wonder/AlbumCover/AlbumCover_MarioWonder.png",
+    "cover": "Assets/Games/SuperMarioBros.Wonder/AlbumCover/AlbumCover_MarioWonder.jpg",
     "tracks": [
       {
-        "id": "smo-title-screen",
+        "id": "mariobroswonder-title-screen",
         "title": "Title Screen",
         "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Title Screen.bfstm",
-        "duration": 0
+        "duration": 100.579,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-prologue-creation-of-castle-bowser",
+        "title": "Prologue: Creation of Castle Bowser",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Prologue_ Creation of Castle Bowser.bfstm",
+        "duration": 78.866,
+        "xLoops": false
+      },
+      {
+        "id": "mariobroswonder-prologue-poplin-prisoners",
+        "title": "Prologue: Poplin Prisoners",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Prologue_ Poplin Prisoners.bfstm",
+        "duration": 20.672,
+        "xLoops": false
+      },
+      {
+        "id": "mariobroswonder-prologue-adventure-awaits",
+        "title": "Prologue: Adventure Awaits!",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Prologue_ Adventure Awaits!.bfstm",
+        "duration": 12.07,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-world-theme-pipe-rock-plateau",
+        "title": "World Theme: Pipe-Rock Plateau",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/World Theme_ Pipe-Rock Plateau.bfstm",
+        "duration": 64.421,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-world-theme-pipe-rock-plateau-plains",
+        "title": "World Theme: Pipe-Rock Plateau - Plains",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/World Theme_ Pipe-Rock Plateau (Plains).bfstm",
+        "duration": 64.421,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-world-theme-pipe-rock-plateau-underground",
+        "title": "World Theme: Pipe-Rock Plateau - Underground",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/World Theme_ Pipe-Rock Plateau (Underground).bfstm",
+        "duration": 64.416,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-grassland-theme",
+        "title": "Grassland Theme",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Grassland Theme.bfstm",
+        "duration": 78.013,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-grassland-theme-elephant",
+        "title": "Grassland Theme - Elephant",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Grassland Theme - Elephant.bfstm",
+        "duration": 78.008,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-bendy-boing-wonder",
+        "title": "Bendy-Boing Wonder",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Bendy-Boing Wonder.bfstm",
+        "duration": 38.555,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-course-clear",
+        "title": "Course Clear!",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Course Clear!.bfstm",
+        "duration": 8.843,
+        "xLoops": false
+      },
+      {
+        "id": "mariobroswonder-forest-theme",
+        "title": "Forest Theme",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Forest Theme.bfstm",
+        "duration": 73.462,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-forest-theme-elephant",
+        "title": "Forest Theme - Elephant",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Forest Theme - Elephant.bfstm",
+        "duration": 73.462,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-piranha-plants-on-parade",
+        "title": "Piranha Plants on Parade",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Piranha Plants On Parade.bfstm",
+        "duration": 54.698,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-savanna-theme",
+        "title": "Savanna Theme",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Savannah Theme.bfstm",
+        "duration": 72.07,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-savanna-theme-elephant",
+        "title": "Savanna Theme - Elephant",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Savannah Theme - Elephant.bfstm",
+        "duration": 72.07,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-stompy-stampede-wonder",
+        "title": "Stompy-Stampede Wonder",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Stompy-Stampede Wonder.bfstm",
+        "duration": 51.596,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-spikey-dance-number",
+        "title": "Spikey Dance Number",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Spikey Dance Number.bfstm",
+        "duration": 44.461,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-flippy-float-wonder",
+        "title": "Flippy-Float Wonder",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Flippy-Float Wonder.bfstm",
+        "duration": 24.656,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-switching-on",
+        "title": "Switching On",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Switching On.bfstm",
+        "duration": 11.396,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-wiggler-race-on-your-mark",
+        "title": "Wiggler Race: On Your Mark...",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Wiggler Race_ On Your Mark.bfstm",
+        "duration": 4.57,
+        "xLoops": false
+      },
+      {
+        "id": "mariobroswonder-wiggler-race",
+        "title": "Wiggler Race!",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Wiggler Race!.bfstm",
+        "duration": 58.631,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-wiggler-race-you-win",
+        "title": "Wiggler Race: You Win!",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Wiggler Race_ You Win!.bfstm",
+        "duration": 27.734,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-wiggler-race-you-lose",
+        "title": "Wiggler Race: You Lose...",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Wiggler Race_ You Lose.bfstm",
+        "duration": 14.617,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-world-theme-petal-isles",
+        "title": "World Theme: Petal Isles",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/World Theme_ Petal Isles.bfstm",
+        "duration": 79.68,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-world-theme-petal-isles-near-castle",
+        "title": "World Theme: Petal Isles - Near Castle",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/World Theme_ Petal Isles (Near Castle).bfstm",
+        "duration": 79.633,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-bowser-s-here",
+        "title": "Bowser's Here!",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Bowser's Here!.bfstm",
+        "duration": 9.791,
+        "xLoops": false
+      },
+      {
+        "id": "mariobroswonder-coast-theme",
+        "title": "Coast Theme",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Coast Theme.bfstm",
+        "duration": 60.099,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-coast-theme-elephant",
+        "title": "Coast Theme - Elephant",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Coast Theme - Elephant.bfstm",
+        "duration": 60.099,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-underwater-theme",
+        "title": "Underwater Theme",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Underwater Theme.bfstm",
+        "duration": 59.485,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-underwater-theme-elephant",
+        "title": "Underwater Theme - Elephant",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Underwater Theme - Elephant.bfstm",
+        "duration": 59.485,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-stretchy-shadow-wonder",
+        "title": "Stretchy-Shadow Wonder",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Stretchy-Shadow Wonder.bfstm",
+        "duration": 30.555,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-world-theme-fluff-puff-peaks",
+        "title": "World Theme: Fluff-Puff Peaks",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/World Theme_ Fluff-Puff Peaks.bfstm",
+        "duration": 89.578,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-world-theme-fluff-puff-peaks-clouds",
+        "title": "World Theme: Fluff-Puff Peaks - Clouds",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/World Theme_ Fluff-Puff Peaks (Clouds).bfstm",
+        "duration": 89.573,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-snowy-mountain-theme",
+        "title": "Snowy-Mountain Theme",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Snowy-Mountain Theme.bfstm",
+        "duration": 76.842,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-snowy-mountain-theme-elephant",
+        "title": "Snowy-Mountain Theme - Elephant",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Snowy-Mountain Theme - Elephant.bfstm",
+        "duration": 76.842,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-medley-mix-wonder",
+        "title": "Medley-Mix Wonder",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Medley-Mix Wonder.bfstm",
+        "duration": 63.454,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-athletic-theme",
+        "title": "Athletic Theme",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Athletic Theme.bfstm",
+        "duration": 59.82,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-athletic-theme-elephant",
+        "title": "Athletic Theme - Elephant",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Athletic Theme - Elephant.bfstm",
+        "duration": 59.824,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-jump-jump-jump",
+        "title": "Jump! Jump! Jump!",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Jump! Jump! Jump!.bfstm",
+        "duration": 48.583,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-super-star",
+        "title": "Super Star",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Super Star!.bfstm",
+        "duration": 6.535,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-palace-theme-outside",
+        "title": "Palace Theme (Outside)",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Palace Theme (Outside).bfstm",
+        "duration": 46.583,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-palace-theme",
+        "title": "Palace Theme",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Palace Theme.bfstm",
+        "duration": 93.518,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-palace-theme-elephant",
+        "title": "Palace Theme - Elephant",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Palace Theme - Elephant.bfstm",
+        "duration": 93.518,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-bowser-jr-battle",
+        "title": "Bowser Jr. Battle",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Bowser Jr. Battle (Medley).bfstm",
+        "duration": 222.048,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-you-got-a-royal-seed",
+        "title": "You Got a Royal Seed!",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/You Got a Royal Seed!.bfstm",
+        "duration": 6.006,
+        "xLoops": false
+      },
+      {
+        "id": "mariobroswonder-world-clear",
+        "title": "World Clear!",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/World Clear!.bfstm",
+        "duration": 21.653,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-world-theme-shining-falls",
+        "title": "World Theme: Shining Falls",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/World Theme_ Shining Falls.bfstm",
+        "duration": 72.029,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-poplin-house-outside",
+        "title": "Poplin House (Outside)",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Poplin House (Outside).bfstm",
+        "duration": 30.288,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-poplin-house",
+        "title": "Poplin House",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Poplin House.bfstm",
+        "duration": 26.705,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-shining-falls-theme",
+        "title": "Shining Falls Theme",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Shining Falls Theme.bfstm",
+        "duration": 68.181,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-shining-falls-theme-elephant",
+        "title": "Shining Falls Theme - Elephant",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Shining Falls Theme (Elephant).bfstm",
+        "duration": 68.181,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-shapey-shift-wonder",
+        "title": "Shapey-Shift Wonder",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Shapey-Shift Wonder.bfstm",
+        "duration": 33.892,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-shooty-star-wonder",
+        "title": "Shooty-Star Wonder",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Shooty-Star Wonder.bfstm",
+        "duration": 5.897,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-badge-challenge",
+        "title": "Badge Challenge",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Badge Challenge.bfstm",
+        "duration": 85.898,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-bonus-coins-galore",
+        "title": "Bonus: Coins Galore!",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Bonus_ Coins Galore!.bfstm",
+        "duration": 27.853,
+        "xLoops": false
+      },
+      {
+        "id": "mariobroswonder-break-time-theme-1",
+        "title": "Break Time! Theme 1",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Break Time! Theme 1.bfstm",
+        "duration": 65.636,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-break-time-theme-2",
+        "title": "Break Time! Theme 2",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Break Time! Theme 2.bfstm",
+        "duration": 16.109,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-a-new-world-awaits",
+        "title": "A New World Awaits",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/A New World Awaits.bfstm",
+        "duration": 12,
+        "xLoops": false
+      },
+      {
+        "id": "mariobroswonder-world-theme-sunbaked-desert",
+        "title": "World Theme: Sunbaked Desert",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/World Theme_ Sunbaked Desert.bfstm",
+        "duration": 72.07,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-world-theme-sunbaked-desert-castle",
+        "title": "World Theme: Sunbaked Desert - Castle",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/World Theme_ Sunbaked Desert (Castle).bfstm",
+        "duration": 72.064,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-desert-theme",
+        "title": "Desert Theme",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Desert Theme.bfstm",
+        "duration": 75.086,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-desert-theme-elephant",
+        "title": "Desert Theme - Elephant",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Desert Theme - Elephant.bfstm",
+        "duration": 75.086,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-puzzly-pyramid-wonder",
+        "title": "Puzzly-Pyramid Wonder",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Puzzly-Pyramid Wonder.bfstm",
+        "duration": 63.831,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-underground-theme",
+        "title": "Underground Theme",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Underground Theme.bfstm",
+        "duration": 74.082,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-underground-theme-elephant",
+        "title": "Underground Theme - Elephant",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Underground Theme - Elephant.bfstm",
+        "duration": 135.613,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-ninji-disco",
+        "title": "Ninji Disco",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Ninji Disco (Combo).bfstm",
+        "duration": 49.352,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-world-theme-fungi-mines",
+        "title": "World Theme: Fungi Mines",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/World Theme_ Fungi Mines.bfstm",
+        "duration": 95.136,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-world-theme-fungi-mines-caves",
+        "title": "World Theme: Fungi Mines - Caves",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/World Theme_ Fungi Mines (Caves).bfstm",
+        "duration": 95.132,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-dark-woods-theme",
+        "title": "Dark Woods Theme",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Dark Woods Theme.bfstm",
+        "duration": 75.774,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-dark-woods-theme-elephant",
+        "title": "Dark Woods Theme - Elephant",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Dark Woods Theme - Elephant.bfstm",
+        "duration": 75.774,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-poison-swamp-underground-theme",
+        "title": "Poison-Swamp Underground Theme",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Poison-Swamp Underground Theme.bfstm",
+        "duration": 74.626,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-poison-swamp-underground-theme-elephant",
+        "title": "Poison-Swamp Underground Theme - Elephant",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Poison-Swamp Underground Theme - Elephant.bfstm",
+        "duration": 74.626,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-a-night-at-boo-s-opera",
+        "title": "A Night at Boo's Opera",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/A Night At Boo's Opera.bfstm",
+        "duration": 62.613,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-pumpkin-party",
+        "title": "Pumpkin Party",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Pumpkin Party.bfstm",
+        "duration": 39.153,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-arena",
+        "title": "Arena",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Arena (Medley).bfstm",
+        "duration": 205.706,
+        "xLoops": false
+      },
+      {
+        "id": "mariobroswonder-arena-victory",
+        "title": "Arena: Victory",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Arena - Victory.bfstm",
+        "duration": 35.002,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-world-theme-deep-magma-bog",
+        "title": "World Theme: Deep Magma Bog",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/World Theme_ Deep Magma Bog.bfstm",
+        "duration": 60.086,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-world-theme-deep-magma-bog-caves",
+        "title": "World Theme: Deep Magma Bog - Caves",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/World Theme_ Deep Magma Bog (Magma Cave).bfstm",
+        "duration": 60.086,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-lava-theme",
+        "title": "Lava Theme",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Lava Theme.bfstm",
+        "duration": 73.389,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-lava-theme-elephant",
+        "title": "Lava Theme - Elephant",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Lava Theme - Elephant.bfstm",
+        "duration": 73.389,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-flowy-flight-wonder",
+        "title": "Flowy-Flight Wonder",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Flowy-Flight Wonder.bfstm",
+        "duration": 52.426,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-flying-battleship-theme",
+        "title": "Flying Battleship Theme",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Flying Battleship Theme.bfstm",
+        "duration": 138.104,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-flying-battleship-theme-elephant",
+        "title": "Flying Battleship Theme - Elephant",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Flying Battleship Theme - Elephant.bfstm",
+        "duration": 138.1,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-doomy-gloom-wonder",
+        "title": "Doomy-Gloom Wonder",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Doomy-Gloom Wonder.bfstm",
+        "duration": 53.307,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-mecha-maker-battle",
+        "title": "Mecha Maker Battle",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Mecha Maker Battle.bfstm",
+        "duration": 37.935,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-too-bad",
+        "title": "Too Bad!",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Too Bad!.bfstm",
+        "duration": 2.731,
+        "xLoops": false
+      },
+      {
+        "id": "mariobroswonder-game-over",
+        "title": "Game Over",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Game Over.bfstm",
+        "duration": 4.752,
+        "xLoops": false
+      },
+      {
+        "id": "mariobroswonder-world-theme-flower-kingdom-invaded",
+        "title": "World Theme: Flower Kingdom Invaded",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/World Theme_ Flower Kingdom Invaded.bfstm",
+        "duration": 54.255,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-castle-bowser-finally-made-it",
+        "title": "Castle Bowser: Finally Made It!",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Castle Bowser_ Finally Made It!.bfstm",
+        "duration": 7.637,
+        "xLoops": false
+      },
+      {
+        "id": "mariobroswonder-world-theme-petal-isles-castle-bowser",
+        "title": "World Theme: Petal Isles (Castle Bowser)",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/World Theme_ Petal Isles (Castle Bowser).bfstm",
+        "duration": 76.332,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-world-theme-petal-isles-castle-bowser-final-area",
+        "title": "World Theme: Petal Isles (Castle Bowser) - Final Area",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/World Theme_ Petal Isles (Castle Bowser) (Final Area).bfstm",
+        "duration": 76.332,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-castle-bowser-theme",
+        "title": "Castle Bowser Theme",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Castle Bowser Theme.bfstm",
+        "duration": 73.25,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-castle-bowser-theme-elephant",
+        "title": "Castle Bowser Theme - Elephant",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Castle Bowser Theme - Elephant.bfstm",
+        "duration": 73.25,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-zappy-zone-wonder",
+        "title": "Zappy-Zone Wonder",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Zappy-Zone Wonder.bfstm",
+        "duration": 37.068,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-bowser-s-blazing-beats",
+        "title": "Bowser's Blazing Beats",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Bowser's Blazing Beats Medley.bfstm",
+        "duration": 110.004,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-bowser-s-wonder-rush",
+        "title": "Bowser's Wonder Rush",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Bowser's Wonder Rush.bfstm",
+        "duration": 149.364,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-bowser-s-rage-stage",
+        "title": "Bowser's Rage Stage",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Bowser's Rage Stage.bfstm",
+        "duration": 27.983,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-castle-bowser-battle",
+        "title": "Castle Bowser Battle",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Castle Bowser Battle - Medley.bfstm",
+        "duration": 374.247,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-castle-bowser-demolished",
+        "title": "Castle Bowser Demolished",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Castle Bowser Demolished.bfstm",
+        "duration": 15.489,
+        "xLoops": false
+      },
+      {
+        "id": "mariobroswonder-the-royal-seeds",
+        "title": "The Royal Seeds",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/The Royal Seeds.bfstm",
+        "duration": 22.719,
+        "xLoops": false
+      },
+      {
+        "id": "mariobroswonder-epilogue-kingdom-in-full-bloom",
+        "title": "Epilogue: Kingdom in Full Bloom",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Epilogue_ Kingdom in Full Bloom.bfstm",
+        "duration": 35.757,
+        "xLoops": false
+      },
+      {
+        "id": "mariobroswonder-starry-staff-wonder",
+        "title": "Starry-Staff Wonder",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Starry-Staff Wonder.bfstm",
+        "duration": 270.414,
+        "xLoops": false
+      },
+      {
+        "id": "mariobroswonder-epilogue-come-back-again-sometime-yeah",
+        "title": "Epilogue: Come Back Again Sometime, Yeah?",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Epilogue_ Come Back Again Sometime, Yeah_.bfstm",
+        "duration": 27.978,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-special-world",
+        "title": "Special World",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/Special World.bfstm",
+        "duration": 48.917,
+        "xLoops": true
+      },
+      {
+        "id": "mariobroswonder-a-very-special-march",
+        "title": "A Very Special March",
+        "file": "Assets/Games/SuperMarioBros.Wonder/Tracks/A Very Special March.bfstm",
+        "duration": 96.542,
+        "xLoops": true
       }
     ]
   },
+
 
   {
     "id": "marioodyssey",
