@@ -14,829 +14,967 @@
         "id": "dkb-title-theme",
         "title": "Title Theme",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Title Theme.bfstm",
-        "duration": 60.139
+        "duration": 60.139,
+        "xLoops": true
       },
       {
         "id": "dkb-enter-dk",
         "title": "Enter DK!",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Enter DK!.bfstm",
-        "duration": 13.533
+        "duration": 13.533,
+        "xLoops": false
       },
       {
         "id": "dkb-ingot-isle",
         "title": "Ingot Isle",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Ingot Isle.bfstm",
-        "duration": 144.112
+        "duration": 144.112,
+        "xLoops": true
       },
       {
         "id": "dkb-oh-banana",
         "title": "Oh, Banana!",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Oh Banana!.bfstm",
-        "duration": 3.408
+        "duration": 3.408,
+        "xLoops": false
       },
       {
         "id": "dkb-you-got-a-banandium-gem",
         "title": "You Got a Banandium Gem",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/You Got a Banandium Gem.bfstm",
-        "duration": 3.283
+        "duration": 3.283,
+        "xLoops": false
       },
       {
         "id": "dkb-ingot-isle-cave-in",
         "title": "Ingot Isle Cave-In",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Ingot Isle Cave-In.bfstm",
-        "duration": 163.731
+        "duration": 163.731,
+        "xLoops": true
       },
       {
         "id": "dkb-ingot-isle-cave-in-battle",
         "title": "Ingot Isle Cave-In Battle",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Ingot Isle Cave-In Battle.bfstm",
-        "duration": 59.05
+        "duration": 59.05,
+        "xLoops": true
       },
       {
         "id": "dkb-entrance-to-the-underground-world",
         "title": "Entrance to the Underground World",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Welcome to the Underground World.bfstm",
-        "duration": 20.033
+        "duration": 20.033,
+        "xLoops": false
       },
       {
         "id": "dkb-donkey-kong-bananza",
         "title": "Donkey Kong Bananza",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Donkey Kong Bananza (Title Drop Jingle).bfstm",
-        "duration": 15.7
+        "duration": 15.7,
+        "xLoops": false
       },
       {
         "id": "dkb-lagoon-layer",
         "title": "Lagoon Layer",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Lagoon Layer.bfstm",
-        "duration": 128.833
+        "duration": 128.833,
+        "xLoops": true
       },
       {
         "id": "dkb-you-got-three-banandium-gems",
         "title": "You Got Three Banandium Gems",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/You Got Three Banandium Gems.bfstm",
-        "duration": 5.7
+        "duration": 5.7,
+        "xLoops": false
       },
       {
         "id": "dkb-battle-challenge",
         "title": "Battle Challenge",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Battle Challenge.bfstm",
-        "duration": 46.167
+        "duration": 46.167,
+        "xLoops": true
       },
       {
         "id": "dkb-battle-challenge-clear",
         "title": "Battle Challenge Clear",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Battle Challenge Clear.bfstm",
-        "duration": 4.633
+        "duration": 4.633,
+        "xLoops": false
       },
       {
         "id": "dkb-battle-challenge-lobby",
         "title": "Battle Challenge Lobby",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Battle Challenge Lobby.bfstm",
-        "duration": 18.988
+        "duration": 18.988,
+        "xLoops": true
       },
       {
         "id": "dkb-lagoon-layer-salvager-s-landing",
         "title": "Lagoon Layer: Salvager's Landing",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Lagoon Layer - Salvager's Landing.bfstm",
-        "duration": 128.833
+        "duration": 128.833,
+        "xLoops": true
       },
       {
         "id": "dkb-challenge-course-1",
         "title": "Challenge Course #1",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Challenge Course 1.bfstm",
-        "duration": 86.748
+        "duration": 86.748,
+        "xLoops": true
       },
       {
         "id": "dkb-kong-bananza",
         "title": "Kong Bananza",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Kong Bananza.bfstm",
-        "duration": 62.879
+        "duration": 62.879,
+        "xLoops": true
       },
       {
         "id": "dkb-void-kong-confrontation",
         "title": "Void Kong Confrontation",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Void Kong Confrontation.bfstm",
-        "duration": 55.842
+        "duration": 55.842,
+        "xLoops": true
       },
       {
         "id": "dkb-void-company-revealed",
         "title": "Void Company Revealed",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Void Company Revealed.bfstm",
-        "duration": 96.017
+        "duration": 96.017,
+        "xLoops": false
       },
       {
         "id": "dkb-showdown-with-peekabruiser",
         "title": "Showdown with Peekabruiser!",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Showdown with Peekabruiser!.bfstm",
-        "duration": 7.517
+        "duration": 7.517,
+        "xLoops": false
       },
       {
         "id": "dkb-boss-introduction",
         "title": "Boss Introduction",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Boss Introduction.bfstm",
-        "duration": 3.45
+        "duration": 3.45,
+        "xLoops": false
       },
       {
         "id": "dkb-peekabruiser-battle",
         "title": "Peekabruiser Battle",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Peekabruiser Battle.bfstm",
-        "duration": 98.301
+        "duration": 98.301,
+        "xLoops": true
       },
       {
         "id": "dkb-boss-defeated",
         "title": "Boss Defeated",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Boss Defeated.bfstm",
-        "duration": 8.767
+        "duration": 8.767,
+        "xLoops": false
       },
       {
         "id": "dkb-dk-and-pauline-dance",
         "title": "DK & Pauline Dance",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/DK & Pauline Dance.bfstm",
-        "duration": 11.472
+        "duration": 11.472,
+        "xLoops": false
       },
       {
         "id": "dkb-sinkhole",
         "title": "Sinkhole",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Sinkhole.bfstm",
-        "duration": 72.359
+        "duration": 72.359,
+        "xLoops": true
       },
       {
         "id": "dkb-sinkhole-dive",
         "title": "Sinkhole Dive",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Sinkhole Dive.bfstm",
-        "duration": 100.954
+        "duration": 100.954,
+        "xLoops": true
       },
       {
         "id": "dkb-hilltop-layer",
         "title": "Hilltop Layer",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Hilltop Layer.bfstm",
-        "duration": 277.69
+        "duration": 277.69,
+        "xLoops": true
       },
       {
         "id": "dkb-you-got-five-banandium-gems",
         "title": "You Got Five Banandium Gems",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/You Got Five Banandium Gems.bfstm",
-        "duration": 6.65
+        "duration": 6.65,
+        "xLoops": false
       },
       {
         "id": "dkb-you-got-a-skill-point",
         "title": "You Got a Skill Point!",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/You Got a Skill Point!.bfstm",
-        "duration": 3.967
+        "duration": 3.967,
+        "xLoops": false
       },
       {
         "id": "dkb-hilltop-layer-fractone-village",
         "title": "Hilltop Layer: Fractone Village",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Hilltop Layer - Fractone Village.bfstm",
-        "duration": 55.802
+        "duration": 55.802,
+        "xLoops": true
       },
       {
         "id": "dkb-closet",
         "title": "Closet",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Closet.bfstm",
-        "duration": 23.785
+        "duration": 23.785,
+        "xLoops": true
       },
       {
         "id": "dkb-getaway",
         "title": "Getaway",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Getaway (DK Rap).bfstm",
-        "duration": 40.395
+        "duration": 40.395,
+        "xLoops": true
       },
       {
         "id": "dkb-time-for-a-break",
         "title": "Time for a Break",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Time for a Break.bfstm",
-        "duration": 6.267
+        "duration": 6.267,
+        "xLoops": false
       },
       {
         "id": "dkb-2d-challenge-course-1-dk-island-swing",
         "title": "2D Challenge Course #1 (DK Island Swing)",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/2D Challenge Course 1 (DK Island Swing).bfstm",
-        "duration": 155.125
+        "duration": 155.125,
+        "LoopFromStoE": true
       },
       {
         "id": "dkb-canyon-layer",
         "title": "Canyon Layer",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Canyon Layer.bfstm",
-        "duration": 125.956
+        "duration": 125.956,
+        "xLoops": true
       },
       {
         "id": "dkb-challenge-course-2",
         "title": "Challenge Course #2",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Challenge Course 2.bfstm",
-        "duration": 88.177
+        "duration": 88.177,
+        "xLoops": true
       },
       {
         "id": "dkb-showdown-with-grumpy-kong",
         "title": "Showdown with Grumpy Kong!",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Showdown with Grumpy Kong!.bfstm",
-        "duration": 12.183
+        "duration": 12.183,
+        "xLoops": false
       },
       {
         "id": "dkb-grumpy-kong-battle",
         "title": "Grumpy Kong Battle",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Grumpy Kong Battle.bfstm",
-        "duration": 78.136
+        "duration": 78.136,
+        "xLoops": true
       },
       {
         "id": "dkb-canyon-layer-banandium-refinery",
         "title": "Canyon Layer: Banandium Refinery",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Canyon Layer - Banandium Refinery.bfstm",
-        "duration": 88.827
+        "duration": 88.827,
+        "xLoops": true
       },
       {
         "id": "dkb-mad-mixer-battle",
         "title": "Mad Mixer Battle",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Mad Mixer Battle.bfstm",
-        "duration": 84.574
+        "duration": 84.574,
+        "xLoops": true
       },
       {
         "id": "dkb-canyon-layer-smokestack-depths",
         "title": "Canyon Layer: Smokestack Depths",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Canyon Layer - Smokestack Depths.bfstm",
-        "duration": 44.028
+        "duration": 44.028,
+        "xLoops": true
       },
       {
         "id": "dkb-stompenclomper-battle",
         "title": "Stompenclomper Battle",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Stompenclomper Battle.bfstm",
-        "duration": 97.204
+        "duration": 97.204,
+        "xLoops": true
       },
       {
         "id": "dkb-the-divide",
         "title": "The Divide",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/The Divide.bfstm",
-        "duration": 108.353
+        "duration": 108.353,
+        "xLoops": true
       },
       {
         "id": "dkb-the-divide-freezer-path",
         "title": "The Divide: Freezer Path",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/The Divide - Freezer Path.bfstm",
-        "duration": 89.153
+        "duration": 89.153,
+        "xLoops": true
       },
       {
         "id": "dkb-freezer-layer-cold-colt-crest",
         "title": "Freezer Layer: Cold-Colt Crest",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Freezer Layer - Cold-Colt Crest.bfstm",
-        "duration": 181.434
+        "duration": 181.434,
+        "xLoops": true
       },
       {
         "id": "dkb-bonus-stage",
         "title": "Bonus Stage",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Bonus Stage (Token Tango).bfstm",
-        "duration": 49.452
+        "duration": 49.452,
+        "xLoops": true
       },
       {
         "id": "dkb-freezer-layer-chocolava-lake",
         "title": "Freezer Layer: Chocolava Lake",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Freezer Layer - Chocolava Lake.bfstm",
-        "duration": 167.702
+        "duration": 167.702,
+        "xLoops": true
       },
       {
         "id": "dkb-freezer-layer-canter-creamery",
         "title": "Freezer Layer: Canter Creamery",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Freezer Layer - Canter Creamery.bfstm",
-        "duration": 166.398
+        "duration": 166.398,
+        "xLoops": true
       },
       {
         "id": "dkb-zebra-bananza",
         "title": "Zebra Bananza",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Zebra Bananza.bfstm",
-        "duration": 69.094
+        "duration": 69.094,
+        "xLoops": true
       },
       {
         "id": "dkb-showdown-with-poppy-kong",
         "title": "Showdown with Poppy Kong!",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Showdown with Poppy Kong!.bfstm",
-        "duration": 21.367
+        "duration": 21.367,
+        "xLoops": false
       },
       {
         "id": "dkb-poppy-kong-battle",
         "title": "Poppy Kong Battle",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Poppy Kong Battle.bfstm",
-        "duration": 72.825
+        "duration": 72.825,
+        "xLoops": true
       },
       {
         "id": "dkb-freezer-layer-hot-hoof-heater",
         "title": "Freezer Layer: Hot-Hoof Heater",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Freezer Layer - Hot-Hoof Heater.bfstm",
-        "duration": 169.323
+        "duration": 169.323,
+        "xLoops": true
       },
       {
         "id": "dkb-inflammonite-battle",
         "title": "Inflammonite Battle",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Inflammonite Battle.bfstm",
-        "duration": 99.148
+        "duration": 99.148,
+        "xLoops": true
       },
       {
         "id": "dkb-the-divide-forest-path",
         "title": "The Divide: Forest Path",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/The Divide - Forest Path.bfstm",
-        "duration": 82.001
+        "duration": 82.001,
+        "xLoops": true
       },
       {
         "id": "dkb-forest-layer-beaky-thicket",
         "title": "Forest Layer: Beaky Thicket",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Forest Layer - Beaky Thicket.bfstm",
-        "duration": 131.062
+        "duration": 131.062,
+        "xLoops": true
       },
       {
         "id": "dkb-2d-challenge-course-2-stickerbush-symphony",
         "title": "2D Challenge Course #2 (Stickerbush Symphony)",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/2D Challenge Course 2 (Stickerbrush Symphony).bfstm",
-        "duration": 146.505
+        "duration": 146.505,
+        "xLoops": true
       },
       {
         "id": "dkb-forest-layer-eggshell-hotel",
         "title": "Forest Layer: Eggshell Hotel",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Forest Layer - Eggshell Hotel.bfstm",
-        "duration": 126.186
+        "duration": 126.186,
+        "xLoops": true
       },
       {
         "id": "dkb-ostrich-bananza",
         "title": "Ostrich Bananza",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Ostrich Bananza.bfstm",
-        "duration": 78.949
+        "duration": 78.949,
+        "xLoops": true
       },
       {
         "id": "dkb-forest-layer-mossplume-marsh",
         "title": "Forest Layer: Mossplume Marsh",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Forest Layer - Mossplume Marsh.bfstm",
-        "duration": 129.829
+        "duration": 129.829,
+        "xLoops": true
       },
       {
         "id": "dkb-forest-layer-eggshell-hotel-annex",
         "title": "Forest Layer: Eggshell Hotel Annex",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Forest Layer - Eggshell Hotel Annex.bfstm",
-        "duration": 129.829
+        "duration": 129.829,
+        "xLoops": true
       },
       {
         "id": "dkb-forest-layer-bramblenest-bog",
         "title": "Forest Layer: Bramblenest Bog",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Forest Layer - Bramblenest Bog.bfstm",
-        "duration": 137.305
+        "duration": 137.305,
+        "xLoops": true
       },
       {
         "id": "dkb-abracajabya-battle",
         "title": "Abracajabya Battle",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Abracajabya Battle.bfstm",
-        "duration": 83.452
+        "duration": 83.452,
+        "xLoops": true
       },
       {
         "id": "dkb-the-junction",
         "title": "The Junction",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/The Junction.bfstm",
-        "duration": 79.155
+        "duration": 79.155,
+        "xLoops": true
       },
       {
         "id": "dkb-the-junction-void-chase",
         "title": "The Junction: Void Chase",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/The Junction - Void Chase.bfstm",
-        "duration": 32.869
+        "duration": 32.869,
+        "xLoops": true
       },
       {
         "id": "dkb-void-kong-battle-1",
         "title": "Void Kong Battle #1",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Void Kong Battle 1.bfstm",
-        "duration": 84.631
+        "duration": 84.631,
+        "xLoops": true
       },
       {
         "id": "dkb-resort-layer",
         "title": "Resort Layer",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Resort Layer.bfstm",
-        "duration": 148.079
+        "duration": 148.079,
+        "xLoops": true
       },
       {
         "id": "dkb-2d-challenge-course-3-mine-cart-madness",
         "title": "2D Challenge Course #3 (Mine Cart Madness)",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/2D Challenge Course 3 (Mine-Cart Madness).bfstm",
-        "duration": 104.795
+        "duration": 104.795,
+        "xLoops": true
       },
       {
         "id": "dkb-tempest-layer-forecaster-refuge",
         "title": "Tempest Layer: Forecaster Refuge",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Tempest Layer - Forecaster Refuge.bfstm",
-        "duration": 71.743
+        "duration": 71.743,
+        "xLoops": true
       },
       {
         "id": "dkb-tempest-layer-lava-lake",
         "title": "Tempest Layer: Lava Lake",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Tempest Layer - Lava Lake.bfstm",
-        "duration": 87.56
+        "duration": 87.56,
+        "xLoops": true
       },
       {
         "id": "dkb-sinister-blusterwing-battle-1",
         "title": "Sinister Blusterwing Battle #1",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Sinister Blusterwing Battle 1.bfstm",
-        "duration": 56.693
+        "duration": 56.693,
+        "xLoops": true
       },
       {
         "id": "dkb-tempest-layer-hot-shower-cave",
         "title": "Tempest Layer: Hot-Shower Cave",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Tempest Layer - Hot-Shower Cave.bfstm",
-        "duration": 150.278
+        "duration": 150.278,
+        "xLoops": true
       },
       {
         "id": "dkb-elephant-bananza",
         "title": "Elephant Bananza",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Elephant Bananza.bfstm",
-        "duration": 82.39
+        "duration": 82.39,
+        "xLoops": true
       },
       {
         "id": "dkb-tempest-layer-jumbo-spa",
         "title": "Tempest Layer: Jumbo Spa",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Tempest Layer - Jumbo Spa.bfstm",
-        "duration": 83.411
+        "duration": 83.411,
+        "xLoops": true
       },
       {
         "id": "dkb-sinister-blusterwing-battle-2",
         "title": "Sinister Blusterwing Battle #2",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Sinister Blusterwing Battle 2.bfstm",
-        "duration": 80.32
+        "duration": 80.32,
+        "xLoops": true
       },
       {
         "id": "dkb-landfill-layer-forgotten-pit",
         "title": "Landfill Layer: Forgotten Pit",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Landfill Layer - Forgotten Pit.bfstm",
-        "duration": 69.718
+        "duration": 69.718,
+        "xLoops": true
       },
       {
         "id": "dkb-landfill-layer-trashtopia",
         "title": "Landfill Layer: Trashtopia",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Landfill Layer - Trashtopia.bfstm",
-        "duration": 46.826
+        "duration": 46.826,
+        "xLoops": true
       },
       {
         "id": "dkb-challenge-course-3",
         "title": "Challenge Course #3",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Challenge Course 3.bfstm",
-        "duration": 43.41
+        "duration": 43.41,
+        "xLoops": true
       },
       {
         "id": "dkb-challenge-course-4",
         "title": "Challenge Course #4",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Challenge Course 4.bfstm",
-        "duration": 69.995
+        "duration": 69.995,
+        "xLoops": true
       },
       {
         "id": "dkb-challenge-course-clear",
         "title": "Challenge Course Clear",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Challenge Course Clear.bfstm",
-        "duration": 5.15
+        "duration": 5.15,
+        "xLoops": false
       },
       {
         "id": "dkb-rambi-rumble-start",
         "title": "Rambi Rumble Start",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Rambi Rumble Start.bfstm",
-        "duration": 7.25
+        "duration": 7.25,
+        "xLoops": false
       },
       {
         "id": "dkb-racing-layer-rambi-rumble",
         "title": "Racing Layer: Rambi Rumble",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Racing Layer - Rambi Rumble.bfstm",
-        "duration": 68.087
+        "duration": 68.087,
+        "xLoops": true
       },
       {
         "id": "dkb-rambi-rumble-loss",
         "title": "Rambi Rumble (Loss)",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Rambi Rumble (Loss).bfstm",
-        "duration": 3.883
+        "duration": 3.883,
+        "xLoops": false
       },
       {
         "id": "dkb-rambi-rumble-win",
         "title": "Rambi Rumble (Win)",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Rambi Rumble (Win).bfstm",
-        "duration": 5.017
+        "duration": 5.017,
+        "xLoops": false
       },
       {
         "id": "dkb-racing-layer-rambi-rumble-results",
         "title": "Racing Layer: Rambi Rumble (Results)",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Racing Layer_ Rambi Rumble (Results).bfstm",
-        "duration": 30.116
+        "duration": 30.116,
+        "xLoops": true
       },
       {
         "id": "dkb-radiance-layer-darkness",
         "title": "Radiance Layer: Darkness",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Radiance Layer - Darkness.bfstm",
-        "duration": 97.171
+        "duration": 97.171,
+        "xLoops": true
       },
       {
         "id": "dkb-radiance-layer-elder-court",
         "title": "Radiance Layer: Elder Court",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Radiance Layer - Elder Court.bfstm",
-        "duration": 97.171
+        "duration": 97.171,
+        "xLoops": true
       },
       {
         "id": "dkb-snake-bananza",
         "title": "Snake Bananza",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Snake Bananza.bfstm",
-        "duration": 74.836
+        "duration": 74.836,
+        "xLoops": true
       },
       {
         "id": "dkb-radiance-layer-solar-control-tower",
         "title": "Radiance Layer: Solar Control Tower",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Radiance Layer - Solar Control Tower.bfstm",
-        "duration": 134.348
+        "duration": 134.348,
+        "xLoops": true
       },
       {
         "id": "dkb-2d-challenge-course-4-25m",
         "title": "2D Challenge Course #4 (25m)",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/2D Challenge Course 4 (Donkey Kong BGM).bfstm",
-        "duration": 72.377
+        "duration": 72.377,
+        "xLoops": true
       },
       {
         "id": "dkb-radiance-layer-solar-control-tower-synthetic-sun-restored",
         "title": "Radiance Layer: Solar Control Tower (Synthetic Sun Restored)",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Radiance Layer - Solar Control Tower On.bfstm",
-        "duration": 122.897
+        "duration": 122.897,
+        "xLoops": true
       },
       {
         "id": "dkb-radiance-layer-serpent-sands",
         "title": "Radiance Layer: Serpent Sands",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Radiance Layer - Serpent Sands.bfstm",
-        "duration": 150.185
+        "duration": 150.185,
+        "xLoops": true
       },
       {
         "id": "dkb-radiance-layer-hiss-hiss-oasis",
         "title": "Radiance Layer: Hiss Hiss Oasis",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Radiance Layer - Hiss Hiss Oasis.bfstm",
-        "duration": 81.138
+        "duration": 81.138,
+        "xLoops": true
       },
       {
         "id": "dkb-challenge-course-5",
         "title": "Challenge Course #5",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Challenge Course 5.bfstm",
-        "duration": 88.683
+        "duration": 88.683,
+        "xLoops": true
       },
       {
         "id": "dkb-radiance-layer-shade-clouds",
         "title": "Radiance Layer: Shade Clouds",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Radiance Layer - Shade Clouds.bfstm",
-        "duration": 119.369
+        "duration": 119.369,
+        "xLoops": true
       },
       {
         "id": "dkb-radiance-layer-crystal-cobra-den",
         "title": "Radiance Layer: Crystal-Cobra Den",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Radiance Layer - Crystal-Cobra Den.bfstm",
-        "duration": 93.733
+        "duration": 93.733,
+        "xLoops": true
       },
       {
         "id": "dkb-groove-layer-jail-hall",
         "title": "Groove Layer: Jail Hall",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Groove Layer - Jail Hall.bfstm",
-        "duration": 56.127
+        "duration": 56.127,
+        "xLoops": true
       },
       {
         "id": "dkb-groove-layer-disco-hall",
         "title": "Groove Layer: Disco Hall",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Groove Layer - Disco Hall.bfstm",
-        "duration": 99.732
+        "duration": 99.732,
+        "xLoops": true
       },
       {
         "id": "dkb-inside-the-great-harmoneel",
         "title": "Inside the Great Harmoneel",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Inside The Great Harmoneel.bfstm",
-        "duration": 93.53
+        "duration": 93.53,
+        "xLoops": true
       },
       {
         "id": "dkb-feast-layer-mane-gate-market",
         "title": "Feast Layer: Mane Gate Market",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Feast Layer - Mane Gate Market.bfstm",
-        "duration": 110.88
+        "duration": 110.88,
+        "xLoops": true
       },
       {
         "id": "dkb-feast-layer-fried-pride-plaza",
         "title": "Feast Layer: Fried Pride Plaza",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Feast Layer - Fried Pride Plaza.bfstm",
-        "duration": 115.106
+        "duration": 115.106,
+        "xLoops": true
       },
       {
         "id": "dkb-feast-layer-grater-go-round",
         "title": "Feast Layer: Grater-Go-Round",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Feast Layer - Grater-Go-Round.bfstm",
-        "duration": 86.414
+        "duration": 86.414,
+        "xLoops": true
       },
       {
         "id": "dkb-feast-layer-kingly-swings",
         "title": "Feast Layer: Kingly Swings",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Feast Layer - Kingly Swings.bfstm",
-        "duration": 62.655
+        "duration": 62.655,
+        "xLoops": true
       },
       {
         "id": "dkb-feast-layer-ferocious-fryhouse",
         "title": "Feast Layer: Ferocious Fryhouse",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Feast Layer - Ferocious Fryhouse.bfstm",
-        "duration": 62.349
+        "duration": 62.349,
+        "xLoops": true
       },
       {
         "id": "dkb-feast-layer-royal-oil-cruise",
         "title": "Feast Layer: Royal Oil Cruise",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Feast Layer - Royal Oil Cruise.bfstm",
-        "duration": 87.799
+        "duration": 87.799,
+        "xLoops": true
       },
       {
         "id": "dkb-feast-layer-cat-scratch-kitchen",
         "title": "Feast Layer: Cat-Scratch Kitchen",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Feast Layer - Cat-Scratch Kitchen.bfstm",
-        "duration": 130.034
+        "duration": 130.034,
+        "xLoops": true
       },
       {
         "id": "dkb-feast-layer-waste-oil-container",
         "title": "Feast Layer: Waste-Oil Container",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Feast Layer - Waste-Oil Container.bfstm",
-        "duration": 130.032
+        "duration": 130.032,
+        "xLoops": true
       },
       {
         "id": "dkb-muckety-muck-battle",
         "title": "Muckety-Muck Battle",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Muckety-Muck Battle.bfstm",
-        "duration": 93.888
+        "duration": 93.888,
+        "xLoops": true
       },
       {
         "id": "dkb-sinkhole-dive-forbidden-layer",
         "title": "Sinkhole Dive: Forbidden Layer",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Sinkhole Dive - Forbidden Layer.bfstm",
-        "duration": 94.824
+        "duration": 94.824,
+        "xLoops": true
       },
       {
         "id": "dkb-forbidden-layer-do-not-enter-depths",
         "title": "Forbidden Layer: Do-Not-Enter Depths",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Forbidden Layer.bfstm",
-        "duration": 176.028
+        "duration": 176.028,
+        "xLoops": true
       },
       {
         "id": "dkb-void-kong-battle-2",
         "title": "Void Kong Battle #2",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Void Kong Battle 2.bfstm",
-        "duration": 94.969
+        "duration": 94.969,
+        "xLoops": true
       },
       {
         "id": "dkb-sinkhole-dive-planet-core",
         "title": "Sinkhole Dive: Planet Core",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Sinkhole Dive - Planet Core.bfstm",
-        "duration": 82.855
+        "duration": 82.855,
+        "xLoops": true
       },
       {
         "id": "dkb-planet-core-kremling-kourtyard",
         "title": "Planet Core: Kremling Kourtyard",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Planet Core - Kremling Kourtyard.bfstm",
-        "duration": 133.409
+        "duration": 133.409,
+        "xLoops": true
       },
       {
         "id": "dkb-planet-core-first-half",
         "title": "Planet Core: First Half",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Planet Core - First Half.bfstm",
-        "duration": 207.726
+        "duration": 207.726,
+        "xLoops": true
       },
       {
         "id": "dkb-planet-core-first-half-battle",
         "title": "Planet Core: First-Half Battle",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Planet Core - First Half Battle.bfstm",
-        "duration": 230.481
+        "duration": 230.481,
+        "xLoops": true
       },
       {
         "id": "dkb-planet-core-mine-cart-ride",
         "title": "Planet Core: Mine-Cart Ride",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Planet Core - Mine-Cart Ride.bfstm",
-        "duration": 58.433
+        "duration": 58.433,
+        "xLoops": true
       },
       {
         "id": "dkb-planet-core-fractone-cradle",
         "title": "Planet Core: Fractone Cradle",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Planet Core - Fractone Cradle.bfstm",
-        "duration": 80.293
+        "duration": 80.293,
+        "xLoops": true
       },
       {
         "id": "dkb-planet-core-second-half",
         "title": "Planet Core: Second Half",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Planet Core - Second Half.bfstm",
-        "duration": 101.807
+        "duration": 101.807,
+        "xLoops": true
       },
       {
         "id": "dkb-planet-core-climactic-cliff",
         "title": "Planet Core: Climactic Cliff",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Planet Core - Climactic Cliff.bfstm",
-        "duration": 144.457
+        "duration": 144.457,
+        "xLoops": true
       },
       {
         "id": "dkb-planet-core-heart-of-gold",
         "title": "Planet Core: Heart of Gold",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Planet Core - Heart of Gold.bfstm",
-        "duration": 153.884
+        "duration": 153.884,
+        "xLoops": true
       },
       {
         "id": "dkb-showdown-with-king-k-rool",
         "title": "Showdown with King K. Rool!",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Showdown with King K. Rool!.bfstm",
-        "duration": 67.167
+        "duration": 67.167,
+        "xLoops": false
       },
       {
         "id": "dkb-donkey-k-ong-bananza",
         "title": "Donkey K.ong Bananza",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Donkey K.ong Bananza (Title Drop Jingle).bfstm",
-        "duration": 9.733
+        "duration": 9.733,
+        "xLoops": false
       },
       {
         "id": "dkb-banandium-root-tower",
         "title": "Banandium Root Tower (Gangplank Galleon)",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Banandium Root Tower (Gangplank Galleon).bfstm",
-        "duration": 179.414
+        "duration": 179.414,
+        "xLoops": true
       },
       {
         "id": "dkb-new-donk-city",
         "title": "New Donk City",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/New Donk City.bfstm",
-        "duration": 88.47
+        "duration": 88.47,
+        "xLoops": true
       },
       {
         "id": "dkb-showdown-with-k-rool-king-of-rot",
         "title": "Showdown with K. Rool, King of Rot!",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Showdown with K. Rool, King of Rot!.bfstm",
-        "duration": 31.25
+        "duration": 31.25,
+        "xLoops": false
       },
       {
         "id": "dkb-enter-k-rool-king-of-rot",
         "title": "Enter K. Rool, King of Rot!",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Enter K. Rool, King of Rot!.bfstm",
-        "duration": 5.017
+        "duration": 5.017,
+        "xLoops": false
       },
       {
         "id": "dkb-k-rool-king-of-rot-battle",
         "title": "K. Rool, King of Rot Battle",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/K. Rool, King of Rot Battle.bfstm",
-        "duration": 128.738
+        "duration": 128.738,
+        "xLoops": true
       },
       {
         "id": "dkb-breaking-through-heart-of-gold",
         "title": "Breaking Through (Heart of Gold)",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Breaking Through (Heart of Gold).bfstm",
-        "duration": 282.559
+        "duration": 282.559,
+        "xLoops": false
       },
       {
         "id": "dkb-dk-artist",
         "title": "DK Artist (Simian Segue)",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/DK Artist (Simian Segue).bfstm",
-        "duration": 131.258
+        "duration": 131.258,
+        "xLoops": true
       },
       {
         "id": "dkb-dk-island-daytime",
         "title": "DK Island (Daytime)",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/DK Island - Daytime.bfstm",
-        "duration": 142.164
+        "duration": 142.164,
+        "xLoops": true
       },
       {
         "id": "dkb-emerald-rush-1",
         "title": "Emerald Rush #1",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Emerald Rush 1.bfstm",
-        "duration": 94.353
+        "duration": 94.353,
+        "xLoops": true
       },
       {
         "id": "dkb-emerald-rush-round-clear",
         "title": "Emerald Rush Round Clear",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Emerald Rush Round Clear.bfstm",
-        "duration": 2.233
+        "duration": 2.233,
+        "xLoops": false
       },
       {
         "id": "dkb-emerald-rush-2",
         "title": "Emerald Rush #2",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Emerald Rush 2.bfstm",
-        "duration": 105.176
+        "duration": 105.176,
+        "xLoops": true
       },
       {
         "id": "dkb-emerald-rush-3",
         "title": "Emerald Rush #3",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Emerald Rush 3.bfstm",
-        "duration": 100.053
+        "duration": 100.053,
+        "xLoops": true
       },
       {
         "id": "dkb-emerald-rush-hurry-up",
         "title": "Emerald Rush (Hurry Up!)",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Emerald Rush (Hurry Up!).bfstm",
-        "duration": 28.259
+        "duration": 28.259,
+        "xLoops": true
       },
       {
         "id": "dkb-emerald-rush-results",
         "title": "Emerald Rush Results",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Emerald Rush Results.bfstm",
-        "duration": 41.088
+        "duration": 41.088,
+        "xLoops": true
       },
       {
         "id": "dkb-emerald-rush-staff-credits-score-display",
         "title": "Emerald Rush Staff Credits (Score Display)",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Emerald Rush Staff Credits (Score Display).bfstm",
-        "duration": 5.417
+        "duration": 5.417,
+        "xLoops": false
       },
       {
         "id": "dkb-dk-island-sunset",
         "title": "DK Island (Sunset)",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/DK Island - Sunset.bfstm",
-        "duration": 120.194
+        "duration": 120.194,
+        "xLoops": true
       },
       {
         "id": "dkb-void-kong-defeated-dk-island",
         "title": "Void Kong Defeated (DK Island)",
         "file": "Assets/Games/DonkeyKongBananza/Tracks/Void Kong Defeated (DK Island).bfstm",
-        "duration": 5.167
+        "duration": 5.167,
+        "xLoops": false
       }
     ]
   },
@@ -855,487 +993,568 @@
         "id": "smo-title-screen",
         "title": "Title Screen",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Title Screen.bfstm",
-        "duration": 38.055
+        "duration": 38.055,
+        "xLoops": true
       },
       {
         "id": "smo-skies-above-peachs-castle",
         "title": "The Skies above Peach's Castle",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/The Skies above Peach's Castle.bfstm",
-        "duration": 80.964
+        "duration": 80.964,
+        "xLoops": false
       },
       {
         "id": "smo-meeting-cappy",
         "title": "Meeting Cappy",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Meeting Cappy.bfstm",
-        "duration": 54.466
+        "duration": 54.466,
+        "xLoops": true
       },
       {
         "id": "smo-bonneton",
         "title": "Bonneton",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Bonneton.bfstm",
-        "duration": 78.077
+        "duration": 78.077,
+        "xLoops": true
       },
       {
         "id": "smo-top-hat-tower",
         "title": "Top-Hat Tower",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Top-Hat Tower.bfstm",
-        "duration": 57.532
+        "duration": 57.532,
+        "xLoops": true
       },
       {
         "id": "smo-here-come-the-broodals",
         "title": "Here Come the Broodals",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Here Come the Broodals.bfstm",
-        "duration": 26.415
+        "duration": 26.415,
+        "xLoops": true
       },
       {
         "id": "smo-battling-the-broodals",
         "title": "Battling the Broodals",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Battling the Broodals.bfstm",
-        "duration": 55.219
+        "duration": 55.219,
+        "xLoops": true
       },
       {
         "id": "smo-fossil-falls",
         "title": "Fossil Falls",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Fossil Falls.bfstm",
-        "duration": 123.954
+        "duration": 123.954,
+        "xLoops": true
       },
       {
         "id": "smo-capturing-a-t-rex",
         "title": "Capturing a T-Rex",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Capturing a T-Rex.bfstm",
-        "duration": 46.337
+        "duration": 46.337,
+        "xLoops": true
       },
       {
         "id": "smo-battling-madame-broode",
         "title": "Battling Madame Broode",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Battling Madame Broode.bfstm",
-        "duration": 57.55
+        "duration": 57.55,
+        "xLoops": true
       },
       {
         "id": "smo-mario-meets-the-world",
         "title": "Mario Meets the World: The Odyssey's Maiden Voyage",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Mario Meets the World The Odyssey's Maiden Voyage.bfstm",
-        "duration": 43.887
+        "duration": 43.887,
+        "xLoops": false
       },
       {
         "id": "smo-tostarena-ruins",
         "title": "Tostarena Ruins",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Tostarena Ruins.bfstm",
-        "duration": 110.181
+        "duration": 110.181,
+        "xLoops": true
       },
       {
         "id": "smo-inside-the-inverted-pyramid",
         "title": "Inside the Inverted Pyramid",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Inside the Inverted Pyramid.bfstm",
-        "duration": 67.96
+        "duration": 67.96,
+        "xLoops": true
       },
       {
         "id": "smo-tostarena-nights",
         "title": "Tostarena Nights",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Tostarena Nights.bfstm",
-        "duration": 107.485
+        "duration": 107.485,
+        "xLoops": true
       },
       {
         "id": "smo-jaxi-joyride",
         "title": "Jaxi Joyride",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Jaxi Joyride.bfstm",
-        "duration": 55.089
+        "duration": 55.089,
+        "xLoops": true
       },
       {
         "id": "smo-knocking-out-knucklotec",
         "title": "Knocking Out Knucklotec",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Knocking Out Knucklotec.bfstm",
-        "duration": 76.391
+        "duration": 76.391,
+        "xLoops": true
       },
       {
         "id": "smo-tostarena-town",
         "title": "Tostarena Town",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Tostarena Town.bfstm",
-        "duration": 53.939
+        "duration": 53.939,
+        "xLoops": true
       },
       {
         "id": "smo-steam-gardens",
         "title": "Steam Gardens",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Steam Gardens.bfstm",
-        "duration": 114.688
+        "duration": 114.688,
+        "xLoops": true
       },
       {
         "id": "smo-steam-gardens-sherm-sector",
         "title": "Steam Gardens: Sherm Sector",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Steam Gardens Sherm Sector.bfstm",
-        "duration": 114.688
+        "duration": 114.688,
+        "xLoops": true
       },
       {
         "id": "smo-tusseling-with-torkdrift",
         "title": "Tusseling with Torkdrift",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Tusseling with Torkdrift.bfstm",
-        "duration": 89.643
+        "duration": 89.643,
+        "xLoops": true
       },
       {
         "id": "smo-lake-lamode-underwater-passage",
         "title": "Lake Lamode: Underwater Passage",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Lake Lamode Underwater Passage.bfstm",
-        "duration": 85.719
+        "duration": 85.719,
+        "xLoops": true
       },
       {
         "id": "smo-lake-lamode",
         "title": "Lake Lamode",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Lake Lamode.bfstm",
-        "duration": 98.975
+        "duration": 98.975,
+        "xLoops": true
       },
       {
         "id": "smo-lake-lamode-surface",
         "title": "Lake Lamode: Surface",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Lake Lamode Surface.bfstm",
-        "duration": 98.975
+        "duration": 98.975,
+        "xLoops": true
       },
       {
         "id": "smo-bumping-into-bowsers-flying-battleship",
         "title": "Bumping into Bowser's Flying Battleship",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Bumping into Bowser's Flying Battleship.bfstm",
-        "duration": 33.111
+        "duration": 33.111,
+        "xLoops": false
       },
       {
         "id": "smo-bowsers-entrance",
         "title": "Bowser's Entrance",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Bowser's Entrance.bfstm",
-        "duration": 24.021
+        "duration": 24.021,
+        "xLoops": true
       },
       {
         "id": "smo-battling-bowser-1",
         "title": "Battling Bowser 1: Showdown in Nimbus Arena",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Battling Bowser 1 Showdown in Nimbus Arena.bfstm",
-        "duration": 85.024
+        "duration": 85.024,
+        "xLoops": true
       },
       {
         "id": "smo-bowsers-bombardment",
         "title": "Bowser's Bombardment: The Odyssey Goes Down",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Bowser's Bombardment The Odyssey Goes Down.bfstm",
-        "duration": 32.94
+        "duration": 32.94,
+        "xLoops": false
       },
       {
         "id": "smo-cappy-gets-capnapped",
         "title": "Cappy Gets Capnapped",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Cappy Gets Capnapped.bfstm",
-        "duration": 44.681
+        "duration": 44.681,
+        "xLoops": true
       },
       {
         "id": "smo-the-forgotten-isle",
         "title": "The Forgotten Isle",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/The Forgotten Isle.bfstm",
-        "duration": 92.572
+        "duration": 92.572,
+        "xLoops": true
       },
       {
         "id": "smo-new-donk-nights",
         "title": "New Donk Nights",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/New Donk Nights.bfstm",
-        "duration": 53.747
+        "duration": 53.747,
+        "xLoops": true
       },
       {
         "id": "smo-new-donk-nights-city-hall",
         "title": "New Donk Nights: City Hall",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/New Donk Nights City Hall.bfstm",
-        "duration": 64.844
+        "duration": 64.844,
+        "xLoops": true
       },
       {
         "id": "smo-menacing-mechawiggler",
         "title": "Menacing Mechawiggler",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Menacing Mechawiggler.bfstm",
-        "duration": 87.934
+        "duration": 87.934,
+        "xLoops": true
       },
       {
         "id": "smo-new-donk-city",
         "title": "New Donk City",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/New Donk City.bfstm",
-        "duration": 99.821
+        "duration": 99.821,
+        "xLoops": true
       },
       {
         "id": "smo-the-bands-all-here",
         "title": "The Band's All Here: Super Mario Bros. Ground BGM",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/The Band's All Here Super Mario Bros. Ground BGM.bfstm",
-        "duration": 63.811
+        "duration": 63.811,
+        "xLoops": true
       },
       {
         "id": "smo-pausing-by-the-poolside",
         "title": "Pausing by the Poolside",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Pausing by the Poolside.bfstm",
-        "duration": 149.239
+        "duration": 149.239,
+        "xLoops": true
       },
       {
         "id": "smo-underground-power-plant",
         "title": "Underground Power Plant",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Underground Power Plant.bfstm",
-        "duration": 59.462
+        "duration": 59.462,
+        "xLoops": true
       },
       {
         "id": "smo-jump-up-super-star",
         "title": "Jump Up, Super Star!",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Jump Up, Super Star!.bfstm",
-        "duration": 248.04
+        "duration": 248.04,
+        "xLoops": false
       },
       {
         "id": "smo-festival-finale",
         "title": "Festival Finale",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Festival Finale.bfstm",
-        "duration": 14.491
+        "duration": 14.491,
+        "xLoops": false
       },
       {
         "id": "smo-shiveria-town",
         "title": "Shiveria Town",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Shiveria Town.bfstm",
-        "duration": 79.285
+        "duration": 79.285,
+        "xLoops": true
       },
       {
         "id": "smo-ice-caves",
         "title": "Ice Caves",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Ice Caves.bfstm",
-        "duration": 55.463
+        "duration": 55.463,
+        "xLoops": true
       },
       {
         "id": "smo-snowline-circuit",
         "title": "Snowline Circuit",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Snowline Circuit.bfstm",
-        "duration": 68.428
+        "duration": 68.428,
+        "xLoops": true
       },
       {
         "id": "smo-the-bound-bowl-grand-prix",
         "title": "The Bound Bowl Grand Prix",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/The Bound Bowl Grand Prix.bfstm",
-        "duration": 39.382
+        "duration": 39.382,
+        "xLoops": true
       },
       {
         "id": "smo-race-results",
         "title": "Race Results",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Race Results.bfstm",
-        "duration": 9.841
+        "duration": 9.841,
+        "xLoops": true
       },
       {
         "id": "smo-bubblaine",
         "title": "Bubblaine",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Bubblaine.bfstm",
-        "duration": 121.175
+        "duration": 121.175,
+        "xLoops": true
       },
       {
         "id": "smo-bubblaine-underwater",
         "title": "Bubblaine: Underwater",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Bubblaine Underwater.bfstm",
-        "duration": 121.175
+        "duration": 121.175,
+        "xLoops": true
       },
       {
         "id": "smo-battling-brigadier-mollusque-lanceur-iii",
         "title": "Battling Brigadier Mollusque-Lanceur III, Dauphin of Bubblaine",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Battling Brigadier Mollusque-Lanceur III.bfstm",
-        "duration": 92.496
+        "duration": 92.496,
+        "xLoops": true
       },
       {
         "id": "smo-mount-volbono",
         "title": "Mount Volbono",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Mount Volbono.bfstm",
-        "duration": 97.741
+        "duration": 97.741,
+        "xLoops": true
       },
       {
         "id": "smo-peronza-plaza",
         "title": "Peronza Plaza",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Peronza Plaza.bfstm",
-        "duration": 90.056
+        "duration": 90.056,
+        "xLoops": true
       },
       {
         "id": "smo-cooking-cookatiel",
         "title": "Cooking Cookatiel",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Cooking Cookatiel.bfstm",
-        "duration": 82.659
+        "duration": 82.659,
+        "xLoops": true
       },
       {
         "id": "smo-eye-to-eye-with-the-ruined-dragon",
         "title": "Eye to Eye with the Ruined Dragon",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Eye to Eye with the Ruined Dragon.bfstm",
-        "duration": 48.6
+        "duration": 48.6,
+        "xLoops": false
       },
       {
         "id": "smo-rebuffing-the-ruined-dragon",
         "title": "Rebuffing the Ruined Dragon",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Rebuffing the Ruined Dragon.bfstm",
-        "duration": 84.648
+        "duration": 84.648,
+        "xLoops": true
       },
       {
         "id": "smo-bowsers-castle",
         "title": "Bowser's Castle",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Bowser's Castle.bfstm",
-        "duration": 102.683
+        "duration": 102.683,
+        "xLoops": true
       },
       {
         "id": "smo-bowsers-castle-main-courtyard",
         "title": "Bowser's Castle: Main Courtyard",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Bowser's Castle Main Courtyard.bfstm",
-        "duration": 86.601
+        "duration": 86.601,
+        "xLoops": true
       },
       {
         "id": "smo-bowser-bound-for-the-moon",
         "title": "Bowser, Bound for the Moon",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Bowser, Bound for the Moon.bfstm",
-        "duration": 47.128
+        "duration": 47.128,
+        "xLoops": false
       },
       {
         "id": "smo-wrecking-robobrood",
         "title": "Wrecking RoboBrood",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Wrecking RoboBrood.bfstm",
-        "duration": 188.228
+        "duration": 188.228,
+        "xLoops": true
       },
       {
         "id": "smo-to-the-next-kingdom",
         "title": "To the Next Kingdom",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/To the Next Kingdom.bfstm",
-        "duration": 155.672
+        "duration": 155.672,
+        "xLoops": true
       },
       {
         "id": "smo-odyssey-to-the-moon",
         "title": "Odyssey to the Moon",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Odyssey to the Moon.bfstm",
-        "duration": 24.51
+        "duration": 24.51,
+        "xLoops": false
       },
       {
         "id": "smo-honeylune-ridge",
         "title": "Honeylune Ridge",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Honeylune Ridge.bfstm",
-        "duration": 103.799
+        "duration": 103.799,
+        "xLoops": true
       },
       {
         "id": "smo-underground-moon-caverns",
         "title": "Underground Moon Caverns",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Underground Moon Caverns.bfstm",
-        "duration": 83.702
+        "duration": 83.702,
+        "xLoops": true
       },
       {
         "id": "smo-the-wedding-hall",
         "title": "The Wedding Hall",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/The Wedding Hall.bfstm",
-        "duration": 62.086
+        "duration": 62.086,
+        "xLoops": true
       },
       {
         "id": "smo-the-big-stare-down",
         "title": "The Big Stare Down",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/The Big Stare Down.bfstm",
-        "duration": 21.723
+        "duration": 21.723,
+        "xLoops": false
       },
       {
         "id": "smo-battling-bowser-2",
         "title": "Battling Bowser 2: The Final Fight",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Battling Bowser 2 The Final Fight.bfstm",
-        "duration": 109.271
+        "duration": 109.271,
+        "xLoops": true
       },
       {
         "id": "smo-is-it-really-over",
         "title": "Is It Really Over?",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Is It Really Over.bfstm",
-        "duration": 11.646
+        "duration": 11.646,
+        "xLoops": false
       },
       {
         "id": "smo-honeylune-ridge-collapse",
         "title": "Honeylune Ridge: Collapse",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Honeylune Ridge Collapse.bfstm",
-        "duration": 56.76
+        "duration": 56.76,
+        "xLoops": true
       },
       {
         "id": "smo-break-free-lead-the-way",
         "title": "Break Free (Lead the Way)",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Break Free (Lead the Way).bfstm",
-        "duration": 177.8
+        "duration": 177.8,
+        "xLoops": false
       },
       {
         "id": "smo-staff-roll",
         "title": "Staff Roll",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Staff Roll.bfstm",
-        "duration": 171.421
+        "duration": 171.421,
+        "xLoops": true
       },
       {
         "id": "smo-peachs-castle-outskirts",
         "title": "Peach's Castle Outskirts",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Peach's Castle Outskirts.bfstm",
-        "duration": 28.735
+        "duration": 28.735,
+        "xLoops": true
       },
       {
         "id": "smo-peachs-castle",
         "title": "Peach's Castle",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Peach's Castle.bfstm",
-        "duration": 66.119
+        "duration": 66.119,
+        "xLoops": true
       },
       {
         "id": "smo-crazy-cap",
         "title": "Crazy Cap",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Crazy Cap.bfstm",
-        "duration": 187.66
+        "duration": 187.66,
+        "xLoops": false
       },
       {
         "id": "smo-yay-slots-away",
         "title": "Yay! Slots Away!",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Yay! Slots Away!.bfstm",
-        "duration": 20.205
+        "duration": 20.205,
+        "xLoops": true
       },
       {
         "id": "smo-rc-car-challenge",
         "title": "RC Car Challenge",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/RC Car Challenge.bfstm",
-        "duration": 35.823
+        "duration": 35.823,
+        "xLoops": true
       },
       {
         "id": "smo-koopas-trace-walking",
         "title": "Koopa's Trace-Walking",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Koopa's Trace-Walking.bfstm",
-        "duration": 30.299
+        "duration": 30.299,
+        "xLoops": true
       },
       {
         "id": "smo-run-jump-throw-1",
         "title": "Run, Jump, Throw! 1",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Run, Jump, Throw! 1.bfstm",
-        "duration": 68.815
+        "duration": 68.815,
+        "xLoops": true
       },
       {
         "id": "smo-run-jump-throw-2",
         "title": "Run, Jump, Throw! 2",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Run, Jump, Throw! 2.bfstm",
-        "duration": 55.424
+        "duration": 55.424,
+        "xLoops": true
       },
       {
         "id": "smo-another-world",
         "title": "Challenges in Another World",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Another World.bfstm",
-        "duration": 56.654
+        "duration": 56.654,
+        "xLoops": true
       },
       {
         "id": "smo-above-the-clouds",
         "title": "Above the Clouds",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Above the Clouds.bfstm",
-        "duration": 46.013
+        "duration": 46.013,
+        "xLoops": true
       },
       {
         "id": "smo-jump-up-super-star-music-box",
         "title": "Jump Up, Super Star! - Music Box Ver.",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Jump Up, Super Star! - Music Box Ver..bfstm",
-        "duration": 76.235
+        "duration": 76.235,
+        "xLoops": true
       },
       {
         "id": "smo-the-farthest-lullaby",
         "title": "The Farthest Lullaby - Fossil Falls - Music Box Ver.",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/The Farthest Lullaby - Fossil Falls - Music Box Ver..bfstm",
-        "duration": 40.706
+        "duration": 40.706,
+        "xLoops": true
       },
       {
         "id": "smo-rolling-canyon",
         "title": "Rolling Canyon",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Rolling Canyon.bfstm",
-        "duration": 113.171
+        "duration": 113.171,
+        "xLoops": false
       },
       {
         "id": "smo-traversing-tostarena",
         "title": "Traversing Tostarena",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Traversing Tostarena.bfstm",
-        "duration": 125
+        "duration": 125,
+        "xLoops": true
       },
       {
         "id": "smo-bubblaine-gloom",
         "title": "Bubblaine Gloom",
         "file": "Assets/Games/SuperMarioOdyssey/Tracks/Bubblaine Gloom.bfstm",
-        "duration": 119.807
+        "duration": 119.807,
+        "xLoops": true
       }
     ]
   },
@@ -1354,139 +1573,162 @@
         "id": "smg-overture",
         "title": "Overture",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/Overture.bfstm",
-        "duration": 44.662
+        "duration": 44.662,
+        "xLoops": true
       },
       {
         "id": "smg-the-star-festival",
         "title": "The Star Festival",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/The Star Festival.bfstm",
-        "duration": 50.335
+        "duration": 50.335,
+        "xLoops": true
       },
       {
         "id": "smg-attack-of-the-airships",
         "title": "Attack of the Airships",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/Attack of the Airships.bfstm",
-        "duration": 79.02
+        "duration": 79.02,
+        "xLoops": false
       },
       {
         "id": "smg-catastrophe",
         "title": "Catastrophe",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/Catastrophe.bfstm",
-        "duration": 26.319
+        "duration": 26.319,
+        "xLoops": false
       },
       {
         "id": "smg-enter-the-galaxy",
         "title": "Enter the Galaxy",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/Enter the Galaxy.bfstm",
-        "duration": 47.324
+        "duration": 47.324,
+        "xLoops": true
       },
       {
         "id": "smg-egg-planet",
         "title": "Egg Planet",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/Egg Planet.bfstm",
-        "duration": 85.09
+        "duration": 85.09,
+        "xLoops": true
       },
       {
         "id": "smg-rosalina-observatory-1",
         "title": "Rosalina in the Observatory 1",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/Rosalina in the Observatory 1.bfstm",
-        "duration": 91.68
+        "duration": 91.68,
+        "xLoops": true
       },
       {
         "id": "smg-the-honeyhive",
         "title": "The Honeyhive",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/The Honeyhive.bfstm",
-        "duration": 83.254
+        "duration": 83.254,
+        "xLoops": true
       },
       {
         "id": "smg-space-junk-road",
         "title": "Space Junk Road",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/Space Junk Road.bfstm",
-        "duration": 104.627
+        "duration": 104.627,
+        "xLoops": true
       },
       {
         "id": "smg-battlerock-galaxy",
         "title": "Battlerock Galaxy",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/Battlerock Galaxy.bfstm",
-        "duration": 113.54
+        "duration": 113.54,
+        "xLoops": true
       },
       {
         "id": "smg-beach-bowl-galaxy",
         "title": "Beach Bowl Galaxy",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/Beach Bowl Galaxy.bfstm",
-        "duration": 75.203
+        "duration": 75.203,
+        "xLoops": true
       },
       {
         "id": "smg-rosalina-observatory-2",
         "title": "Rosalina in the Observatory 2",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/Rosalina in the Observatory 2.bfstm",
-        "duration": 100.149
+        "duration": 100.149,
+        "xLoops": true
       },
       {
         "id": "smg-enter-bowser-jr",
         "title": "Enter Bowser Jr.!",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/Enter Bowser Jr.!.bfstm",
-        "duration": 92.883
+        "duration": 92.883,
+        "xLoops": true
       },
       {
         "id": "smg-waltz-of-the-boos",
         "title": "Waltz of the Boos",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/Waltz of the Boos.bfstm",
-        "duration": 84.211
+        "duration": 84.211,
+        "xLoops": true
       },
       {
         "id": "smg-buoy-base-galaxy",
         "title": "Buoy Base Galaxy",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/Buoy Base Galaxy.bfstm",
-        "duration": 102.036
+        "duration": 102.036,
+        "xLoops": true
       },
       {
         "id": "smg-gusty-garden-galaxy",
         "title": "Gusty Garden Galaxy",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/Gusty Garden Galaxy.bfstm",
-        "duration": 117.224
+        "duration": 117.224,
+        "xLoops": true
       },
       {
         "id": "smg-rosalina-observatory-3",
         "title": "Rosalina in the Observatory 3",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/Rosalina in the Observatory 3.bfstm",
-        "duration": 89.312
+        "duration": 89.312,
+        "xLoops": true
       },
       {
         "id": "smg-king-bowser",
         "title": "King Bowser",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/King Bowser.bfstm",
-        "duration": 205.047
+        "duration": 205.047,
+        "xLoops": true
       },
       {
         "id": "smg-melty-molten-galaxy",
         "title": "Melty Molten Galaxy",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/Melty Molten Galaxy.bfstm",
-        "duration": 140.925
+        "duration": 140.925,
+        "xLoops": true
       },
       {
         "id": "smg-the-galaxy-reactor",
         "title": "The Galaxy Reactor",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/The Galaxy Reactor.bfstm",
-        "duration": 80.088
+        "duration": 80.088,
+        "xLoops": true
       },
       {
         "id": "smg-final-battle-with-bowser",
         "title": "Final Battle with Bowser",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/Final Battle with Bowser.bfstm",
-        "duration": 83.978
+        "duration": 83.978,
+        "xLoops": true
       },
       {
         "id": "smg-day-break-a-new-dawn",
         "title": "Day Break - A New Dawn",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/Day Break- A New Dawn.bfstm",
-        "duration": 54.428
+        "duration": 54.428,
+        "xLoops": false
       },
       {
         "id": "smg-birth",
         "title": "Birth",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/Birth.bfstm",
-        "duration": 75.237
+        "duration": 75.237,
+        "xLoops": true
       },
       {
         "id": "smg-super-mario-galaxy",
@@ -1499,533 +1741,619 @@
         "id": "smg-purple-comet",
         "title": "Purple Comet",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/Purple Comet.bfstm",
-        "duration": 94.392
+        "duration": 94.392,
+        "xLoops": true
       },
       {
         "id": "smg-blue-sky-athletic",
         "title": "Blue Sky Athletic",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/Blue Sky Athletic.bfstm",
-        "duration": 37.519
+        "duration": 37.519,
+        "xLoops": true
       },
       {
         "id": "smg-super-mario-2007",
         "title": "Super Mario 2007",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/Super Mario 2007.bfstm",
-        "duration": 80.869
+        "duration": 80.869,
+        "xLoops": true
       },
       {
         "id": "smg-file-select",
         "title": "File Select",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/File Select.bfstm",
-        "duration": 55.739
+        "duration": 55.739,
+        "xLoops": true
       },
       {
         "id": "smg-luma",
         "title": "Luma",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/Luma.bfstm",
-        "duration": 60.404
+        "duration": 60.404,
+        "xLoops": true
       },
       {
         "id": "smg-to-the-gateway",
         "title": "To the Gateway",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/To the Gateway.bfstm",
-        "duration": 182.07
+        "duration": 182.07,
+        "xLoops": true
       },
       {
         "id": "smg-to-the-observatory-grounds-1",
         "title": "To The Observatory Grounds 1",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/To The Observatory Grounds 1.bfstm",
-        "duration": 42.24
+        "duration": 42.24,
+        "xLoops": false
       },
       {
         "id": "smg-observatory-dome",
         "title": "Observatory Dome",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/Observatory Dome.bfstm",
-        "duration": 67.643
+        "duration": 67.643,
+        "xLoops": true
       },
       {
         "id": "smg-course-select",
         "title": "Course Select",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/Course Select.bfstm",
-        "duration": 15.26
+        "duration": 15.26,
+        "xLoops": true
       },
       {
         "id": "smg-dino-piranha",
         "title": "Dino Piranha",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/Dino Piranha.bfstm",
-        "duration": 62.982
+        "duration": 62.982,
+        "xLoops": true
       },
       {
         "id": "smg-a-tense-moment",
         "title": "A Tense Moment",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/A Tense Moment.bfstm",
-        "duration": 36.992
+        "duration": 36.992,
+        "xLoops": true
       },
       {
         "id": "smg-the-toad-brigade",
         "title": "The Toad Brigade",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/The Toad Brigade.bfstm",
-        "duration": 18.272
+        "duration": 18.272,
+        "xLoops": true
       },
       {
         "id": "smg-airship-armada",
         "title": "Airship Armada",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/Airship Armada.bfstm",
-        "duration": 70.287
+        "duration": 70.287,
+        "xLoops": true
       },
       {
         "id": "smg-aquatic-race",
         "title": "Aquatic Race",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/Aquatic Race.bfstm",
-        "duration": 66.462
+        "duration": 66.462,
+        "xLoops": true
       },
       {
         "id": "smg-space-fantasy",
         "title": "Space Fantasy",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/Space Fantasy.bfstm",
-        "duration": 113.54
+        "duration": 113.54,
+        "xLoops": true
       },
       {
         "id": "smg-megaleg",
         "title": "Megaleg",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/Megaleg.bfstm",
-        "duration": 72.043
+        "duration": 72.043,
+        "xLoops": true
       },
       {
         "id": "smg-to-the-observatory-grounds-2",
         "title": "To The Observatory Grounds 2",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/To The Observatory Grounds 2.bfstm",
-        "duration": 27.744
+        "duration": 27.744,
+        "xLoops": false
       },
       {
         "id": "smg-space-athletic",
         "title": "Space Athletic",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/Space Athletic.bfstm",
-        "duration": 57.897
+        "duration": 57.897,
+        "xLoops": true
       },
       {
         "id": "smg-speedy-comet-in-orbit",
         "title": "Speedy Comet in Orbit",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/Speedy Comet in Orbit.bfstm",
-        "duration": 57.619
+        "duration": 57.619,
+        "xLoops": true
       },
       {
         "id": "smg-beach-bowl-underwater",
         "title": "Beach Bowl Galaxy - Underwater",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/Beach Bowl Galaxy - Underwater.bfstm",
-        "duration": 75.203
+        "duration": 75.203,
+        "xLoops": true
       },
       {
         "id": "smg-interlude",
         "title": "Interlude",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/Interlude.bfstm",
-        "duration": 24.064
+        "duration": 24.064,
+        "xLoops": true
       },
       {
         "id": "smg-the-fiery-stronghold",
         "title": "The Fiery Stronghold",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/The Fiery Stronghold.bfstm",
-        "duration": 80.079
+        "duration": 80.079,
+        "xLoops": true
       },
       {
         "id": "smg-the-big-staircase",
         "title": "The Big Staircase",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/The Big Staircase.bfstm",
-        "duration": 19.367
+        "duration": 19.367,
+        "xLoops": true
       },
       {
         "id": "smg-the-library",
         "title": "The Library",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/The Library.bfstm",
-        "duration": 54.841
+        "duration": 54.841,
+        "xLoops": true
       },
       {
         "id": "smg-buoy-base-underwater",
         "title": "Buoy Base Galaxy - Underwater",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/Buoy Base Galaxy - Underwater.bfstm",
-        "duration": 108.455
+        "duration": 108.455,
+        "xLoops": true
       },
       {
         "id": "smg-rainbow-mario",
         "title": "Rainbow Mario",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/Rainbow Mario.bfstm",
-        "duration": 44.377
+        "duration": 44.377,
+        "xLoops": true
       },
       {
         "id": "smg-pipe-interior",
         "title": "Pipe Interior",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/Pipe Interior.bfstm",
-        "duration": 32.974
+        "duration": 32.974,
+        "xLoops": true
       },
       {
         "id": "smg-cosmic-comet",
         "title": "Cosmic Comet",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/Cosmic Comet.bfstm",
-        "duration": 45.252
+        "duration": 45.252,
+        "xLoops": true
       },
       {
         "id": "smg-drip-drop-galaxy",
         "title": "Drip Drop Galaxy",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/Drip Drop Galaxy.bfstm",
-        "duration": 61.368
+        "duration": 61.368,
+        "xLoops": true
       },
       {
         "id": "smg-kingfin",
         "title": "Kingfin",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/Kingfin.bfstm",
-        "duration": 56.142
+        "duration": 56.142,
+        "xLoops": true
       },
       {
         "id": "smg-boo-race",
         "title": "Boo Race",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/Boo Race.bfstm",
-        "duration": 64.67
+        "duration": 64.67,
+        "xLoops": true
       },
       {
         "id": "smg-ice-mountain",
         "title": "Ice Mountain",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/Ice Mountain.bfstm",
-        "duration": 74.396
+        "duration": 74.396,
+        "xLoops": true
       },
       {
         "id": "smg-dusty-dune-galaxy",
         "title": "Dusty Dune Galaxy",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/Dusty Dune Galaxy.bfstm",
-        "duration": 104.997
+        "duration": 104.997,
+        "xLoops": true
       },
       {
         "id": "smg-deep-dark-galaxy",
         "title": "Deep Dark Galaxy",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/Deep Dark Galaxy.bfstm",
-        "duration": 88.005
+        "duration": 88.005,
+        "xLoops": true
       },
       {
         "id": "smg-sad-girl",
         "title": "Sad Girl",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/Sad Girl.bfstm",
-        "duration": 52.509
+        "duration": 52.509,
+        "xLoops": true
       },
       {
         "id": "smg-a-wish",
         "title": "A Wish",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/A Wish.bfstm",
-        "duration": 40.014
+        "duration": 40.014,
+        "xLoops": false
       },
       {
         "id": "smg-family",
         "title": "Family",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/Family.bfstm",
-        "duration": 71.871
+        "duration": 71.871,
+        "xLoops": true
       },
       {
         "id": "smg-day-break-a-new-dawn",
         "title": "Day Break - A New Dawn",
         "file": "Assets/Games/SuperMarioGalaxy/Tracks/Day Break- A New Dawn.bfstm",
-        "duration": 54.428
+        "duration": 54.428,
+        "xLoops": false
       }
     ]
   },
 
-{
-  "id": "mariogalaxy2",
-  "title": "Super Mario Galaxy 2",
-  "short": "Mario Galaxy 2",
-  "fullscreenName": "Super Mario Galaxy 2",
-  "composer": "Mahito Yokota, Ryo Nagamatsu, Koji Kondo",
-  "console": "wii",
-  "franchise": "mario",
-  "cover": "Assets/Games/SuperMarioGalaxy2/AlbumCover/AlbumCover_MarioGalaxy2.png",
-  "tracks": [
   {
-    "id": "smg2-overture",
-    "title": "Overture",
-    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Overture.bfstm",
-    "duration": 55.048
+    "id": "mariogalaxy2",
+    "title": "Super Mario Galaxy 2",
+    "short": "Mario Galaxy 2",
+    "fullscreenName": "Super Mario Galaxy 2",
+    "composer": "Mahito Yokota, Ryo Nagamatsu, Koji Kondo",
+    "console": "wii",
+    "franchise": "mario",
+    "cover": "Assets/Games/SuperMarioGalaxy2/AlbumCover/AlbumCover_MarioGalaxy2.png",
+    "tracks": [
+      {
+        "id": "smg2-overture",
+        "title": "Overture",
+        "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Overture.bfstm",
+        "duration": 55.048,
+        "xLoops": true
+      },
+      {
+        "id": "smg2-a-new-story",
+        "title": "A New Story",
+        "file": "Assets/Games/SuperMarioGalaxy2/Tracks/A New Story.bfstm",
+        "duration": 54.858,
+        "xLoops": true
+      },
+      {
+        "id": "smg2-sky-station-galaxy",
+        "title": "Sky Station Galaxy",
+        "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Sky Station Galaxy.bfstm",
+        "duration": 81.262,
+        "xLoops": true
+      },
+      {
+        "id": "smg2-unknown-star",
+        "title": "Unknown Star",
+        "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Unknown Star.bfstm",
+        "duration": 71.215,
+        "xLoops": true
+      },
+      {
+        "id": "smg2-starship-mario-blasting-off",
+        "title": "Starship Mario, Blasting Off!",
+        "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Starship Mario, Blasting Off!.bfstm",
+        "duration": 50.395,
+        "xLoops": true
+      },
+      {
+        "id": "smg2-yoshi-star-galaxy",
+        "title": "Yoshi Star Galaxy",
+        "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Yoshi Star Galaxy.bfstm",
+        "duration": 73.126,
+        "xLoops": true
+      },
+      {
+        "id": "smg2-starship-mario-1",
+        "title": "Starship Mario 1",
+        "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Starship Mario 1.bfstm",
+        "duration": 70.278,
+        "xLoops": true
+      },
+      {
+        "id": "smg2-worlds-1-and-2",
+        "title": "Worlds 1 & 2",
+        "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Worlds 1 & 2.bfstm",
+        "duration": 81.874,
+        "xLoops": true
+      },
+      {
+        "id": "smg2-the-starships-journey",
+        "title": "The Starship's Journey",
+        "file": "Assets/Games/SuperMarioGalaxy2/Tracks/The Starship's Journey.bfstm",
+        "duration": 74.362,
+        "xLoops": true
+      },
+      {
+        "id": "smg2-spin-dig-galaxy",
+        "title": "Spin-Dig Galaxy",
+        "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Spin-Dig Galaxy.bfstm",
+        "duration": 86.449,
+        "xLoops": true
+      },
+      {
+        "id": "smg2-digga-leg",
+        "title": "Digga-Leg",
+        "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Digga-Leg.bfstm",
+        "duration": 73.158,
+        "xLoops": true
+      },
+      {
+        "id": "smg2-flip-swap-galaxy",
+        "title": "Flip-Swap Galaxy",
+        "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Flip-Swap Galaxy.bfstm",
+        "duration": 55.427,
+        "xLoops": true
+      },
+      {
+        "id": "smg2-puzzle-plank-galaxy",
+        "title": "Puzzle Plank Galaxy",
+        "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Puzzle Plank Galaxy.bfstm",
+        "duration": 69.699,
+        "xLoops": true
+      },
+      {
+        "id": "smg2-wild-glide-galaxy",
+        "title": "Wild Glide Galaxy",
+        "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Wild Glide Galaxy.bfstm",
+        "duration": 73.361,
+        "xLoops": true
+      },
+      {
+        "id": "smg2-cosmic-cove-galaxy",
+        "title": "Cosmic Cove Galaxy",
+        "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Cosmic Cove Galaxy.bfstm",
+        "duration": 111.579,
+        "xLoops": true
+      },
+      {
+        "id": "smg2-hightail-falls-galaxy",
+        "title": "Hightail Falls Galaxy",
+        "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Hightail Falls Galaxy.bfstm",
+        "duration": 39.39,
+        "xLoops": true
+      },
+      {
+        "id": "smg2-world-3",
+        "title": "World 3",
+        "file": "Assets/Games/SuperMarioGalaxy2/Tracks/World 3.bfstm",
+        "duration": 66.033,
+        "xLoops": true
+      },
+      {
+        "id": "smg2-slider",
+        "title": "Slider",
+        "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Slider.bfstm",
+        "duration": 76.804,
+        "xLoops": true
+      },
+      {
+        "id": "smg2-freezy-flake-galaxy",
+        "title": "Freezy Flake Galaxy",
+        "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Freezy Flake Galaxy.bfstm",
+        "duration": 94.311,
+        "xLoops": true
+      },
+      {
+        "id": "smg2-rolling-masterpiece-galaxy",
+        "title": "Rolling Masterpiece Galaxy",
+        "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Rolling Masterpiece Galaxy.bfstm",
+        "duration": 48.699,
+        "xLoops": true
+      },
+      {
+        "id": "smg2-cloudy-court-galaxy",
+        "title": "Cloudy Court Galaxy",
+        "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Cloudy Court Galaxy.bfstm",
+        "duration": 115.093,
+        "xLoops": true
+      },
+      {
+        "id": "smg2-starship-mario-2",
+        "title": "Starship Mario 2",
+        "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Starship Mario 2.bfstm",
+        "duration": 70.284,
+        "xLoops": true
+      },
+      {
+        "id": "smg2-world-4",
+        "title": "World 4",
+        "file": "Assets/Games/SuperMarioGalaxy2/Tracks/World 4.bfstm",
+        "duration": 80.355,
+        "xLoops": true
+      },
+      {
+        "id": "smg2-honeyhop-galaxy",
+        "title": "Honeyhop Galaxy",
+        "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Honeyhop Galaxy.bfstm",
+        "duration": 87.731,
+        "xLoops": true
+      },
+      {
+        "id": "smg2-starshine-beach-galaxy",
+        "title": "Starshine Beach Galaxy",
+        "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Starshine Beach Galaxy.bfstm",
+        "duration": 102.057,
+        "xLoops": true
+      },
+      {
+        "id": "smg2-starshine-beach-galaxy-underwater",
+        "title": "Starshine Beach Galaxy: Underwater",
+        "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Starshine Beach Galaxy Underwater.bfstm",
+        "duration": 102.057,
+        "xLoops": true
+      },
+      {
+        "id": "smg2-bowsers-lava-lair",
+        "title": "Bowser's Lava Lair",
+        "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Bowser's Lava Lair.bfstm",
+        "duration": 80.083,
+        "xLoops": true
+      },
+      {
+        "id": "smg2-world-5",
+        "title": "World 5",
+        "file": "Assets/Games/SuperMarioGalaxy2/Tracks/World 5.bfstm",
+        "duration": 67.559,
+        "xLoops": true
+      },
+      {
+        "id": "smg2-space-storm-galaxy",
+        "title": "Space Storm Galaxy",
+        "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Space Storm Galaxy.bfstm",
+        "duration": 91.707,
+        "xLoops": true
+      },
+      {
+        "id": "smg2-haunty-halls-galaxy",
+        "title": "Haunty Halls Galaxy",
+        "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Haunty Halls Galaxy.bfstm",
+        "duration": 112.213,
+        "xLoops": true
+      },
+      {
+        "id": "smg2-slipsand-galaxy",
+        "title": "Slipsand Galaxy",
+        "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Slipsand Galaxy.bfstm",
+        "duration": 100.345,
+        "xLoops": true
+      },
+      {
+        "id": "smg2-bowser-jrs-fiery-flotilla",
+        "title": "Bowser Jr.'s Fiery Flotilla",
+        "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Bowser Jr.'s Fiery Flotilla.bfstm",
+        "duration": 57.111,
+        "xLoops": true
+      },
+      {
+        "id": "smg2-starship-mario-3",
+        "title": "Starship Mario 3",
+        "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Starship Mario 3.bfstm",
+        "duration": 70.284,
+        "xLoops": true
+      },
+      {
+        "id": "smg2-world-6",
+        "title": "World 6",
+        "file": "Assets/Games/SuperMarioGalaxy2/Tracks/World 6.bfstm",
+        "duration": 63.577,
+        "xLoops": true
+      },
+      {
+        "id": "smg2-melty-monster-galaxy",
+        "title": "Melty Monster Galaxy",
+        "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Melty Monster Galaxy.bfstm",
+        "duration": 74.032,
+        "xLoops": true
+      },
+      {
+        "id": "smg2-throwback-galaxy",
+        "title": "Throwback Galaxy",
+        "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Throwback Galaxy.bfstm",
+        "duration": 78.717,
+        "xLoops": true
+      },
+      {
+        "id": "smg2-sweet-mystery-galaxy",
+        "title": "Sweet Mystery Galaxy",
+        "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Sweet Mystery Galaxy.bfstm",
+        "duration": 74.935,
+        "xLoops": true
+      },
+      {
+        "id": "smg2-gobblegut",
+        "title": "Gobblegut",
+        "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Gobblegut.bfstm",
+        "duration": 60.956,
+        "xLoops": true
+      },
+      {
+        "id": "smg2-boss-blitz-galaxy",
+        "title": "Boss Blitz Galaxy",
+        "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Boss Blitz Galaxy.bfstm",
+        "duration": 37.863,
+        "xLoops": true
+      },
+      {
+        "id": "smg2-speed-run",
+        "title": "Speed Run",
+        "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Speed Run.bfstm",
+        "duration": 105.181,
+        "xLoops": true
+      },
+      {
+        "id": "smg2-world-s",
+        "title": "World S",
+        "file": "Assets/Games/SuperMarioGalaxy2/Tracks/World S.bfstm",
+        "duration": 84.032,
+        "xLoops": true
+      },
+      {
+        "id": "smg2-a-tense-moment",
+        "title": "A Tense Moment",
+        "file": "Assets/Games/SuperMarioGalaxy2/Tracks/A Tense Moment.bfstm",
+        "duration": 36.992,
+        "xLoops": true
+      },
+      {
+        "id": "smg2-bowsers-galaxy-generator",
+        "title": "Bowser's Galaxy Generator",
+        "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Bowser's Galaxy Generator.bfstm",
+        "duration": 106.209,
+        "xLoops": true
+      },
+      {
+        "id": "smg2-king-bowsers-might",
+        "title": "King Bowser's Might",
+        "file": "Assets/Games/SuperMarioGalaxy2/Tracks/King Bowser's Might.bfstm",
+        "duration": 176.644,
+        "xLoops": true
+      },
+      {
+        "id": "smg2-fated-battle",
+        "title": "Fated Battle",
+        "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Fated Battle.bfstm",
+        "duration": 98.071,
+        "xLoops": true
+      },
+      {
+        "id": "smg2-precious-one",
+        "title": "Precious One",
+        "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Precious One.bfstm",
+        "duration": 201.405,
+        "xLoops": true
+      },
+      {
+        "id": "smg2-super-mario-galaxy-2-credits",
+        "title": "Super Mario Galaxy 2 Credits",
+        "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Super Mario Galaxy 2 Credits.bfstm",
+        "duration": 227.248,
+        "xLoops": false
+      },
+      {
+        "id": "smg2-the-luma-and-the-hat",
+        "title": "The Luma and the Hat",
+        "file": "Assets/Games/SuperMarioGalaxy2/Tracks/The Luma and the Hat.bfstm",
+        "duration": 56.942,
+        "xLoops": true
+      }
+    ]
   },
-  {
-    "id": "smg2-a-new-story",
-    "title": "A New Story",
-    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/A New Story.bfstm",
-    "duration": 54.858
-  },
-  {
-    "id": "smg2-sky-station-galaxy",
-    "title": "Sky Station Galaxy",
-    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Sky Station Galaxy.bfstm",
-    "duration": 81.262
-  },
-  {
-    "id": "smg2-unknown-star",
-    "title": "Unknown Star",
-    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Unknown Star.bfstm",
-    "duration": 71.215
-  },
-  {
-    "id": "smg2-starship-mario-blasting-off",
-    "title": "Starship Mario, Blasting Off!",
-    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Starship Mario, Blasting Off!.bfstm",
-    "duration": 50.395
-  },
-  {
-    "id": "smg2-yoshi-star-galaxy",
-    "title": "Yoshi Star Galaxy",
-    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Yoshi Star Galaxy.bfstm",
-    "duration": 73.126
-  },
-  {
-    "id": "smg2-starship-mario-1",
-    "title": "Starship Mario 1",
-    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Starship Mario 1.bfstm",
-    "duration": 70.278
-  },
-  {
-    "id": "smg2-worlds-1-and-2",
-    "title": "Worlds 1 & 2",
-    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Worlds 1 & 2.bfstm",
-    "duration": 81.874
-  },
-  {
-    "id": "smg2-the-starships-journey",
-    "title": "The Starship's Journey",
-    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/The Starship's Journey.bfstm",
-    "duration": 74.362
-  },
-  {
-    "id": "smg2-spin-dig-galaxy",
-    "title": "Spin-Dig Galaxy",
-    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Spin-Dig Galaxy.bfstm",
-    "duration": 86.449
-  },
-  {
-    "id": "smg2-digga-leg",
-    "title": "Digga-Leg",
-    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Digga-Leg.bfstm",
-    "duration": 73.158
-  },
-  {
-    "id": "smg2-flip-swap-galaxy",
-    "title": "Flip-Swap Galaxy",
-    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Flip-Swap Galaxy.bfstm",
-    "duration": 55.427
-  },
-  {
-    "id": "smg2-puzzle-plank-galaxy",
-    "title": "Puzzle Plank Galaxy",
-    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Puzzle Plank Galaxy.bfstm",
-    "duration": 69.699
-  },
-  {
-    "id": "smg2-wild-glide-galaxy",
-    "title": "Wild Glide Galaxy",
-    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Wild Glide Galaxy.bfstm",
-    "duration": 73.361
-  },
-  {
-    "id": "smg2-cosmic-cove-galaxy",
-    "title": "Cosmic Cove Galaxy",
-    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Cosmic Cove Galaxy.bfstm",
-    "duration": 111.579
-  },
-  {
-    "id": "smg2-hightail-falls-galaxy",
-    "title": "Hightail Falls Galaxy",
-    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Hightail Falls Galaxy.bfstm",
-    "duration": 39.39
-  },
-  {
-    "id": "smg2-world-3",
-    "title": "World 3",
-    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/World 3.bfstm",
-    "duration": 66.033
-  },
-  {
-    "id": "smg2-slider",
-    "title": "Slider",
-    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Slider.bfstm",
-    "duration": 76.804
-  },
-  {
-    "id": "smg2-freezy-flake-galaxy",
-    "title": "Freezy Flake Galaxy",
-    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Freezy Flake Galaxy.bfstm",
-    "duration": 94.311
-  },
-  {
-    "id": "smg2-rolling-masterpiece-galaxy",
-    "title": "Rolling Masterpiece Galaxy",
-    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Rolling Masterpiece Galaxy.bfstm",
-    "duration": 48.699
-  },
-  {
-    "id": "smg2-cloudy-court-galaxy",
-    "title": "Cloudy Court Galaxy",
-    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Cloudy Court Galaxy.bfstm",
-    "duration": 115.093
-  },
-  {
-    "id": "smg2-starship-mario-2",
-    "title": "Starship Mario 2",
-    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Starship Mario 2.bfstm",
-    "duration": 70.284
-  },
-  {
-    "id": "smg2-world-4",
-    "title": "World 4",
-    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/World 4.bfstm",
-    "duration": 80.355
-  },
-  {
-    "id": "smg2-honeyhop-galaxy",
-    "title": "Honeyhop Galaxy",
-    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Honeyhop Galaxy.bfstm",
-    "duration": 87.731
-  },
-  {
-    "id": "smg2-starshine-beach-galaxy",
-    "title": "Starshine Beach Galaxy",
-    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Starshine Beach Galaxy.bfstm",
-    "duration": 102.057
-  },
-  {
-    "id": "smg2-starshine-beach-galaxy-underwater",
-    "title": "Starshine Beach Galaxy: Underwater",
-    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Starshine Beach Galaxy Underwater.bfstm",
-    "duration": 102.057
-  },
-  {
-    "id": "smg2-bowsers-lava-lair",
-    "title": "Bowser's Lava Lair",
-    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Bowser's Lava Lair.bfstm",
-    "duration": 80.083
-  },
-  {
-    "id": "smg2-world-5",
-    "title": "World 5",
-    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/World 5.bfstm",
-    "duration": 67.559
-  },
-  {
-    "id": "smg2-space-storm-galaxy",
-    "title": "Space Storm Galaxy",
-    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Space Storm Galaxy.bfstm",
-    "duration": 91.707
-  },
-  {
-    "id": "smg2-haunty-halls-galaxy",
-    "title": "Haunty Halls Galaxy",
-    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Haunty Halls Galaxy.bfstm",
-    "duration": 112.213
-  },
-  {
-    "id": "smg2-slipsand-galaxy",
-    "title": "Slipsand Galaxy",
-    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Slipsand Galaxy.bfstm",
-    "duration": 100.345
-  },
-  {
-    "id": "smg2-bowser-jrs-fiery-flotilla",
-    "title": "Bowser Jr.'s Fiery Flotilla",
-    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Bowser Jr.'s Fiery Flotilla.bfstm",
-    "duration": 57.111
-  },
-  {
-    "id": "smg2-starship-mario-3",
-    "title": "Starship Mario 3",
-    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Starship Mario 3.bfstm",
-    "duration": 70.284
-  },
-  {
-    "id": "smg2-world-6",
-    "title": "World 6",
-    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/World 6.bfstm",
-    "duration": 63.577
-  },
-  {
-    "id": "smg2-melty-monster-galaxy",
-    "title": "Melty Monster Galaxy",
-    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Melty Monster Galaxy.bfstm",
-    "duration": 74.032
-  },
-  {
-    "id": "smg2-throwback-galaxy",
-    "title": "Throwback Galaxy",
-    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Throwback Galaxy.bfstm",
-    "duration": 78.717
-  },
-  {
-    "id": "smg2-sweet-mystery-galaxy",
-    "title": "Sweet Mystery Galaxy",
-    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Sweet Mystery Galaxy.bfstm",
-    "duration": 74.935
-  },
-  {
-    "id": "smg2-gobblegut",
-    "title": "Gobblegut",
-    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Gobblegut.bfstm",
-    "duration": 60.956
-  },
-  {
-    "id": "smg2-boss-blitz-galaxy",
-    "title": "Boss Blitz Galaxy",
-    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Boss Blitz Galaxy.bfstm",
-    "duration": 37.863
-  },
-  {
-    "id": "smg2-speed-run",
-    "title": "Speed Run",
-    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Speed Run.bfstm",
-    "duration": 105.181
-  },
-  {
-    "id": "smg2-world-s",
-    "title": "World S",
-    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/World S.bfstm",
-    "duration": 84.032
-  },
-  {
-    "id": "smg2-a-tense-moment",
-    "title": "A Tense Moment",
-    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/A Tense Moment.bfstm",
-    "duration": 36.992
-  },
-  {
-    "id": "smg2-bowsers-galaxy-generator",
-    "title": "Bowser's Galaxy Generator",
-    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Bowser's Galaxy Generator.bfstm",
-    "duration": 106.209
-  },
-  {
-    "id": "smg2-king-bowsers-might",
-    "title": "King Bowser's Might",
-    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/King Bowser's Might.bfstm",
-    "duration": 176.644
-  },
-  {
-    "id": "smg2-fated-battle",
-    "title": "Fated Battle",
-    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Fated Battle.bfstm",
-    "duration": 98.071
-  },
-  {
-    "id": "smg2-precious-one",
-    "title": "Precious One",
-    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Precious One.bfstm",
-    "duration": 201.405
-  },
-  {
-    "id": "smg2-super-mario-galaxy-2-credits",
-    "title": "Super Mario Galaxy 2 Credits",
-    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/Super Mario Galaxy 2 Credits.bfstm",
-    "duration": 227.248
-  },
-  {
-    "id": "smg2-the-luma-and-the-hat",
-    "title": "The Luma and the Hat",
-    "file": "Assets/Games/SuperMarioGalaxy2/Tracks/The Luma and the Hat.bfstm",
-    "duration": 56.942
-  }
-]
-},
   
   {
     "id": "oot",
@@ -2041,626 +2369,725 @@
         "id": "oot-title",
         "title": "Title Theme",
         "file": "Assets/Games/OOT/Tracks/Title Theme.bfstm",
-        "duration": 78.8
+        "duration": 78.8,
+        "xLoops": true
       },
       {
         "id": "oot-enter-ganondorf",
         "title": "Enter Ganondorf",
         "file": "Assets/Games/OOT/Tracks/Enter Ganondorf.bfstm",
-        "duration": 12.006
+        "duration": 12.006,
+        "xLoops": false
       },
       {
         "id": "oot-fairy-flying",
         "title": "Fairy Flying",
         "file": "Assets/Games/OOT/Tracks/Fairy Flying.bfstm",
-        "duration": 17.095
+        "duration": 17.095,
+        "xLoops": true
       },
       {
         "id": "oot-inside-a-house",
         "title": "Inside a House",
         "file": "Assets/Games/OOT/Tracks/Inside a House.bfstm",
-        "duration": 28.286
+        "duration": 28.286,
+        "xLoops": true
       },
       {
         "id": "oot-inside-a-shop",
         "title": "Inside a Shop",
         "file": "Assets/Games/OOT/Tracks/Inside a Shop.bfstm",
-        "duration": 61.683
+        "duration": 61.683,
+        "xLoops": true
       },
       {
         "id": "oot-battle",
         "title": "Battle",
         "file": "Assets/Games/OOT/Tracks/Battle.bfstm",
-        "duration": 58.974
+        "duration": 58.974,
+        "xLoops": true
       },
       {
         "id": "oot-inside-the-deku-tree",
         "title": "Inside the Deku Tree",
         "file": "Assets/Games/OOT/Tracks/Inside the Deku Tree.bfstm",
-        "duration": 81.502
+        "duration": 81.502,
+        "xLoops": true
       },
       {
         "id": "oot-boss-battle",
         "title": "Boss Battle",
         "file": "Assets/Games/OOT/Tracks/Boss Battle.bfstm",
-        "duration": 73.799
+        "duration": 73.799,
+        "xLoops": true
       },
       {
         "id": "oot-hyrule-field-main-theme",
         "title": "Hyrule Field Main Theme",
         "file": "Assets/Games/OOT/Tracks/Hyrule Field Main Theme.bfstm",
-        "duration": 316.375
+        "duration": 316.375,
+        "xLoops": true
       },
       {
         "id": "oot-kaepora-gaeboras-theme",
         "title": "Kaepora Gaebora's Theme",
         "file": "Assets/Games/OOT/Tracks/Kaepora Gaebora's Theme.bfstm",
-        "duration": 54.396
+        "duration": 54.396,
+        "xLoops": true
       },
       {
         "id": "oot-market",
         "title": "Market",
         "file": "Assets/Games/OOT/Tracks/Market.bfstm",
-        "duration": 41.401
+        "duration": 41.401,
+        "xLoops": true
       },
       {
         "id": "oot-shooting-gallery",
         "title": "Shooting Gallery",
         "file": "Assets/Games/OOT/Tracks/Shooting Gallery.bfstm",
-        "duration": 32.378
+        "duration": 32.378,
+        "xLoops": true
       },
       {
         "id": "oot-castle-courtyard",
         "title": "Castle Courtyard",
         "file": "Assets/Games/OOT/Tracks/Castle Courtyard.bfstm",
-        "duration": 24.665
+        "duration": 24.665,
+        "xLoops": true
       },
       {
         "id": "oot-zeldas-theme",
         "title": "Zelda's Theme",
         "file": "Assets/Games/OOT/Tracks/Zelda's Theme.bfstm",
-        "duration": 44.806
+        "duration": 44.806,
+        "xLoops": true
       },
       {
         "id": "oot-lon-lon-ranch",
         "title": "Lon Lon Ranch",
         "file": "Assets/Games/OOT/Tracks/Lon Lon Ranch.bfstm",
-        "duration": 244.323
+        "duration": 244.323,
+        "xLoops": true
       },
       {
         "id": "oot-mini-game",
         "title": "Mini-Game",
         "file": "Assets/Games/OOT/Tracks/Mini-game.bfstm",
-        "duration": 26.601
+        "duration": 26.601,
+        "xLoops": true
       },
       {
         "id": "oot-kakariko-village",
         "title": "Kakariko Village",
         "file": "Assets/Games/OOT/Tracks/Kakariko Village.bfstm",
-        "duration": 93.312
+        "duration": 93.312,
+        "xLoops": true
       },
       {
         "id": "oot-goron-city",
         "title": "Goron City",
         "file": "Assets/Games/OOT/Tracks/Goron City.bfstm",
-        "duration": 84.66
+        "duration": 84.66,
+        "xLoops": true
       },
       {
         "id": "oot-lost-woods",
         "title": "Lost Woods",
         "file": "Assets/Games/OOT/Tracks/Lost Woods.bfstm",
-        "duration": 33.133
+        "duration": 33.133,
+        "xLoops": true
       },
       {
         "id": "oot-dodongos-cavern",
         "title": "Dodongo's Cavern",
         "file": "Assets/Games/OOT/Tracks/Dodongo's Cavern.bfstm",
-        "duration": 140.841
+        "duration": 140.841,
+        "xLoops": true
       },
       {
         "id": "oot-mini-boss",
         "title": "Mini-boss",
         "file": "Assets/Games/OOT/Tracks/Mini-boss.bfstm",
-        "duration": 61.5
+        "duration": 61.5,
+        "xLoops": true
       },
       {
         "id": "oot-king-dodongo-battle",
         "title": "King Dodongo Battle",
         "file": "Assets/Games/OOT/Tracks/King Dodongo Battle.bfstm",
-        "duration": 62.046
+        "duration": 62.046,
+        "xLoops": true
       },
       {
         "id": "oot-zoras-domain",
         "title": "Zora's Domain",
         "file": "Assets/Games/OOT/Tracks/Zora's Domain.bfstm",
-        "duration": 83.696
+        "duration": 83.696,
+        "xLoops": true
       },
       {
         "id": "oot-great-fairys-fountain",
         "title": "Great Fairy's Fountain",
         "file": "Assets/Games/OOT/Tracks/Great Fairy's Fountain.bfstm",
-        "duration": 29.166
+        "duration": 29.166,
+        "xLoops": true
       },
       {
         "id": "oot-kakariko-potion-shop",
         "title": "Kakariko Potion Shop",
         "file": "Assets/Games/OOT/Tracks/Kakariko Potion Shop.bfstm",
-        "duration": 45.078
+        "duration": 45.078,
+        "xLoops": true
       },
       {
         "id": "oot-inside-jabu-jabus-belly",
         "title": "Inside Jabu-Jabu's Belly",
         "file": "Assets/Games/OOT/Tracks/Inside Jabu-Jabu's Belly.bfstm",
-        "duration": 52.15
+        "duration": 52.15,
+        "xLoops": true
       },
       {
         "id": "oot-temple-of-time",
         "title": "Temple of Time",
         "file": "Assets/Games/OOT/Tracks/Temple of Time.bfstm",
-        "duration": 71.692
+        "duration": 71.692,
+        "xLoops": true
       },
       {
         "id": "oot-ganondorfs-theme",
         "title": "Ganondorf's Theme",
         "file": "Assets/Games/OOT/Tracks/Ganondorf's Theme.bfstm",
-        "duration": 31.591
+        "duration": 31.591,
+        "xLoops": true
       },
       {
         "id": "oot-chamber-of-sages",
         "title": "Chamber of Sages",
         "file": "Assets/Games/OOT/Tracks/Chamber of Sages.bfstm",
-        "duration": 99.235
+        "duration": 99.235,
+        "xLoops": true
       },
       {
         "id": "oot-sheiks-theme",
         "title": "Sheik's Theme",
         "file": "Assets/Games/OOT/Tracks/Sheik's Theme.bfstm",
-        "duration": 25.489
+        "duration": 25.489,
+        "xLoops": true
       },
       {
         "id": "oot-horse-race",
         "title": "Horse Race",
         "file": "Assets/Games/OOT/Tracks/Horse Race.bfstm",
-        "duration": 42.359
+        "duration": 42.359,
+        "xLoops": true
       },
       {
         "id": "oot-ingos-theme",
         "title": "Ingo's Theme",
         "file": "Assets/Games/OOT/Tracks/Ingo's Theme.bfstm",
-        "duration": 31.152
+        "duration": 31.152,
+        "xLoops": true
       },
       {
         "id": "oot-kakariko-village-(orchestrated)",
         "title": "Kakariko Village (Orchestrated)",
         "file": "Assets/Games/OOT/Tracks/Kakariko Village (Orchestrated).bfstm",
-        "duration": 91.832
+        "duration": 91.832,
+        "xLoops": true
       },
       {
         "id": "oot-windmill",
         "title": "Windmill",
         "file": "Assets/Games/OOT/Tracks/Windmill.bfstm",
-        "duration": 42.2
+        "duration": 42.2,
+        "xLoops": true
       },
       {
         "id": "oot-forest-temple",
         "title": "Forest Temple",
         "file": "Assets/Games/OOT/Tracks/Forest Temple.bfstm",
-        "duration": 102.546
+        "duration": 102.546,
+        "xLoops": true
       },
       {
         "id": "oot-gerudo-valley",
         "title": "Gerudo Valley",
         "file": "Assets/Games/OOT/Tracks/Gerudo Valley.bfstm",
-        "duration": 86.628
+        "duration": 86.628,
+        "xLoops": true
       },
       {
         "id": "oot-spirit-temple",
         "title": "Spirit Temple",
         "file": "Assets/Games/OOT/Tracks/Spirit Temple.bfstm",
-        "duration": 167.296
+        "duration": 167.296,
+        "xLoops": true
       },
       {
         "id": "oot-koume-and-kotakes-theme",
         "title": "Koume and Kotake's Theme",
         "file": "Assets/Games/OOT/Tracks/Koume and Kotake's Theme.bfstm",
-        "duration": 49.211
+        "duration": 49.211,
+        "xLoops": true
       },
       {
         "id": "oot-reunite-with-zelda",
         "title": "Reunite with Zelda",
         "file": "Assets/Games/OOT/Tracks/Reunite with Zelda.bfstm",
-        "duration": 41.463
+        "duration": 41.463,
+        "xLoops": true
       },
       {
         "id": "oot-ganons-castle",
         "title": "Ganon's Castle",
         "file": "Assets/Games/OOT/Tracks/Ganon's Castle.bfstm",
-        "duration": 200.922
+        "duration": 200.922,
+        "xLoops": true
       },
       {
         "id": "oot-ganondorf-battle",
         "title": "Ganondorf Battle",
         "file": "Assets/Games/OOT/Tracks/Ganondorf Battle.bfstm",
-        "duration": 65.326
+        "duration": 65.326,
+        "xLoops": true
       },
       {
         "id": "oot-escaping-from-ganons-castle",
         "title": "Escaping from Ganon's Castle",
         "file": "Assets/Games/OOT/Tracks/Escaping from Ganon's Castle.bfstm",
-        "duration": 40.919
+        "duration": 40.919,
+        "xLoops": true
       },
       {
         "id": "oot-last-battle",
         "title": "Last Battle",
         "file": "Assets/Games/OOT/Tracks/Last Battle.bfstm",
-        "duration": 99.34
+        "duration": 99.34,
+        "xLoops": true
       },
       {
         "id": "oot-credits",
         "title": "Credits",
         "file": "Assets/Games/OOT/Tracks/Credits.opus",
         "fileIos": "Assets/Games/OOT/Tracks/Credits.m4a",
-        "duration": 433.2,
-        "playback": "stream"
+        "duration": 433.563,
+        "playback": "stream",
+        "xLoops": false
       }
     ]
   },
 
-{
-  "id": "donkeykongcountry",
-  "title": "Donkey Kong Country",
-  "short": "DK Country",
-  "fullscreenName": "Donkey Kong Country",
-  "composer": "David Wise, Eveline Novakovic, Robin Beanland",
-  "console": "snes",
-  "franchise": "donkeykong",
-  "cover": "Assets/Games/DonkeyKongCountry/AlbumCover/AlbumCover_DKC.png",
-  "tracks": [
-    {
-      "id": "dkc-opening-fanfare",
-      "title": "Opening Fanfare",
-      "file": "Assets/Games/DonkeyKongCountry/Tracks/Opening Fanfare.bfstm",
-      "duration": 6.673
-    },
-    {
-      "id": "dkc-theme",
-      "title": "Theme",
-      "file": "Assets/Games/DonkeyKongCountry/Tracks/Theme.bfstm",
-      "duration": 63.7
-    },
-    {
-      "id": "dkc-simian-segue",
-      "title": "Simian Segue",
-      "file": "Assets/Games/DonkeyKongCountry/Tracks/Simian Segue.bfstm",
-      "duration": 74.378
-    },
-    {
-      "id": "dkc-dk-island-swing",
-      "title": "DK Island Swing",
-      "file": "Assets/Games/DonkeyKongCountry/Tracks/DK Island Swing.bfstm",
-      "duration": 221.618
-    },
-    {
-      "id": "dkc-cave-dweller-concert",
-      "title": "Cave Dweller Concert",
-      "file": "Assets/Games/DonkeyKongCountry/Tracks/Cave Dweller Concert.bfstm",
-      "duration": 197.985
-    },
-    {
-      "id": "dkc-aquatic-ambiance",
-      "title": "Aquatic Ambiance",
-      "file": "Assets/Games/DonkeyKongCountry/Tracks/Aquatic Ambiance.bfstm",
-      "duration": 122.197
-    },
-    {
-      "id": "dkc-well-done",
-      "title": "Well Done",
-      "file": "Assets/Games/DonkeyKongCountry/Tracks/Well Done.bfstm",
-      "duration": 6.865
-    },
-    {
-      "id": "dkc-crankys-theme",
-      "title": "Cranky's Theme",
-      "file": "Assets/Games/DonkeyKongCountry/Tracks/Cranky's Theme.bfstm",
-      "duration": 74.458
-    },
-    {
-      "id": "dkc-life-in-the-mines",
-      "title": "Life in the Mines",
-      "file": "Assets/Games/DonkeyKongCountry/Tracks/Life in the Mines.bfstm",
-      "duration": 201.719
-    },
-    {
-      "id": "dkc-mine-cart-madness",
-      "title": "Mine Cart Madness",
-      "file": "Assets/Games/DonkeyKongCountry/Tracks/Mine Cart Madness.bfstm",
-      "duration": 94.943
-    },
-    {
-      "id": "dkc-misty-menace",
-      "title": "Misty Menace",
-      "file": "Assets/Games/DonkeyKongCountry/Tracks/Misty Menace.bfstm",
-      "duration": 129.195
-    },
-    {
-      "id": "dkc-voices-of-the-temple",
-      "title": "Voices of the Temple",
-      "file": "Assets/Games/DonkeyKongCountry/Tracks/Voices of the Temple.bfstm",
-      "duration": 139.455
-    },
-    {
-      "id": "dkc-lost-a-balloon",
-      "title": "Lost a Balloon",
-      "file": "Assets/Games/DonkeyKongCountry/Tracks/Lost a Balloon.bfstm",
-      "duration": 5.004
-    },
-    {
-      "id": "dkc-funkys-fugue",
-      "title": "Funky's Fugue",
-      "file": "Assets/Games/DonkeyKongCountry/Tracks/Funky's Fugue.bfstm",
-      "duration": 95.829
-    },
-    {
-      "id": "dkc-forest-frenzy",
-      "title": "Forest Frenzy",
-      "file": "Assets/Games/DonkeyKongCountry/Tracks/Forest Frenzy.bfstm",
-      "duration": 68.82
-    },
-    {
-      "id": "dkc-treetop-rock",
-      "title": "Treetop Rock",
-      "file": "Assets/Games/DonkeyKongCountry/Tracks/Treetop Rock.bfstm",
-      "duration": 90.477
-    },
-    {
-      "id": "dkc-bonus-room-blitz",
-      "title": "Bonus Room Blitz",
-      "file": "Assets/Games/DonkeyKongCountry/Tracks/Bonus Room Blitz.bfstm",
-      "duration": 29.113
-    },
-    {
-      "id": "dkc-better-luck-next-time",
-      "title": "Better Luck Next Time",
-      "file": "Assets/Games/DonkeyKongCountry/Tracks/Better Luck Next Time.bfstm",
-      "duration": 6.623
-    },
-    {
-      "id": "dkc-candys-love-song",
-      "title": "Candy's Love Song",
-      "file": "Assets/Games/DonkeyKongCountry/Tracks/Candy's Love Song.bfstm",
-      "duration": 63.82
-    },
-    {
-      "id": "dkc-northern-hemispheres",
-      "title": "Northern Hemispheres",
-      "file": "Assets/Games/DonkeyKongCountry/Tracks/Northern Hemispheres.bfstm",
-      "duration": 130.655
-    },
-    {
-      "id": "dkc-ice-cave-chant",
-      "title": "Ice Cave Chant",
-      "file": "Assets/Games/DonkeyKongCountry/Tracks/Ice Cave Chant.bfstm",
-      "duration": 112.704
-    },
-    {
-      "id": "dkc-fear-factory",
-      "title": "Fear Factory",
-      "file": "Assets/Games/DonkeyKongCountry/Tracks/Fear Factory.bfstm",
-      "duration": 115.572
-    },
-    {
-      "id": "dkc-bad-boss-boogie",
-      "title": "Bad Boss Boogie",
-      "file": "Assets/Games/DonkeyKongCountry/Tracks/Bad Boss Boogie.bfstm",
-      "duration": 109.219
-    },
-    {
-      "id": "dkc-k-rools-cacophony",
-      "title": "K. Rool's Cacophony",
-      "file": "Assets/Games/DonkeyKongCountry/Tracks/K. Rool's Cacophony.bfstm",
-      "duration": 22.036
-    },
-    {
-      "id": "dkc-gang-plank-galleon",
-      "title": "Gang-Plank Galleon",
-      "file": "Assets/Games/DonkeyKongCountry/Tracks/Gang-Plank Galleon.bfstm",
-      "duration": 106.224
-    },
-    {
-      "id": "dkc-the-credits-concerto",
-      "title": "The Credits Concerto",
-      "file": "Assets/Games/DonkeyKongCountry/Tracks/The Credits Concerto.bfstm",
-      "duration": 54.609
-    }
-  ]
-},
+  {
+    "id": "donkeykongcountry",
+    "title": "Donkey Kong Country",
+    "short": "DK Country",
+    "fullscreenName": "Donkey Kong Country",
+    "composer": "David Wise, Eveline Novakovic, Robin Beanland",
+    "console": "snes",
+    "franchise": "donkeykong",
+    "cover": "Assets/Games/DonkeyKongCountry/AlbumCover/AlbumCover_DKC.png",
+    "tracks": [
+      {
+        "id": "dkc-opening-fanfare",
+        "title": "Opening Fanfare",
+        "file": "Assets/Games/DonkeyKongCountry/Tracks/Opening Fanfare.bfstm",
+        "duration": 6.673,
+        "xLoops": false
+      },
+      {
+        "id": "dkc-theme",
+        "title": "Theme",
+        "file": "Assets/Games/DonkeyKongCountry/Tracks/Theme.bfstm",
+        "duration": 63.7,
+        "xLoops": true
+      },
+      {
+        "id": "dkc-simian-segue",
+        "title": "Simian Segue",
+        "file": "Assets/Games/DonkeyKongCountry/Tracks/Simian Segue.bfstm",
+        "duration": 74.378,
+        "xLoops": true
+      },
+      {
+        "id": "dkc-dk-island-swing",
+        "title": "DK Island Swing",
+        "file": "Assets/Games/DonkeyKongCountry/Tracks/DK Island Swing.bfstm",
+        "duration": 221.618,
+        "xLoops": true
+      },
+      {
+        "id": "dkc-cave-dweller-concert",
+        "title": "Cave Dweller Concert",
+        "file": "Assets/Games/DonkeyKongCountry/Tracks/Cave Dweller Concert.bfstm",
+        "duration": 197.985,
+        "xLoops": true
+      },
+      {
+        "id": "dkc-aquatic-ambiance",
+        "title": "Aquatic Ambiance",
+        "file": "Assets/Games/DonkeyKongCountry/Tracks/Aquatic Ambiance.bfstm",
+        "duration": 122.197,
+        "xLoops": true
+      },
+      {
+        "id": "dkc-well-done",
+        "title": "Well Done",
+        "file": "Assets/Games/DonkeyKongCountry/Tracks/Well Done.bfstm",
+        "duration": 6.865,
+        "xLoops": false
+      },
+      {
+        "id": "dkc-crankys-theme",
+        "title": "Cranky's Theme",
+        "file": "Assets/Games/DonkeyKongCountry/Tracks/Cranky's Theme.bfstm",
+        "duration": 74.458,
+        "xLoops": true
+      },
+      {
+        "id": "dkc-life-in-the-mines",
+        "title": "Life in the Mines",
+        "file": "Assets/Games/DonkeyKongCountry/Tracks/Life in the Mines.bfstm",
+        "duration": 201.719,
+        "xLoops": true
+      },
+      {
+        "id": "dkc-mine-cart-madness",
+        "title": "Mine Cart Madness",
+        "file": "Assets/Games/DonkeyKongCountry/Tracks/Mine Cart Madness.bfstm",
+        "duration": 94.943,
+        "xLoops": true
+      },
+      {
+        "id": "dkc-misty-menace",
+        "title": "Misty Menace",
+        "file": "Assets/Games/DonkeyKongCountry/Tracks/Misty Menace.bfstm",
+        "duration": 129.195,
+        "xLoops": true
+      },
+      {
+        "id": "dkc-voices-of-the-temple",
+        "title": "Voices of the Temple",
+        "file": "Assets/Games/DonkeyKongCountry/Tracks/Voices of the Temple.bfstm",
+        "duration": 139.455,
+        "xLoops": true
+      },
+      {
+        "id": "dkc-lost-a-balloon",
+        "title": "Lost a Balloon",
+        "file": "Assets/Games/DonkeyKongCountry/Tracks/Lost a Balloon.bfstm",
+        "duration": 5.004,
+        "xLoops": false
+      },
+      {
+        "id": "dkc-funkys-fugue",
+        "title": "Funky's Fugue",
+        "file": "Assets/Games/DonkeyKongCountry/Tracks/Funky's Fugue.bfstm",
+        "duration": 95.829,
+        "xLoops": true
+      },
+      {
+        "id": "dkc-forest-frenzy",
+        "title": "Forest Frenzy",
+        "file": "Assets/Games/DonkeyKongCountry/Tracks/Forest Frenzy.bfstm",
+        "duration": 68.82,
+        "xLoops": true
+      },
+      {
+        "id": "dkc-treetop-rock",
+        "title": "Treetop Rock",
+        "file": "Assets/Games/DonkeyKongCountry/Tracks/Treetop Rock.bfstm",
+        "duration": 90.477,
+        "xLoops": true
+      },
+      {
+        "id": "dkc-bonus-room-blitz",
+        "title": "Bonus Room Blitz",
+        "file": "Assets/Games/DonkeyKongCountry/Tracks/Bonus Room Blitz.bfstm",
+        "duration": 29.113,
+        "xLoops": true
+      },
+      {
+        "id": "dkc-better-luck-next-time",
+        "title": "Better Luck Next Time",
+        "file": "Assets/Games/DonkeyKongCountry/Tracks/Better Luck Next Time.bfstm",
+        "duration": 6.623,
+        "xLoops": false
+      },
+      {
+        "id": "dkc-candys-love-song",
+        "title": "Candy's Love Song",
+        "file": "Assets/Games/DonkeyKongCountry/Tracks/Candy's Love Song.bfstm",
+        "duration": 63.82,
+        "xLoops": true
+      },
+      {
+        "id": "dkc-northern-hemispheres",
+        "title": "Northern Hemispheres",
+        "file": "Assets/Games/DonkeyKongCountry/Tracks/Northern Hemispheres.bfstm",
+        "duration": 130.655,
+        "xLoops": true
+      },
+      {
+        "id": "dkc-ice-cave-chant",
+        "title": "Ice Cave Chant",
+        "file": "Assets/Games/DonkeyKongCountry/Tracks/Ice Cave Chant.bfstm",
+        "duration": 112.704,
+        "xLoops": true
+      },
+      {
+        "id": "dkc-fear-factory",
+        "title": "Fear Factory",
+        "file": "Assets/Games/DonkeyKongCountry/Tracks/Fear Factory.bfstm",
+        "duration": 115.572,
+        "xLoops": true
+      },
+      {
+        "id": "dkc-bad-boss-boogie",
+        "title": "Bad Boss Boogie",
+        "file": "Assets/Games/DonkeyKongCountry/Tracks/Bad Boss Boogie.bfstm",
+        "duration": 109.219,
+        "xLoops": true
+      },
+      {
+        "id": "dkc-k-rools-cacophony",
+        "title": "K. Rool's Cacophony",
+        "file": "Assets/Games/DonkeyKongCountry/Tracks/K. Rool's Cacophony.bfstm",
+        "duration": 22.036,
+        "xLoops": false
+      },
+      {
+        "id": "dkc-gang-plank-galleon",
+        "title": "Gang-Plank Galleon",
+        "file": "Assets/Games/DonkeyKongCountry/Tracks/Gang-Plank Galleon.bfstm",
+        "duration": 106.224,
+        "xLoops": true
+      },
+      {
+        "id": "dkc-the-credits-concerto",
+        "title": "The Credits Concerto",
+        "file": "Assets/Games/DonkeyKongCountry/Tracks/The Credits Concerto.bfstm",
+        "duration": 54.609,
+        "xLoops": true
+      }
+    ]
+  },
 
-{
-  "id": "donkeykongcountry2",
-  "title": "Donkey Kong Country 2: Diddy's Kong Quest",
-  "short": "DK Country 2",
-  "fullscreenName": "Donkey Kong Country 2",
-  "composer": "David Wise",
-  "console": "snes",
-  "franchise": "donkeykong",
-  "cover": "Assets/Games/DonkeyKongCountry2/AlbumCover/AlbumCover_DKC2.jpg",
-  "tracks": [
-    {
-      "id": "dkc2-k-rool-returns",
-      "title": "K. Rool Returns",
-      "file": "Assets/Games/DonkeyKongCountry2/Tracks/K. Rool Returns.bfstm",
-      "duration": 38.931
-    },
-    {
-      "id": "dkc2-welcome-to-crocodile-isle",
-      "title": "Welcome to Crocodile Isle",
-      "file": "Assets/Games/DonkeyKongCountry2/Tracks/Welcome to Crocodile Isle.bfstm",
-      "duration": 32.867
-    },
-    {
-      "id": "dkc2-klomps-romp",
-      "title": "Klomp's Romp",
-      "file": "Assets/Games/DonkeyKongCountry2/Tracks/Klomp's Romp.bfstm",
-      "duration": 67.741
-    },
-    {
-      "id": "dkc2-lockjaws-saga",
-      "title": "Lockjaw's Saga",
-      "file": "Assets/Games/DonkeyKongCountry2/Tracks/Lockjaw's Saga.bfstm",
-      "duration": 53.84
-    },
-    {
-      "id": "dkc2-jib-jig",
-      "title": "Jib Jig",
-      "file": "Assets/Games/DonkeyKongCountry2/Tracks/Jib Jig.bfstm",
-      "duration": 58.228
-    },
-    {
-      "id": "dkc2-swanky-swing",
-      "title": "Swanky Swing",
-      "file": "Assets/Games/DonkeyKongCountry2/Tracks/Swanky's Swing.bfstm",
-      "duration": 24.469
-    },
-    {
-      "id": "dkc2-snakey-chantey",
-      "title": "Snakey Chantey",
-      "file": "Assets/Games/DonkeyKongCountry2/Tracks/Snakey Chantey.bfstm",
-      "duration": 52.797
-    },
-    {
-      "id": "dkc2-bayou-boogie",
-      "title": "Bayou Boogie",
-      "file": "Assets/Games/DonkeyKongCountry2/Tracks/Bayou Boogie.bfstm",
-      "duration": 148.731
-    },
-    {
-      "id": "dkc2-school-house-harmony",
-      "title": "School House Harmony",
-      "file": "Assets/Games/DonkeyKongCountry2/Tracks/School House Harmony.bfstm",
-      "duration": 52.061
-    },
-    {
-      "id": "dkc2-forest-interlude",
-      "title": "Forest Interlude",
-      "file": "Assets/Games/DonkeyKongCountry2/Tracks/Forest Interlude.bfstm",
-      "duration": 141.713
-    },
-    {
-      "id": "dkc2-funky-the-main-monkey",
-      "title": "Funky the Main Monkey",
-      "file": "Assets/Games/DonkeyKongCountry2/Tracks/Funky the Main Monkey.bfstm",
-      "duration": 43.339
-    },
-    {
-      "id": "dkc2-flight-of-the-zinger",
-      "title": "Flight of the Zinger",
-      "file": "Assets/Games/DonkeyKongCountry2/Tracks/Flight of the Zinger.bfstm",
-      "duration": 118.656
-    },
-    {
-      "id": "dkc2-crankys-conga",
-      "title": "Cranky's Conga",
-      "file": "Assets/Games/DonkeyKongCountry2/Tracks/Cranky's Conga.bfstm",
-      "duration": 76.937
-    },
-    {
-      "id": "dkc2-hot-head-bop",
-      "title": "Hot-Head Bop",
-      "file": "Assets/Games/DonkeyKongCountry2/Tracks/Hot-Head Hop.bfstm",
-      "duration": 211.636
-    },
-    {
-      "id": "dkc2-run-rambi-run",
-      "title": "Run, Rambi! Run!",
-      "file": "Assets/Games/DonkeyKongCountry2/Tracks/Run, Rambi! Run!.bfstm",
-      "duration": 22.835
-    },
-    {
-      "id": "dkc2-token-tango",
-      "title": "Token Tango",
-      "file": "Assets/Games/DonkeyKongCountry2/Tracks/Token Tango.bfstm",
-      "duration": 21.833
-    },
-    {
-      "id": "dkc2-stickerbush-symphony",
-      "title": "Stickerbush Symphony",
-      "file": "Assets/Games/DonkeyKongCountry2/Tracks/Stickerbrush Symphony.bfstm",
-      "duration": 146.487
-    },
-    {
-      "id": "dkc2-bad-bird-rag",
-      "title": "Bad Bird Rag",
-      "file": "Assets/Games/DonkeyKongCountry2/Tracks/Bad Bird Rag.bfstm",
-      "duration": 102.852
-    },
-    {
-      "id": "dkc2-disco-train",
-      "title": "Disco Train",
-      "file": "Assets/Games/DonkeyKongCountry2/Tracks/Disco Train.bfstm",
-      "duration": 98.325
-    },
-    {
-      "id": "dkc2-boss-bossanova",
-      "title": "Boss Bossanova",
-      "file": "Assets/Games/DonkeyKongCountry2/Tracks/Boss Bossanova.bfstm",
-      "duration": 32.267
-    },
-    {
-      "id": "dkc2-steel-drum-rhumba",
-      "title": "Steel Drum Rhumba",
-      "file": "Assets/Games/DonkeyKongCountry2/Tracks/Steel Drum Rhumba.bfstm",
-      "duration": 38.475
-    },
-    {
-      "id": "dkc2-krooks-march",
-      "title": "Krook's March",
-      "file": "Assets/Games/DonkeyKongCountry2/Tracks/Krook's March.bfstm",
-      "duration": 179.346
-    },
-    {
-      "id": "dkc2-klubbas-reveille",
-      "title": "Klubba's Reveille",
-      "file": "Assets/Games/DonkeyKongCountry2/Tracks/Klubba's Reveille.bfstm",
-      "duration": 29.132
-    },
-    {
-      "id": "dkc2-haunted-chase",
-      "title": "Haunted Chase",
-      "file": "Assets/Games/DonkeyKongCountry2/Tracks/Haunted Chase.bfstm",
-      "duration": 65.792
-    },
-    {
-      "id": "dkc2-in-a-snow-bound-land",
-      "title": "In a Snow-Bound Land",
-      "file": "Assets/Games/DonkeyKongCountry2/Tracks/In a Snow-Bound Land.bfstm",
-      "duration": 92.229
-    },
-    {
-      "id": "dkc2-lost-world-anthem",
-      "title": "Lost World Anthem",
-      "file": "Assets/Games/DonkeyKongCountry2/Tracks/Lost World Anthem.bfstm",
-      "duration": 45.83
-    },
-    {
-      "id": "dkc2-primal-rave",
-      "title": "Primal Rave",
-      "file": "Assets/Games/DonkeyKongCountry2/Tracks/Primal Rave.bfstm",
-      "duration": 98.095
-    },
-    {
-      "id": "dkc2-crocodile-cacophony",
-      "title": "Crocodile Cacophony",
-      "file": "Assets/Games/DonkeyKongCountry2/Tracks/Crocodile Cacophony.bfstm",
-      "duration": 57.392
-    },
-    {
-      "id": "dkc2-donkey-kong-rescued",
-      "title": "Donkey Kong Rescued",
-      "file": "Assets/Games/DonkeyKongCountry2/Tracks/Donkey Kong Rescued.bfstm",
-      "duration": 86.016
-    }
-  ]
-}
+  {
+    "id": "donkeykongcountry2",
+    "title": "Donkey Kong Country 2: Diddy's Kong Quest",
+    "short": "DK Country 2",
+    "fullscreenName": "Donkey Kong Country 2",
+    "composer": "David Wise",
+    "console": "snes",
+    "franchise": "donkeykong",
+    "cover": "Assets/Games/DonkeyKongCountry2/AlbumCover/AlbumCover_DKC2.jpg",
+    "tracks": [
+      {
+        "id": "dkc2-k-rool-returns",
+        "title": "K. Rool Returns",
+        "file": "Assets/Games/DonkeyKongCountry2/Tracks/K. Rool Returns.bfstm",
+        "duration": 38.931,
+        "xLoops": false
+      },
+      {
+        "id": "dkc2-welcome-to-crocodile-isle",
+        "title": "Welcome to Crocodile Isle",
+        "file": "Assets/Games/DonkeyKongCountry2/Tracks/Welcome to Crocodile Isle.bfstm",
+        "duration": 32.867,
+        "xLoops": true
+      },
+      {
+        "id": "dkc2-klomps-romp",
+        "title": "Klomp's Romp",
+        "file": "Assets/Games/DonkeyKongCountry2/Tracks/Klomp's Romp.bfstm",
+        "duration": 67.741,
+        "xLoops": true
+      },
+      {
+        "id": "dkc2-lockjaws-saga",
+        "title": "Lockjaw's Saga",
+        "file": "Assets/Games/DonkeyKongCountry2/Tracks/Lockjaw's Saga.bfstm",
+        "duration": 53.84,
+        "xLoops": true
+      },
+      {
+        "id": "dkc2-jib-jig",
+        "title": "Jib Jig",
+        "file": "Assets/Games/DonkeyKongCountry2/Tracks/Jib Jig.bfstm",
+        "duration": 58.228,
+        "xLoops": true
+      },
+      {
+        "id": "dkc2-swanky-swing",
+        "title": "Swanky Swing",
+        "file": "Assets/Games/DonkeyKongCountry2/Tracks/Swanky's Swing.bfstm",
+        "duration": 24.469,
+        "xLoops": true
+      },
+      {
+        "id": "dkc2-snakey-chantey",
+        "title": "Snakey Chantey",
+        "file": "Assets/Games/DonkeyKongCountry2/Tracks/Snakey Chantey.bfstm",
+        "duration": 52.797,
+        "xLoops": true
+      },
+      {
+        "id": "dkc2-bayou-boogie",
+        "title": "Bayou Boogie",
+        "file": "Assets/Games/DonkeyKongCountry2/Tracks/Bayou Boogie.bfstm",
+        "duration": 148.731,
+        "xLoops": true
+      },
+      {
+        "id": "dkc2-school-house-harmony",
+        "title": "School House Harmony",
+        "file": "Assets/Games/DonkeyKongCountry2/Tracks/School House Harmony.bfstm",
+        "duration": 52.061,
+        "xLoops": true
+      },
+      {
+        "id": "dkc2-forest-interlude",
+        "title": "Forest Interlude",
+        "file": "Assets/Games/DonkeyKongCountry2/Tracks/Forest Interlude.bfstm",
+        "duration": 141.713,
+        "xLoops": true
+      },
+      {
+        "id": "dkc2-funky-the-main-monkey",
+        "title": "Funky the Main Monkey",
+        "file": "Assets/Games/DonkeyKongCountry2/Tracks/Funky the Main Monkey.bfstm",
+        "duration": 43.339,
+        "xLoops": false
+      },
+      {
+        "id": "dkc2-flight-of-the-zinger",
+        "title": "Flight of the Zinger",
+        "file": "Assets/Games/DonkeyKongCountry2/Tracks/Flight of the Zinger.bfstm",
+        "duration": 118.656,
+        "xLoops": true
+      },
+      {
+        "id": "dkc2-crankys-conga",
+        "title": "Cranky's Conga",
+        "file": "Assets/Games/DonkeyKongCountry2/Tracks/Cranky's Conga.bfstm",
+        "duration": 76.937,
+        "xLoops": true
+      },
+      {
+        "id": "dkc2-hot-head-bop",
+        "title": "Hot-Head Bop",
+        "file": "Assets/Games/DonkeyKongCountry2/Tracks/Hot-Head Hop.bfstm",
+        "duration": 211.636,
+        "xLoops": true
+      },
+      {
+        "id": "dkc2-run-rambi-run",
+        "title": "Run, Rambi! Run!",
+        "file": "Assets/Games/DonkeyKongCountry2/Tracks/Run, Rambi! Run!.bfstm",
+        "duration": 22.835,
+        "xLoops": true
+      },
+      {
+        "id": "dkc2-token-tango",
+        "title": "Token Tango",
+        "file": "Assets/Games/DonkeyKongCountry2/Tracks/Token Tango.bfstm",
+        "duration": 21.833,
+        "xLoops": true
+      },
+      {
+        "id": "dkc2-stickerbush-symphony",
+        "title": "Stickerbush Symphony",
+        "file": "Assets/Games/DonkeyKongCountry2/Tracks/Stickerbrush Symphony.bfstm",
+        "duration": 146.487,
+        "xLoops": true
+      },
+      {
+        "id": "dkc2-bad-bird-rag",
+        "title": "Bad Bird Rag",
+        "file": "Assets/Games/DonkeyKongCountry2/Tracks/Bad Bird Rag.bfstm",
+        "duration": 102.852,
+        "xLoops": true
+      },
+      {
+        "id": "dkc2-disco-train",
+        "title": "Disco Train",
+        "file": "Assets/Games/DonkeyKongCountry2/Tracks/Disco Train.bfstm",
+        "duration": 98.325,
+        "xLoops": true
+      },
+      {
+        "id": "dkc2-boss-bossanova",
+        "title": "Boss Bossanova",
+        "file": "Assets/Games/DonkeyKongCountry2/Tracks/Boss Bossanova.bfstm",
+        "duration": 32.267,
+        "xLoops": true
+      },
+      {
+        "id": "dkc2-steel-drum-rhumba",
+        "title": "Steel Drum Rhumba",
+        "file": "Assets/Games/DonkeyKongCountry2/Tracks/Steel Drum Rhumba.bfstm",
+        "duration": 38.475,
+        "xLoops": true
+      },
+      {
+        "id": "dkc2-krooks-march",
+        "title": "Krook's March",
+        "file": "Assets/Games/DonkeyKongCountry2/Tracks/Krook's March.bfstm",
+        "duration": 179.346,
+        "xLoops": true
+      },
+      {
+        "id": "dkc2-klubbas-reveille",
+        "title": "Klubba's Reveille",
+        "file": "Assets/Games/DonkeyKongCountry2/Tracks/Klubba's Reveille.bfstm",
+        "duration": 29.132,
+        "xLoops": true
+      },
+      {
+        "id": "dkc2-haunted-chase",
+        "title": "Haunted Chase",
+        "file": "Assets/Games/DonkeyKongCountry2/Tracks/Haunted Chase.bfstm",
+        "duration": 65.792,
+        "xLoops": true
+      },
+      {
+        "id": "dkc2-in-a-snow-bound-land",
+        "title": "In a Snow-Bound Land",
+        "file": "Assets/Games/DonkeyKongCountry2/Tracks/In a Snow-Bound Land.bfstm",
+        "duration": 92.229,
+        "xLoops": true
+      },
+      {
+        "id": "dkc2-lost-world-anthem",
+        "title": "Lost World Anthem",
+        "file": "Assets/Games/DonkeyKongCountry2/Tracks/Lost World Anthem.bfstm",
+        "duration": 45.83,
+        "xLoops": true
+      },
+      {
+        "id": "dkc2-primal-rave",
+        "title": "Primal Rave",
+        "file": "Assets/Games/DonkeyKongCountry2/Tracks/Primal Rave.bfstm",
+        "duration": 98.095,
+        "xLoops": true
+      },
+      {
+        "id": "dkc2-crocodile-cacophony",
+        "title": "Crocodile Cacophony",
+        "file": "Assets/Games/DonkeyKongCountry2/Tracks/Crocodile Cacophony.bfstm",
+        "duration": 57.392,
+        "xLoops": true
+      },
+      {
+        "id": "dkc2-donkey-kong-rescued",
+        "title": "Donkey Kong Rescued",
+        "file": "Assets/Games/DonkeyKongCountry2/Tracks/Donkey Kong Rescued.bfstm",
+        "duration": 86.016,
+        "xLoops": true
+      }
+    ]
+  }
 
 
 

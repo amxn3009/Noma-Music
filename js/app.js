@@ -11,11 +11,11 @@ const supabase =
     : null;
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = '14.11.26, added bananza lyrics, fixed soft-end fade bug';
+const APP_VERSION = '15.11.26, added rest of lyrics, fixed loop detection added svgs for lyrics symbols';
 
 let LIBRARY = [];
 
-const DEV_DURATION_TOOL = false; // true only when scanning
+const DEV_DURATION_TOOL = true; // true only when scanning
 
 const state = {
   currentGame: null,
@@ -5226,12 +5226,24 @@ function resolvePlaylistTracks(pl) {
 /** True if this track has an internal loop point (X-count loops make sense). */
 function trackSupportsXLoops(track) {
   if (!track) return false;
+  // Explicit games.json flag wins (from DEV scan / hand-authored)
+  const xl = track.xLoops;
+  if (xl === false || xl === 0 || xl === "false" || xl === "0") return false;
+  if (xl === true || xl === 1 || xl === "true" || xl === "1") return true;
   if (track.LoopFromStoE) return true;
   if (Number.isFinite(Number(track.loopStart)) && Number(track.loopStart) > 0) return true;
   if (track.loopFlag === true || track.loopFlag === 1) return true;
-  // BFSTM/BCSTM: loop point lives in the file, often not in games.json
+  // Already-decoded BFSTM: use file loop meta from cache (no full re-decode)
   const path = String(track.file || track.url || track.src || "").toLowerCase();
-  if (/\.(bfstm|bcstm)(\?|$)/.test(path)) return true;
+  if (/\.(bfstm|bcstm)(\?|$)/.test(path) && typeof decodeCacheGet === "function") {
+    try {
+      const url =
+        typeof getTrackUrl === "function" ? getTrackUrl(track) : track.file || track.url || "";
+      const hit = decodeCacheGet(url);
+      if (hit) return !!(hit.loopFlag && hit.loopStartSample > 0);
+    } catch (_) {}
+  }
+  // Unscanned BFSTM with no flag → not X-loopable until games.json says so
   return false;
 }
 
@@ -9402,6 +9414,21 @@ function openGame(id) {
 function bindTabs() {
 document.querySelectorAll(".tab").forEach((tab) => {
     tab.addEventListener("click", () => {
+      // Save list scroll of the tab we’re leaving
+      if ($("#tab-games")?.classList.contains("active")) {
+        if (document.body.classList.contains("games-cat-open")) {
+          const catKey = $("#games-browse")?.dataset.catOpen;
+          const catMode = $("#games-browse")?.dataset.catMode || "";
+          if (catKey) saveListScroll("category", `${catMode}:${catKey}`);
+        } else if (!gameDetail?.classList.contains("active")) {
+          saveListScroll("games");
+        }
+      } else if ($("#tab-playlists")?.classList.contains("active")) {
+        if (!gameDetail?.classList.contains("active")) {
+          saveListScroll("library");
+        }
+      }
+
       // Leaving search → fully close so Playlists keeps its own search/toggles
       if (globalSearchOpen) {
         globalSearchOpen = false;
@@ -12003,6 +12030,20 @@ function updateFsLyricsButton() {
   }
 }
 
+function formatLyricLineHtml(text) {
+  // Keep lyrics.json as-is; swap symbols only in the DOM
+  let s = escapeHtml(String(text ?? ""));
+  s = s.replace(
+    /♪/g,
+    `<img class="lyric-inline-icon" src="/Assets/Common/note.svg" alt="" aria-hidden="true">`
+  );
+  s = s.replace(
+    /⇄/g,
+    `<img class="lyric-inline-icon" src="/Assets/Common/loop.svg" alt="" aria-hidden="true">`
+  );
+  return s;
+}
+
 function renderFsLyrics() {
   const list = $("#fs-lyrics-list");
   if (!list) return;
@@ -12014,7 +12055,7 @@ function renderFsLyrics() {
   list.innerHTML = data.lines
     .map(
       (ln, i) =>
-        `<div class="fs-lyrics-line" data-i="${i}">${escapeHtml(ln.text)}</div>`
+        `<div class="fs-lyrics-line" data-i="${i}">${formatLyricLineHtml(ln.text)}</div>`
     )
     .join("");
   lyricsActiveIndex = -1;
@@ -12099,9 +12140,48 @@ function updateFsLyricsHighlight(forceScroll = false) {
             () => el.classList.remove("is-glow"),
             { once: true }
           );
+
+          // Last line of a loopable track: pre-glow the line we'll land on
+          // so the wrap feels continuous (no cold cut).
+          const isLast = idx === data.lines.length - 1;
+          if (isLast && typeof currentTrackSupportsXLoops === "function" && currentTrackSupportsXLoops()) {
+            const loopSec =
+              typeof getLoopStartSec === "function" ? getLoopStartSec() : 0;
+            let jumpIdx = -1;
+            for (let j = 0; j < data.lines.length; j++) {
+              if (data.lines[j].tSec <= loopSec + 0.02) jumpIdx = j;
+              else break;
+            }
+            if (jumpIdx >= 0 && jumpIdx !== idx) {
+              const jumpEl = nodes[jumpIdx];
+              if (jumpEl) {
+                jumpEl.classList.remove("is-glow");
+                void jumpEl.offsetWidth;
+                jumpEl.classList.add("is-glow");
+                jumpEl.addEventListener(
+                  "animationend",
+                  () => jumpEl.classList.remove("is-glow"),
+                  { once: true }
+                );
+              }
+            }
+          }
         }
       } else if (!on) {
-        el.classList.remove("is-glow");
+        // Keep pre-glow on the upcoming loop target while last line is still active
+        const isLastActive = idx === data.lines.length - 1;
+        let keepGlow = false;
+        if (isLastActive && typeof currentTrackSupportsXLoops === "function" && currentTrackSupportsXLoops()) {
+          const loopSec =
+            typeof getLoopStartSec === "function" ? getLoopStartSec() : 0;
+          let jumpIdx = -1;
+          for (let j = 0; j < data.lines.length; j++) {
+            if (data.lines[j].tSec <= loopSec + 0.02) jumpIdx = j;
+            else break;
+          }
+          keepGlow = i === jumpIdx;
+        }
+        if (!keepGlow) el.classList.remove("is-glow");
       }
     });
     lyricsActiveIndex = idx;
@@ -12165,7 +12245,7 @@ function bindFsLyrics() {
     });
   });
 
-  // line click → seek
+  // line click → seek + always replay glow (even if same line)
   $("#fs-lyrics-list")?.addEventListener("click", (e) => {
     const line = e.target.closest(".fs-lyrics-line[data-i]");
     if (!line) return;
@@ -12173,6 +12253,15 @@ function bindFsLyrics() {
     const i = Number(line.dataset.i);
     if (!data?.lines?.[i]) return;
     seekToSeconds(data.lines[i].tSec);
+
+    line.classList.remove("is-glow");
+    void line.offsetWidth;
+    line.classList.add("is-glow");
+    line.addEventListener(
+      "animationend",
+      () => line.classList.remove("is-glow"),
+      { once: true }
+    );
   });
 
   const scroller = $("#fs-lyrics-scroll");
@@ -14337,49 +14426,56 @@ async function runDurationScan() {
     return;
   }
 
-  console.log(
-    `%c[Noma DEV] Scanning durations for: ${game.short || game.title} (${game.id})`,
-    "color:#7c9cff;font-weight:bold"
-  );
-
-  const lines = [];
-  const byId = {};
+  const mergedTracks = [];
 
   for (const track of tracks) {
     const url = getTrackUrl(track);
+    const out = { ...track };
+
+    // Duration
     try {
       const sec = await getTrackDuration(url, {
         ...track,
-        duration: undefined, // force re-read from file
+        duration: undefined,
       });
-      if (sec == null || !Number.isFinite(sec)) {
-        console.warn("[Noma DEV] failed:", track.id, url);
-        continue;
+      if (sec != null && Number.isFinite(sec)) {
+        out.duration = formatDurationForJson(sec);
       }
-      const d = formatDurationForJson(sec);
-      byId[track.id] = d;
-      lines.push(`    "duration": ${d},  // ${track.id} — ${track.title}`);
-      console.log(`${track.id}: ${d}s`);
-    } catch (err) {
-      console.warn("[Noma DEV] error:", track.id, err);
+    } catch (_) {}
+
+    // xLoops: ignore LoopFromStoE tracks (full-file loop, not X-count)
+    if (track.LoopFromStoE) {
+      // leave xLoops unset — trackSupportsXLoops uses LoopFromStoE
+    } else {
+      const path = String(track.file || track.url || track.src || "").toLowerCase();
+      if (/\.(bfstm|bcstm)(\?|$)/.test(path)) {
+        try {
+          const decoded = await decodeBfstm(url);
+          // Only flag xLoops — never invent loopStart (keep existing if already in JSON)
+          out.xLoops = !!(decoded.loopFlag && decoded.loopStartSample > 0);
+        } catch (_) {
+          out.xLoops = false;
+        }
+      } else if (
+        Number.isFinite(Number(track.loopStart)) &&
+        Number(track.loopStart) > 0
+      ) {
+        out.xLoops = true;
+      } else {
+        out.xLoops = false;
+      }
     }
+
+    mergedTracks.push(out);
   }
 
-  console.log("%c[Noma DEV] Paste helpers", "color:#7c9cff;font-weight:bold");
-  console.log("— One line per track (paste into this game’s tracks in games.json):");
-  console.log(lines.join("\n"));
-
-  console.log("— Map by id:");
-  console.log(JSON.stringify(byId, null, 2));
-
-  console.log("— This game’s tracks with duration merged:");
-  const mergedTracks = tracks.map((t) => ({
-    ...t,
-    duration: byId[t.id] ?? t.duration,
-  }));
-  console.log(JSON.stringify(mergedTracks, null, 2));
-
-  console.log("%c[Noma DEV] Done.", "color:#7c9cff;font-weight:bold");
+  // Paste-ready: same indent as games.json (`    "tracks": [ … ]`)
+  const json = JSON.stringify(mergedTracks, null, 2);
+  const indented = json
+    .split("\n")
+    .map((line, i) => (i === 0 ? line : "    " + line))
+    .join("\n");
+  console.log(`    "tracks": ${indented}`);
 }
 
 function mountDurationDevTool() {

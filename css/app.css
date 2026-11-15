@@ -8516,6 +8516,54 @@ body.fs-lyrics-scrolling .fs-lyrics-line.is-past {
 .fs-lyrics-line.is-active.is-glow {
   animation: lyricGlowIn 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
+
+.fs-lyrics-line .lyric-inline-icon {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.12em;
+  margin: 0 0.06em;
+  object-fit: contain;
+  /* white SVG → match lyric color */
+  filter: brightness(0) invert(1);
+  opacity: 0.92;
+  pointer-events: none;
+  transition:
+    opacity 0.4s ease,
+    filter 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.fs-lyrics-line.is-past .lyric-inline-icon {
+  opacity: 0.7;
+}
+.fs-lyrics-line.is-active .lyric-inline-icon {
+  opacity: 1;
+  filter:
+    brightness(0) invert(1)
+    drop-shadow(0 0 10px rgba(255, 255, 255, 0.45))
+    drop-shadow(0 0 18px rgba(124, 156, 255, 0.35));
+}
+/* same glow pulse as the text when the line first activates */
+.fs-lyrics-line.is-active.is-glow .lyric-inline-icon {
+  animation: lyricIconGlowIn 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes lyricIconGlowIn {
+  0% {
+    filter: brightness(0) invert(1);
+  }
+  40% {
+    filter:
+      brightness(0) invert(1)
+      drop-shadow(0 0 16px rgba(255, 255, 255, 0.7))
+      drop-shadow(0 0 28px rgba(124, 156, 255, 0.55));
+  }
+  100% {
+    filter:
+      brightness(0) invert(1)
+      drop-shadow(0 0 10px rgba(255, 255, 255, 0.45))
+      drop-shadow(0 0 18px rgba(124, 156, 255, 0.35));
+  }
+}
+
 @keyframes lyricGlowIn {
   0% {
     text-shadow:
