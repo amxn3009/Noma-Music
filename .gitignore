@@ -1,4 +1,5 @@
-.wrangler/
-node_modules/
+.wrangler/*
+node_modules/*
 TO DO.txt
 Lyrics Timeline Editor.html
+bfstm-normalizer/*

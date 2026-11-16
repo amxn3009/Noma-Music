@@ -11,7 +11,7 @@ const supabase =
     : null;
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = '15.11.26, added rest of lyrics, fixed loop detection added svgs for lyrics symbols, added qol for lyrics opening + added sm64, smbw';
+const APP_VERSION = '16.11.26, normalized all songs volume.';
 
 let LIBRARY = [];
 
