@@ -218,26 +218,34 @@ export function getTemplate({
           var input = document.getElementById("cfp-password");
           if (!form || !input) return;
 
-          // After autofill, value can appear without a normal "input" you typed.
-          // Submit once we have a non-empty password (iOS autofill path).
           var submitted = false;
-          function trySubmit() {
-            if (submitted) return;
-            if (!(input.value || "").trim()) return;
+          var typing = false; // true after a real key / beforeinput from the user
+
+          function tryAutofillSubmit() {
+            if (submitted || typing) return;
+            var v = (input.value || "").trim();
+            // Autofill usually drops the full password at once
+            if (v.length < 4) return;
             submitted = true;
-            // Small delay so the autofilled value is fully committed
             setTimeout(function () { form.submit(); }, 50);
           }
 
-          input.addEventListener("change", trySubmit);
-          input.addEventListener("input", trySubmit);
-          // iOS sometimes only paints autofill without events — poll briefly
+          // Manual typing → never auto-submit
+          input.addEventListener("keydown", function () { typing = true; });
+          input.addEventListener("beforeinput", function (e) {
+            if (e && e.isTrusted) typing = true;
+          });
+
+          // Password managers often fire this without keydown
+          input.addEventListener("change", tryAutofillSubmit);
+
+          // Brief poll for iOS autofill that paints value with no events
           var n = 0;
           var t = setInterval(function () {
             n++;
-            if ((input.value || "").trim()) trySubmit();
-            if (submitted || n > 40) clearInterval(t);
-          }, 100);
+            tryAutofillSubmit();
+            if (submitted || typing || n > 30) clearInterval(t);
+          }, 120);
         })();
       </script>
 
