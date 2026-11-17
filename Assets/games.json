@@ -2316,6 +2316,25 @@
   },
 
   {
+    "id": "mariokart8deluxe",
+    "title": "Mario Kart 8 Deluxe",
+    "short": "Mario Kart 8 DX",
+    "fullscreenName": "Mario Kart 8 Deluxe",
+    "composer": "Shiho Fujii, Atsuko Asahi, Ryo Nagamatsu, Yasuaki Iwata, Kenta Nagata",
+    "console": "switch",
+    "franchise": "mariokart",
+    "cover": "Assets/Games/MarioKart8Deluxe/AlbumCover/AlbumCover_MK8DX.webp",
+    "tracks": [
+      {
+        "id": "smo-title-screen",
+        "title": "Title Screen",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Title Screen.bfstm",
+        "duration": 0
+      }
+    ]
+  },
+
+  {
     "id": "mariogalaxy",
     "title": "Super Mario Galaxy",
     "short": "Mario Galaxy",
