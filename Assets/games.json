@@ -2326,10 +2326,1082 @@
     "cover": "Assets/Games/MarioKart8Deluxe/AlbumCover/AlbumCover_MK8DX.webp",
     "tracks": [
       {
-        "id": "smo-title-screen",
+        "id": "mk8dx-title-screen",
         "title": "Title Screen",
         "file": "Assets/Games/MarioKart8Deluxe/Tracks/Title Screen.bfstm",
-        "duration": 0
+        "duration": 90.426,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-main-menu",
+        "title": "Main Menu",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Main Menu Medley.bfstm",
+        "duration": 91.074,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-wifi-menu",
+        "title": "Wi-Fi Menu",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Wi-Fi Menu (OST Version).bfstm",
+        "duration": 126.975,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-online-waiting-room",
+        "title": "Online Waiting Room",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Online Waiting Room.bfstm",
+        "duration": 45.323,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-wireless-play",
+        "title": "Wireless Play",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Wireless Play.bfstm",
+        "duration": 40.421,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-mario-kart-tv",
+        "title": "Mario Kart TV",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Mario Kart TV.bfstm",
+        "duration": 56.366,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-course-intro",
+        "title": "Course Intro",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Course Intro (Grand Prix & VS).bfstm",
+        "duration": 14.109,
+        "xLoops": false
+      },
+      {
+        "id": "mk8dx-race-start",
+        "title": "Race Start",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Race Start (Grand Prix & VS).bfstm",
+        "duration": 2.377,
+        "xLoops": false
+      },
+      {
+        "id": "mk8dx-race-start-time-trial",
+        "title": "Race Start (Time Trial)",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Race Start (Time Trial).bfstm",
+        "duration": 1.745,
+        "xLoops": false
+      },
+      {
+        "id": "mk8dx-battle-start",
+        "title": "Battle Start",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Battle Start.bfstm",
+        "duration": 4.6,
+        "xLoops": false
+      },
+      {
+        "id": "mk8dx-lap-fanfare",
+        "title": "Lap Fanfare",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Lap Fanfare.bfstm",
+        "duration": 2.843,
+        "xLoops": false
+      },
+      {
+        "id": "mk8dx-super-star",
+        "title": "Super Star",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Super Star.bfstm",
+        "duration": 6,
+        "LoopFromStoE": true
+      },
+      {
+        "id": "mk8dx-mario-kart-stadium",
+        "title": "Mario Kart Stadium",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Mario Kart Stadium.bfstm",
+        "duration": 62.41,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-water-park",
+        "title": "Water Park",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Water Park.bfstm",
+        "duration": 61.928,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-water-park-underwater",
+        "title": "Water Park (Underwater)",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Water Park (Underwater).bfstm",
+        "duration": 61.928,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-sweet-sweet-canyon",
+        "title": "Sweet Sweet Canyon",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Sweet Sweet Canyon.bfstm",
+        "duration": 61.362,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-thwomp-ruins",
+        "title": "Thwomp Ruins",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Thwomp Ruins (MK8D Ver.).bfstm",
+        "duration": 69.386,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-mario-circuit",
+        "title": "Mario Circuit",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Mario Circuit.bfstm",
+        "duration": 65.376,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-toad-harbor",
+        "title": "Toad Harbor",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Toad Harbor.bfstm",
+        "duration": 59.664,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-twisted-mansion",
+        "title": "Twisted Mansion",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Twisted Mansion.bfstm",
+        "duration": 59.157,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-shy-guy-falls",
+        "title": "Shy Guy Falls",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Shy Guy Falls (OST Version).bfstm",
+        "duration": 102.176,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-sunshine-airport",
+        "title": "Sunshine Airport",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Sunshine Airport.bfstm",
+        "duration": 60.535,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-dolphin-shoals",
+        "title": "Dolphin Shoals",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Dolphin Shoals (Above Water).bfstm",
+        "duration": 47.266,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-dolphin-shoals-shallow",
+        "title": "Dolphin Shoals (Shallow Water)",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Dolphin Shoals (Shallow Water).bfstm",
+        "duration": 48.459,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-dolphin-shoals-undersea",
+        "title": "Dolphin Shoals (Undersea)",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Dolphin Shoals (In the Sea ~ Undersea).bfstm",
+        "duration": 172.473,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-dolphin-shoals-deep",
+        "title": "Dolphin Shoals (Deep Water)",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Dolphin Shoals (Deep Water).bfstm",
+        "duration": 45.323,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-electrodrome",
+        "title": "Electrodrome",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Electrodrome.bfstm",
+        "duration": 55.758,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-electrodrome-beginning",
+        "title": "Electrodrome (Beginning)",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Electrodrome (Beginning).bfstm",
+        "duration": 55.758,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-electrodrome-anti-gravity",
+        "title": "Electrodrome (Anti-Gravity Zone)",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Electrodrome (Anti-Gravity Zone).bfstm",
+        "duration": 55.758,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-mount-wario",
+        "title": "Mount Wario",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Mount Wario (Medley).bfstm",
+        "duration": 250.571,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-cloudtop-cruise",
+        "title": "Cloudtop Cruise",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Cloudtop Cruise.bfstm",
+        "duration": 78.945,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-cloudtop-cruise-thundercloud",
+        "title": "Cloudtop Cruise (Thundercloud)",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Cloudtop Cruise (Thundercloud).bfstm",
+        "duration": 78.945,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-bone-dry-dunes",
+        "title": "Bone Dry Dunes",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Bone Dry Dunes.bfstm",
+        "duration": 57.813,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-bowsers-castle",
+        "title": "Bowser's Castle",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Bowser's Castle.bfstm",
+        "duration": 78.078,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-rainbow-road",
+        "title": "Rainbow Road",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Rainbow Road.bfstm",
+        "duration": 72.006,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-wii-moo-moo-meadows",
+        "title": "Wii Moo Moo Meadows",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Wii Moo Moo Meadows.bfstm",
+        "duration": 63.951,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-gba-mario-circuit",
+        "title": "GBA Mario Circuit",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/GBA Mario Circuit.bfstm",
+        "duration": 57.765,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-ds-cheep-cheep-beach",
+        "title": "DS Cheep Cheep Beach",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/DS Cheep Cheep Beach.bfstm",
+        "duration": 66.111,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-n64-toads-turnpike",
+        "title": "N64 Toad's Turnpike",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/N64 Toad's Turnpike.bfstm",
+        "duration": 68.571,
+        "LoopFromStoE": true
+      },
+      {
+        "id": "mk8dx-gcn-dry-dry-desert",
+        "title": "GCN Dry Dry Desert",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/GCN Dry Dry Desert.bfstm",
+        "duration": 79.323,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-snes-donut-plains-3",
+        "title": "SNES Donut Plains 3",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/SNES Donut Plains 3 (OST Version).bfstm",
+        "duration": 69.545,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-n64-royal-raceway",
+        "title": "N64 Royal Raceway",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/N64 Royal Raceway.bfstm",
+        "duration": 71.834,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-3ds-dk-jungle",
+        "title": "3DS DK Jungle",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/3DS DK Jungle.bfstm",
+        "duration": 68.315,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-ds-wario-stadium",
+        "title": "DS Wario Stadium",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/DS Wario Stadium.bfstm",
+        "duration": 65.879,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-gcn-sherbet-land",
+        "title": "GCN Sherbet Land",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/GCN Sherbet Land.bfstm",
+        "duration": 56,
+        "LoopFromStoE": true
+      },
+      {
+        "id": "mk8dx-3ds-music-park",
+        "title": "3DS Music Park",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/3DS Music Park (OST Version).bfstm",
+        "duration": 95.651,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-n64-yoshi-valley",
+        "title": "N64 Yoshi Valley",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/N64 Yoshi Valley.bfstm",
+        "duration": 68.034,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-ds-tick-tock-clock",
+        "title": "DS Tick-Tock Clock",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/DS Tick-Tock Clock (OST Version).bfstm",
+        "duration": 110.008,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-3ds-piranha-plant-slide",
+        "title": "3DS Piranha Plant Slide",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/3DS Piranha Plant Slide.bfstm",
+        "duration": 67.617,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-wii-grumble-volcano",
+        "title": "Wii Grumble Volcano",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Wii Grumble Volcano.bfstm",
+        "duration": 81.588,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-n64-rainbow-road",
+        "title": "N64 Rainbow Road",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/N64 Rainbow Road.bfstm",
+        "duration": 72.992,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-n64-rainbow-road-final",
+        "title": "N64 Rainbow Road (Final Section)",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/N64 Rainbow Road (Final Section).bfstm",
+        "duration": 79.37,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-gcn-yoshi-circuit",
+        "title": "GCN Yoshi Circuit",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/GCN Yoshi Circuit.bfstm",
+        "duration": 80.949,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-excitebike-arena",
+        "title": "Excitebike Arena",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Excitebike Arena.bfstm",
+        "duration": 57.248,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-dragon-driftway",
+        "title": "Dragon Driftway",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Dragon Driftway.bfstm",
+        "duration": 71.081,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-mute-city",
+        "title": "Mute City",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Mute City.bfstm",
+        "duration": 98.64,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-big-blue",
+        "title": "Big Blue",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Big Blue.bfstm",
+        "duration": 89.76,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-big-blue-final-lap",
+        "title": "Big Blue (Final Lap)",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Big Blue (Final Lap).bfstm",
+        "duration": 69.623,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-mute-city-big-blue-results",
+        "title": "Mute City / Big Blue Results",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Mute City_Big Blue Results.bfstm",
+        "duration": 31.165,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-wii-warios-gold-mine",
+        "title": "Wii Wario's Gold Mine",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Wii Wario's Gold Mine (OST Version).bfstm",
+        "duration": 126.177,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-snes-rainbow-road",
+        "title": "SNES Rainbow Road",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/SNES Rainbow Road.bfstm",
+        "duration": 66.569,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-ice-ice-outpost",
+        "title": "Ice Ice Outpost",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Ice Ice Outpost.bfstm",
+        "duration": 55.996,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-hyrule-circuit",
+        "title": "Hyrule Circuit",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Hyrule Circuit.bfstm",
+        "duration": 63.104,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-gcn-baby-park",
+        "title": "GCN Baby Park",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/GCN Baby Park.bfstm",
+        "duration": 106.127,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-gcn-baby-park-in-game",
+        "title": "GCN Baby Park (In-Game Style)",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/GCN Baby Park (In-Game Style).bfstm",
+        "duration": 169.781,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-gba-cheese-land",
+        "title": "GBA Cheese Land",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/GBA Cheese Land.bfstm",
+        "duration": 90.459,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-wild-woods",
+        "title": "Wild Woods",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Wild Woods.bfstm",
+        "duration": 68.2,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-animal-crossing-spring",
+        "title": "Animal Crossing (Spring)",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Animal Crossing (Spring).bfstm",
+        "duration": 63.189,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-animal-crossing-summer",
+        "title": "Animal Crossing (Summer)",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Animal Crossing (Summer).bfstm",
+        "duration": 72.275,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-animal-crossing-autumn",
+        "title": "Animal Crossing (Autumn)",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Animal Crossing (Autumn).bfstm",
+        "duration": 69.856,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-animal-crossing-winter",
+        "title": "Animal Crossing (Winter)",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Animal Crossing (Winter).bfstm",
+        "duration": 67.362,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-animal-crossing-results",
+        "title": "Animal Crossing Results",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Animal Crossing Results.bfstm",
+        "duration": 36.271,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-3ds-neo-bowser-city",
+        "title": "3DS Neo Bowser City",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/3DS Neo Bowser City.bfstm",
+        "duration": 52.598,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-gba-ribbon-road",
+        "title": "GBA Ribbon Road",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/GBA Ribbon Road.bfstm",
+        "duration": 63.883,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-super-bell-subway",
+        "title": "Super Bell Subway",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Super Bell Subway.bfstm",
+        "duration": 59.535,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-super-bell-subway-underground",
+        "title": "Super Bell Subway (Underground)",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Super Bell Subway (Underground).bfstm",
+        "duration": 59.535,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-battle-stadium",
+        "title": "Battle Stadium",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Battle Stadium.bfstm",
+        "duration": 58.816,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-sweet-sweet-kingdom",
+        "title": "Sweet Sweet Kingdom",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Sweet Sweet Kingdom.bfstm",
+        "duration": 58.324,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-dragon-palace",
+        "title": "Dragon Palace",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Dragon Palace (Outside).bfstm",
+        "duration": 61.657,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-dragon-palace-inside",
+        "title": "Dragon Palace (Inside)",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Dragon Palace (Inside).bfstm",
+        "duration": 61.657,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-lunar-colony",
+        "title": "Lunar Colony",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Lunar Colony.bfstm",
+        "duration": 90.432,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-3ds-wuhu-town",
+        "title": "3DS Wuhu Town",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/3DS Wuhu Town.bfstm",
+        "duration": 70.744,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-gcn-luigis-mansion",
+        "title": "GCN Luigi's Mansion",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/GCN Luigi's Mansion.bfstm",
+        "duration": 55.872,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-snes-battle-course-1",
+        "title": "SNES Battle Course 1",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/SNES Battle Course 1.bfstm",
+        "duration": 38.951,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-urchin-underpass",
+        "title": "Urchin Underpass",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Urchin Underpass.bfstm",
+        "duration": 79.987,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-urchin-underpass-now-or-never",
+        "title": "Urchin Underpass (Now or Never!)",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Urchin Underpass (Now or Never!).bfstm",
+        "duration": 57.258,
+        "xLoops": false
+      },
+      {
+        "id": "mk8dx-tour-paris-promenade",
+        "title": "Tour Paris Promenade",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Tour Paris Promenade.bfstm",
+        "duration": 40.094,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-3ds-toad-circuit",
+        "title": "3DS Toad Circuit",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/3DS Toad Circuit.bfstm",
+        "duration": 58.071,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-n64-choco-mountain",
+        "title": "N64 Choco Mountain",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/N64 Choco Mountain.bfstm",
+        "duration": 92.902,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-wii-coconut-mall",
+        "title": "Wii Coconut Mall",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Wii Coconut Mall.bfstm",
+        "duration": 67.142,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-tour-tokyo-blur",
+        "title": "Tour Tokyo Blur",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Tour Tokyo Blur.bfstm",
+        "duration": 53.281,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-ds-shroom-ridge",
+        "title": "DS Shroom Ridge",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/DS Shroom Ridge.bfstm",
+        "duration": 65.849,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-gba-sky-garden",
+        "title": "GBA Sky Garden",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/GBA Sky Garden.bfstm",
+        "duration": 42.218,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-course-intro-ninja-hideaway",
+        "title": "Course Intro (Ninja Hideaway)",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Course Intro (Ninja Hideaway).bfstm",
+        "duration": 14.122,
+        "xLoops": false
+      },
+      {
+        "id": "mk8dx-tour-ninja-hideaway",
+        "title": "Tour Ninja Hideaway",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Tour Ninja Hideaway.bfstm",
+        "duration": 63.077,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-tour-new-york-minute",
+        "title": "Tour New York Minute",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Tour New York Minute.bfstm",
+        "duration": 57.28,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-snes-mario-circuit-3",
+        "title": "SNES Mario Circuit 3",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/SNES Mario Circuit 3.bfstm",
+        "duration": 38.164,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-n64-kalimari-desert",
+        "title": "N64 Kalimari Desert",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/N64 Kalimari Desert.bfstm",
+        "duration": 72.577,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-ds-peach-gardens",
+        "title": "DS Peach Gardens",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/DS Peach Gardens.bfstm",
+        "duration": 52.583,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-tour-sydney-sprint",
+        "title": "Tour Sydney Sprint",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Tour Sydney Sprint.bfstm",
+        "duration": 77.1,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-gba-snow-land",
+        "title": "GBA Snow Land",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/GBA Snow Land.bfstm",
+        "duration": 49.279,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-wii-mushroom-gorge",
+        "title": "Wii Mushroom Gorge",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Wii Mushroom Gorge.bfstm",
+        "duration": 52.466,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-sky-high-sundae",
+        "title": "Sky-High Sundae",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Sky-High Sundae.bfstm",
+        "duration": 69.457,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-tour-london-loop",
+        "title": "Tour London Loop",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Tour London Loop.bfstm",
+        "duration": 62.933,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-gba-boo-lake",
+        "title": "GBA Boo Lake",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/GBA Boo Lake.bfstm",
+        "duration": 64.246,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-3ds-rock-rock-mountain",
+        "title": "3DS Rock Rock Mountain",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/3DS Rock Rock Mountain _ Alpine Pass.bfstm",
+        "duration": 68.334,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-wii-maple-treeway",
+        "title": "Wii Maple Treeway",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Wii Maple Treeway.bfstm",
+        "duration": 68.411,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-tour-berlin-byways",
+        "title": "Tour Berlin Byways",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Tour Berlin Byways.bfstm",
+        "duration": 58.508,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-tour-merry-mountain",
+        "title": "Tour Merry Mountain",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Tour Merry Mountain.bfstm",
+        "duration": 68.439,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-3ds-rainbow-road",
+        "title": "3DS Rainbow Road",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/3DS Rainbow Road.bfstm",
+        "duration": 104.144,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-3ds-rainbow-road-moon",
+        "title": "3DS Rainbow Road (Moon)",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/3DS Rainbow Road (Moon).bfstm",
+        "duration": 104.144,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-3ds-rainbow-road-final",
+        "title": "3DS Rainbow Road (Final Section)",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/3DS Rainbow Road (Final Section).bfstm",
+        "duration": 111.758,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-tour-amsterdam-drift",
+        "title": "Tour Amsterdam Drift",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Tour Amsterdam Drift.bfstm",
+        "duration": 52.398,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-gba-riverside-park",
+        "title": "GBA Riverside Park",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/GBA Riverside Park.bfstm",
+        "duration": 59.584,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-wii-dk-summit",
+        "title": "Wii DK Summit",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Wii DK Summit.bfstm",
+        "duration": 71.989,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-course-start-yoshis-island",
+        "title": "Course Start (Yoshi's Island)",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Course Start (Yoshi's Island).bfstm",
+        "duration": 2.054,
+        "xLoops": false
+      },
+      {
+        "id": "mk8dx-yoshis-island",
+        "title": "Yoshi's Island",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Yoshi's Island.bfstm",
+        "duration": 64.337,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-goal-yoshis-island",
+        "title": "Goal (Yoshi's Island)",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Goal (Yoshi's Island).bfstm",
+        "duration": 4.8,
+        "xLoops": false
+      },
+      {
+        "id": "mk8dx-results-yoshis-island",
+        "title": "Results (Yoshi's Island)",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Results (Yoshi's Island).bfstm",
+        "duration": 27.584,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-tour-bangkok-rush",
+        "title": "Tour Bangkok Rush",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Tour Bangkok Rush.bfstm",
+        "duration": 65.752,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-ds-mario-circuit",
+        "title": "DS Mario Circuit",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/DS Mario Circuit.bfstm",
+        "duration": 78.354,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-gcn-waluigi-stadium",
+        "title": "GCN Waluigi Stadium",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/GCN Waluigi Stadium.bfstm",
+        "duration": 78.568,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-tour-singapore-speedway",
+        "title": "Tour Singapore Speedway",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Tour Singapore Speedway.bfstm",
+        "duration": 61.851,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-tour-singapore-speedway-chinatown",
+        "title": "Tour Singapore Speedway (Chinatown)",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Tour Singapore Speedway (Chinatown).bfstm",
+        "duration": 61.851,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-tour-athens-dash",
+        "title": "Tour Athens Dash",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Tour Athens Dash.bfstm",
+        "duration": 60.297,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-gcn-daisy-cruiser",
+        "title": "GCN Daisy Cruiser",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/GCN Daisy Cruiser.bfstm",
+        "duration": 73.105,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-wii-moonview-highway",
+        "title": "Wii Moonview Highway",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Wii Moonview Highway.bfstm",
+        "duration": 64.683,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-wii-moonview-highway-city",
+        "title": "Wii Moonview Highway (City)",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Wii Moonview Highway (City).bfstm",
+        "duration": 64.683,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-squeaky-clean-sprint",
+        "title": "Squeaky Clean Sprint",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Squeaky Clean Sprint.bfstm",
+        "duration": 58.913,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-tour-los-angeles-laps",
+        "title": "Tour Los Angeles Laps",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Tour Los Angeles Laps.bfstm",
+        "duration": 69.313,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-gba-sunset-wilds",
+        "title": "GBA Sunset Wilds",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/GBA Sunset Wilds.bfstm",
+        "duration": 68.961,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-wii-koopa-cape",
+        "title": "Wii Koopa Cape",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Wii Koopa Cape.bfstm",
+        "duration": 42.869,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-wii-koopa-cape-river",
+        "title": "Wii Koopa Cape (River)",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Wii Koopa Cape (River).bfstm",
+        "duration": 42.869,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-wii-koopa-cape-underwater",
+        "title": "Wii Koopa Cape (Underwater)",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Wii Koopa Cape (Underwater).bfstm",
+        "duration": 42.869,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-tour-vancouver-velocity",
+        "title": "Tour Vancouver Velocity",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Tour Vancouver Velocity.bfstm",
+        "duration": 73.414,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-tour-rome-avanti",
+        "title": "Tour Rome Avanti",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Tour Rome Avanti.bfstm",
+        "duration": 53.675,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-gcn-dk-mountain",
+        "title": "GCN DK Mountain",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/GCN DK Mountain.bfstm",
+        "duration": 71.404,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-wii-daisy-circuit",
+        "title": "Wii Daisy Circuit",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Wii Daisy Circuit.bfstm",
+        "duration": 71.772,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-tour-piranha-plant-cove",
+        "title": "Tour Piranha Plant Cove",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Tour Piranha Plant Cove.bfstm",
+        "duration": 53.297,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-tour-madrid-drive",
+        "title": "Tour Madrid Drive",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Tour Madrid Drive.bfstm",
+        "duration": 56.878,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-tour-madrid-drive-inside",
+        "title": "Tour Madrid Drive (Inside)",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Tour Madrid Drive (Inside).bfstm",
+        "duration": 56.878,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-tour-madrid-drive-stadium",
+        "title": "Tour Madrid Drive (Stadium)",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Tour Madrid Drive (Stadium).bfstm",
+        "duration": 56.878,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-3ds-rosalinas-ice-world",
+        "title": "3DS Rosalina's Ice World",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/3DS Rosalina's Ice World.bfstm",
+        "duration": 63.145,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-snes-bowser-castle-3",
+        "title": "SNES Bowser Castle 3",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/SNES Bowser Castle 3.bfstm",
+        "duration": 51.646,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-wii-rainbow-road",
+        "title": "Wii Rainbow Road",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Wii Rainbow Road.bfstm",
+        "duration": 85.148,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-7th-12th-place-finish",
+        "title": "7th-12th Place Finish",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/7th-12th Place Finish.bfstm",
+        "duration": 5.444,
+        "xLoops": false
+      },
+      {
+        "id": "mk8dx-bad-results",
+        "title": "Bad Results",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Bad Results (7th-12th).bfstm",
+        "duration": 31.326,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-good-results",
+        "title": "Good Results",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Good Results.bfstm",
+        "duration": 51.174,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-get-trophy",
+        "title": "Get Trophy",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Get Trophy.bfstm",
+        "duration": 56.05,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-no-trophy",
+        "title": "No Trophy",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/No Trophy.bfstm",
+        "duration": 36.06,
+        "xLoops": true
+      },
+      {
+        "id": "mk8dx-winning-run",
+        "title": "Winning Run",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Winning Run.bfstm",
+        "duration": 38.928,
+        "xLoops": false
+      },
+      {
+        "id": "mk8dx-unlock-feature",
+        "title": "Unlock Feature",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Unlock Feature.bfstm",
+        "duration": 3.308,
+        "xLoops": false
+      },
+      {
+        "id": "mk8dx-staff-roll",
+        "title": "Staff Roll",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Staff Roll.bfstm",
+        "duration": 250.409,
+        "xLoops": false
+      },
+      {
+        "id": "mk8dx-staff-roll-booster",
+        "title": "Staff Roll (Booster Course Pass)",
+        "file": "Assets/Games/MarioKart8Deluxe/Tracks/Staff Roll (Booster Course Pass).bfstm",
+        "duration": 291.275,
+        "xLoops": false
       }
     ]
   },

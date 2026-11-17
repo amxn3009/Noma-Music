@@ -11,7 +11,7 @@ const supabase =
     : null;
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = '17.11.26, fixed bugs, prettier playlist header, changed controller svg, adjusted cookie max age to 1 year.';
+const APP_VERSION = '17.11.26, fixed bugs, prettier playlist header, changed controller svg, adjusted cookie max age to 1 year + Added Mk8DX';
 
 let LIBRARY = [];
 
