@@ -18,7 +18,7 @@ export async function onRequestPost(context: {
     return new Response('', {
       status: 302,
       headers: {
-        'Set-Cookie': `${cookieKeyValue}; Max-Age=${CFP_COOKIE_MAX_AGE}; Path=/; HttpOnly; Secure`,
+        'Set-Cookie': `${cookieKeyValue}; Max-Age=${CFP_COOKIE_MAX_AGE}; Path=/; HttpOnly; Secure; SameSite=Lax`,
         'Cache-Control': 'no-cache',
         Location: redirectPath
       }

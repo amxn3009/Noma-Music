@@ -419,6 +419,86 @@ body.search-mode #global-search-results {
   min-height: 0;
   overflow: hidden;
   padding: 0 28px; /* side room for header + tracks */
+  position: relative; /* anchor for detail-hero-bg */
+}
+
+/* ── Album / playlist blurred cover hero (YTM-style) ── */
+.detail-hero-bg {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: min(48vh, 380px);
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  opacity: 0;
+  transition:
+    opacity 0.45s var(--ease),
+    height 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+#game-detail:not(.hidden) .detail-hero-bg.is-on {
+  opacity: 0.72;
+}
+/* Header collapse → shorter, subtler hero */
+.game-sticky-top.is-collapsed ~ .detail-hero-bg,
+#game-detail:has(.game-sticky-top.is-collapsed) .detail-hero-bg {
+  height: min(26vh, 180px);
+  opacity: 0.5;
+}
+.detail-hero-media {
+  position: absolute;
+  inset: 0;
+  background-size: 100% 100%;
+  background-position: center center;
+  background-repeat: no-repeat;
+  filter: blur(48px) saturate(1.2) brightness(0.62);
+  transform: none;
+}
+/* Mosaic hero: real 2×2 grid under the same blur */
+.detail-hero-media.is-mosaic {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 0;
+  inset: 0;
+  background-image: none !important;
+  filter: blur(40px) saturate(1.15) brightness(0.6);
+  transform: none;
+}
+.detail-hero-media.is-mosaic img {
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  display: block;
+}
+/* No black veil — progressive transparency on the hero itself */
+.detail-hero-fade {
+  display: none !important;
+}
+.detail-hero-bg {
+  -webkit-mask-image: linear-gradient(
+    180deg,
+    #000 0%,
+    #000 30%,
+    rgba(0, 0, 0, 0.45) 55%,
+    rgba(0, 0, 0, 0.12) 78%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    180deg,
+    #000 0%,
+    #000 30%,
+    rgba(0, 0, 0, 0.45) 55%,
+    rgba(0, 0, 0, 0.12) 78%,
+    transparent 100%
+  );
+}
+/* Sticky + tracks sit above the hero */
+.game-sticky-top,
+.track-list-scroll {
+  position: relative;
+  z-index: 1;
 }
 
 #game-detail.tab-panel.active,
@@ -5437,7 +5517,9 @@ body.fs-queue-open #queue-panel {
 }
 
 .fs-queue-collapse:hover,
-.fs-queue-close:hover {
+.fs-queue-close:hover,
+#fs-queue-collapse:hover,
+#fs-queue-close:hover {
   color: var(--text);
   background: rgba(255, 255, 255, 0.08);
 }
@@ -5923,6 +6005,24 @@ body.fs-open .noma-toast {
   min-height: 0;
   overflow: hidden;
   padding: 28px 28px 0;
+}
+
+.tab-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  display: block;
+  background-color: currentColor;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+}
+.tab-icon-controller {
+  -webkit-mask-image: url("../Assets/Common/controller.svg");
+  mask-image: url("../Assets/Common/controller.svg");
 }
 
 .lib-page-top {

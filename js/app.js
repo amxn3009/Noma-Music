@@ -11,7 +11,7 @@ const supabase =
     : null;
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = '16.11.26, normalized all songs volume.';
+const APP_VERSION = '17.11.26, fixed bugs, prettier playlist header, changed controller svg, adjusted cookie max age to 1 year.';
 
 let LIBRARY = [];
 
@@ -753,6 +753,41 @@ function applyCoverToEl(el, pl) {
     return img;
   }
   return el;
+}
+
+/** Blurred cover hero behind game/playlist detail (supports mosaic). */
+function setDetailHeroBg(src) {
+  const hero = document.getElementById("detail-hero-bg");
+  const media = document.getElementById("detail-hero-media");
+  if (!hero || !media) return;
+
+  if (!src) {
+    hero.classList.remove("is-on");
+    media.classList.remove("is-mosaic");
+    media.style.backgroundImage = "";
+    media.innerHTML = "";
+    return;
+  }
+
+  media.classList.remove("is-mosaic");
+  media.innerHTML = "";
+
+  if (Array.isArray(src)) {
+    const cells = src.slice(0, 4);
+    while (cells.length < 4) cells.push(cells[cells.length - 1] || PLACEHOLDER);
+    media.classList.add("is-mosaic");
+    media.style.backgroundImage = "";
+    media.innerHTML = cells
+      .map((u) => `<img src="${escapeHtml(u || PLACEHOLDER)}" alt="" draggable="false">`)
+      .join("");
+  } else {
+    media.style.backgroundImage = `url("${String(src || PLACEHOLDER).replace(/"/g, "%22")}")`;
+  }
+  hero.classList.add("is-on");
+}
+
+function clearDetailHeroBg() {
+  setDetailHeroBg(null);
 }
 
 function playlistCoverHtml(pl, className = "pl-card-cover") {
@@ -5355,9 +5390,9 @@ function openPlaylistDetail(id) {
   if (labelEl) labelEl.textContent = "Playlist";
 
   // Header cover (mosaic-aware)
-  // Header cover (mosaic-aware)
   const coverHost = $("#game-cover");
   if (coverHost) applyCoverToEl(coverHost, pl);
+  setDetailHeroBg(playlistCoverSrc(pl));
 
   // Clean any leftover edit chrome state
   document.body.classList.remove("pl-editing");
@@ -5904,6 +5939,7 @@ function openDeletePlaylistConfirm(plId) {
       state.currentPlaylist = null;
       gameDetail.classList.add("hidden");
       gameDetail.classList.remove("active", "is-playlist-detail");
+      clearDetailHeroBg();
       document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
       document.querySelector('.tab[data-tab="playlists"]')?.classList.add("active");
       document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
@@ -6786,6 +6822,7 @@ function openPlaylistEditMetaModal(pl) {
     const t = $("#game-title");
     if (t) t.textContent = pl.name;
     applyCoverToEl(document.getElementById("game-cover"), pl);
+    setDetailHeroBg(playlistCoverSrc(pl));
     close();
   };
   ov.onclick = null; // only Abbrechen / Fertig close it
@@ -9153,6 +9190,7 @@ function openGame(id) {
     }
     el.classList.remove("pl-cover-mosaic", "pl-cover-editable");
     el.src = src;
+    setDetailHeroBg(game.cover || PLACEHOLDER);
   })();
 
   const titleEl = $("#game-title");
@@ -9474,6 +9512,7 @@ document.querySelectorAll(".tab").forEach((tab) => {
       state.currentPlaylist = null;
       gameDetail.classList.add("hidden");
       gameDetail.classList.remove("active", "is-playlist-detail");
+      clearDetailHeroBg();
       trackListEl?.classList.remove("is-playlist");
       searchReturn = null;
 
@@ -9505,6 +9544,7 @@ document.querySelectorAll(".tab").forEach((tab) => {
       state.currentGame = null;
       gameDetail.classList.add("hidden");
       gameDetail.classList.remove("active", "is-playlist-detail");
+      clearDetailHeroBg();
       trackListEl?.classList.remove("is-playlist");
       document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
       document.querySelector('.tab[data-tab="playlists"]')?.classList.add("active");
@@ -9526,6 +9566,7 @@ document.querySelectorAll(".tab").forEach((tab) => {
       state.currentGame = null;
       gameDetail.classList.add("hidden");
       gameDetail.classList.remove("active");
+      clearDetailHeroBg();
       searchReturn = null;
       document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
       document.querySelector('.tab[data-tab="playlists"]')?.classList.add("active");
@@ -9539,6 +9580,7 @@ document.querySelectorAll(".tab").forEach((tab) => {
     state.currentGame = null;
     gameDetail.classList.add("hidden");
     gameDetail.classList.remove("active");
+    clearDetailHeroBg();
 
     // + Songs → search → open game → back: return to SEARCH (playlist is under that)
     if (
@@ -13663,54 +13705,12 @@ function bindPlayerChrome() {
     scrubbing = false;
     document.body.classList.remove("is-scrubbing");
 
-    if (typeof cancelTransition === "function") cancelTransition(true);
-    lastLoopCycle = -1;
-
     const duration = currentDuration();
     if (!(duration > 0)) return;
 
     const seekTo = paintSeek(ratioFromClientX(e.clientX));
-    const safeEnd = Math.max(0, duration - 0.05);
-    const pos = Math.min(seekTo, safeEnd);
-
-    if (useMediaEl && mediaEl) {
-      const cur = activeMedia() || mediaEl;
-      try {
-        cur.currentTime = pos;
-      } catch (_) {}
-      pauseOffset = pos;
-      state.currentTime = pos;
-      if (mediaA && mediaB) {
-        const other = standbyMedia();
-        if (other) {
-          try {
-            other.currentTime = mediaForceFullLoop ? 0 : mediaLoopStart;
-          } catch (_) {}
-          other.volume = 0;
-        }
-      }
-      if (state.playing) {
-        cur.play().catch(() => {});
-        if (mediaA && mediaB) bindStreamProgress();
-        else updateMediaProgress();
-      } else {
-        paintMediaProgress(pos, duration);
-      }
-      if (typeof updateMediaSession === "function") updateMediaSession();
-      return;
-    }
-
-    if (!decodedBuffer) return;
-    if (state.playing) {
-      playBuffer(decodedBuffer, pos);
-    } else {
-      pauseOffset = pos;
-      state.currentTime = pos;
-      const fill = $("#progress-fill");
-      if (fill) fill.style.width = `${(pos / duration) * 100}%`;
-      const tCur = $("#time-current");
-      if (tCur) tCur.textContent = formatTime(pos);
-    }
+    // Same path as lyric-line seek: resets lastLoopCycle, soft-end, lyrics clocks
+    seekToSeconds(seekTo);
   });
 
   window.addEventListener("pointercancel", () => {
@@ -14015,6 +14015,7 @@ function openProfile() {
   document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
   gameDetail.classList.add("hidden");
   gameDetail.classList.remove("active");
+  clearDetailHeroBg();
   clearTimeout(profileCloseTimer);
   $("#profile-view")?.classList.remove("is-closing");
   $("#profile-view")?.classList.remove("hidden");
@@ -14093,6 +14094,7 @@ function openSettings() {
   document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
   gameDetail.classList.add("hidden");
   gameDetail.classList.remove("active");
+  clearDetailHeroBg();
   clearTimeout(settingsCloseTimer);
   $("#settings-view")?.classList.remove("is-closing");
   $("#settings-view")?.classList.remove("hidden");

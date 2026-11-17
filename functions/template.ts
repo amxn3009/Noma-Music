@@ -189,11 +189,22 @@ export function getTemplate({
       <h1>Willkommen 👋</h1>
       <p class="subtitle">Bitte gib das Passwort ein, um fortzufahren.</p>
 
-      <form method="post" action="/cfp_login">
+      <form method="post" action="/cfp_login" id="cfp-form">
         <input type="hidden" name="redirect" value="${redirectPath}" />
+        <!-- Helps iOS / password managers treat this as a real login -->
+        <input
+          type="text"
+          name="username"
+          autocomplete="username"
+          value="noma"
+          tabindex="-1"
+          aria-hidden="true"
+          style="position:absolute;opacity:0;height:0;width:0;pointer-events:none"
+        />
         <input
           type="password"
           name="password"
+          id="cfp-password"
           placeholder="Passwort"
           autocomplete="current-password"
           required
@@ -201,6 +212,34 @@ export function getTemplate({
         >
         <button type="submit">Weiter</button>
       </form>
+      <script>
+        (function () {
+          var form = document.getElementById("cfp-form");
+          var input = document.getElementById("cfp-password");
+          if (!form || !input) return;
+
+          // After autofill, value can appear without a normal "input" you typed.
+          // Submit once we have a non-empty password (iOS autofill path).
+          var submitted = false;
+          function trySubmit() {
+            if (submitted) return;
+            if (!(input.value || "").trim()) return;
+            submitted = true;
+            // Small delay so the autofilled value is fully committed
+            setTimeout(function () { form.submit(); }, 50);
+          }
+
+          input.addEventListener("change", trySubmit);
+          input.addEventListener("input", trySubmit);
+          // iOS sometimes only paints autofill without events — poll briefly
+          var n = 0;
+          var t = setInterval(function () {
+            n++;
+            if ((input.value || "").trim()) trySubmit();
+            if (submitted || n > 40) clearInterval(t);
+          }, 100);
+        })();
+      </script>
 
       <p class="error">Falsches Passwort.</p>
     </div>
