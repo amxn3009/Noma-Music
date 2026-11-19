@@ -11,7 +11,7 @@ const supabase =
     : null;
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = '17.11.26, fixed bugs, prettier playlist header, changed controller svg, adjusted cookie max age to 1 year + Added Mk8DX';
+const APP_VERSION = '19.11.26, fixed bugs especially for clicks and bfstm encoding, tried to fix i pad perfomance...';
 
 let LIBRARY = [];
 
@@ -1695,8 +1695,10 @@ async function initKawarp() {
   syncKawarpPlayback();
 }
 
-/** Ambient: PlaceholderImage when idle (static); album cover when playing (Kawarp moves). */
-async function setAmbientBackground(url, { force = false } = {}) {
+/** Ambient: PlaceholderImage when idle; album cover when a track is queued. */
+let bgLoadGen = 0;
+
+function setAmbientBackground(url, { force = false } = {}) {
   const idle =
     !url ||
     url === PLACEHOLDER ||
@@ -1708,16 +1710,31 @@ async function setAmbientBackground(url, { force = false } = {}) {
   if (!force && key === lastBgUrl) return;
   lastBgUrl = key;
 
+  // CSS fallback updates immediately (sync)
   if (bgLayer) {
     bgLayer.style.backgroundImage = `url("${src}")`;
   }
 
+  // Kawarp: fire-and-forget so BFSTM decode never blocks the cover swap
   if (settings.bgMode === "kawarp" && kawarp && kawarpReady) {
-    try {
-      await kawarp.loadImage(src);
-    } catch (err) {
-      console.warn("[Noma] Kawarp loadImage failed", err);
-    }
+    const gen = ++bgLoadGen;
+    // Preload so GPU upload can start ASAP even under CPU load
+    const img = new Image();
+    img.decoding = "async";
+    img.onload = () => {
+      if (gen !== bgLoadGen) return;
+      Promise.resolve(kawarp.loadImage(src))
+        .then(() => {
+          if (gen !== bgLoadGen) return;
+          syncKawarpPlayback();
+        })
+        .catch((err) => console.warn("[Noma] Kawarp loadImage failed", err));
+    };
+    img.onerror = () => {
+      if (gen !== bgLoadGen) return;
+      Promise.resolve(kawarp.loadImage(src)).catch(() => {});
+    };
+    img.src = src;
   }
 
   syncKawarpPlayback();
@@ -3168,7 +3185,13 @@ async function playMediaUrlStreamLoop(url, track, offsetSec = 0) {
 }
 
 function updateProgressUI() {
-  if (state.playing && listenClock.trackKey) flushListenTime();
+  if (state.playing && listenClock.trackKey) {
+    const _t = performance.now();
+    if (_t - (updateProgressUI._lastFlush || 0) > 5000) {
+      updateProgressUI._lastFlush = _t;
+      flushListenTime();
+    }
+  }
   // Do NOT clear lastTs here — endListenSession / pause paths own that
   if (!decodedBuffer) return;
 
@@ -4096,7 +4119,7 @@ function releaseDecodedBuffer() {
   }
 }
 
-async function decodeBfstm(url) {
+async function decodeBfstm(url, isStale = () => false) {
   const hit = decodeCacheGet(url);
   if (hit?.audioBuffer) {
     return {
@@ -4110,6 +4133,7 @@ async function decodeBfstm(url) {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Failed to load ${url}: ${res.status}`);
   const arrayBuffer = await res.arrayBuffer();
+  if (isStale()) throw new DOMException("stale", "AbortError");
   const bfstm = new Bfstm(arrayBuffer);
   const meta = bfstm.metadata;
   const channels = bfstm.getAllSamples();
@@ -9710,39 +9734,47 @@ function playFromGame(game, track) {
 
 async function playCurrent() {
   const gen = ++playGen;
-  // iOS mute switch: unlock HTMLAudio + set session to "playback"
-  try {
-    await unlockMediaElement();
-  } catch (_) {}
 
-  ensurePlaybackAudioSession();
-  cancelTransition(false);
-  clearSoftEndTimers();
-
+  // ── Cover / Kawarp FIRST (before any await / BFSTM work) ──
   const item = state.queue[state.queueIndex];
   if (!item) return;
 
   const game = LIBRARY.find((g) => g.id === item.gameId);
   const track = item.track;
+  const coverUrl = game?.cover || PLACEHOLDER;
+
+  $("#now-cover").src = coverUrl;
+  setMarqueeText($("#now-title"), track.title);
+  $("#now-game").textContent = gameNameForPlayer(game);
+  $("#fs-cover").src = coverUrl;
+  const _fsT = $("#fs-title");
+  if (_fsT) _fsT.textContent = track.title;
+  $("#fs-game").textContent = gameNameForFullscreen(game);
+  setAmbientBackground(coverUrl); // non-blocking; starts Kawarp immediately
+
+  document.body.classList.add("is-playing");
+  markPlayingTrack(track.id);
+
+  // Yield 1–2 frames so the browser can paint / start Kawarp texture upload
+  // before BFSTM decode saturates the main thread
+  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+  if (gen !== playGen) return;
+
+  // iOS mute switch: unlock HTMLAudio + set session to "playback"
+  try {
+    await unlockMediaElement();
+  } catch (_) {}
+  if (gen !== playGen) return;
+
+  ensurePlaybackAudioSession();
+  cancelTransition(false);
+  clearSoftEndTimers();
 
   if (state.loopMode === "count") {
     state.loopsRemaining = resolveLoopsForQueueItem(item);
   }
 
-  $("#now-cover").src = game?.cover || PLACEHOLDER;
-  setMarqueeText($("#now-title"), track.title);
-  $("#now-game").textContent = gameNameForPlayer(game);
-  $("#fs-cover").src = game?.cover || PLACEHOLDER;
-  const _fsT = $("#fs-title"); 
-  if (_fsT) _fsT.textContent = track.title;
-  $("#fs-game").textContent = gameNameForFullscreen(game);
-  // set cover only once we know the track — avoids idle→placeholder→cover flash
-  if (game?.cover) {
-    setAmbientBackground(game.cover);
-  }
-  document.body.classList.add("is-playing");
-  markPlayingTrack(track.id);
-
+  flushListenTime({ force: true }); // credit the previous track before switching
   beginListenSession();
 
   releaseDecodedBuffer();
@@ -9772,6 +9804,15 @@ async function playCurrent() {
       ensureAudioContext();
     }
     if (gen !== playGen) return; // skipped while loading
+
+    // Debounce: if the user is skipping fast, wait before fetching/decoding
+    const _now = performance.now();
+    const _rapid = _now - (playCurrent._last || 0) < 600;
+    playCurrent._last = _now;
+    if (_rapid) {
+      await new Promise((r) => setTimeout(r, 200));
+      if (gen !== playGen) return;
+    }
 
     if (typeof isWebAudioFile === "function" && isWebAudioFile(url)) {
       forceFullLoop = !!track.LoopFromStoE;
@@ -9815,7 +9856,7 @@ async function playCurrent() {
     }
 
     // BFSTM
-    const decoded = await decodeBfstm(url);
+    const decoded = await decodeBfstm(url, () => gen !== playGen);
     if (gen !== playGen) return;
 
     decodedBuffer = decoded.audioBuffer;

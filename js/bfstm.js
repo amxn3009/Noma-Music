@@ -21,6 +21,7 @@ export class Bfstm {
   #streamInfoOffset = -1;
   #trackTableOffset = -1;
   #channelTableOffset = -1;
+  #seekSeed = null;
   #cachedSamples = null;
   #cachedChannelInfo = null;
   #cachedSeekData = null;
@@ -377,20 +378,47 @@ export class Bfstm {
       };
     }
 
-    const samplesPerEntry = this.metadata.adpcTableSamplesPerEntry;
-    const blockSample = block * this.metadata.samplesPerBlock;
-    if (samplesPerEntry > 0 && blockSample % samplesPerEntry === 0) {
-      const history = this.#getSeekData()[channel][blockSample / samplesPerEntry];
-      if (history) {
-        return history;
-      }
+    // One-shot seed for random access (set by getSamples)
+    if (this.#seekSeed && this.#seekSeed.block === block) {
+      return this.#seekSeed.histories[channel];
     }
 
+    // Sequential playback: always continue from the previous block.
+    // Do NOT reload the seek table every block — that causes crackles on
+    // align-14 / imperfect OST seek tables.
     const previousSamples = this.#getSamplesAtBlock(block - 1)[channel];
     return {
       yn1: previousSamples[previousSamples.length - 1] ?? 0,
       yn2: previousSamples[previousSamples.length - 2] ?? 0,
     };
+  }
+
+    #seedHistoryFromSeek(block) {
+    if (block <= 0 || this.#offsetToSeek < 0) {
+      this.#seekSeed = null;
+      return false;
+    }
+    const samplesPerEntry = this.metadata.adpcTableSamplesPerEntry;
+    const blockSample = block * this.metadata.samplesPerBlock;
+    if (samplesPerEntry <= 0 || blockSample % samplesPerEntry !== 0) {
+      this.#seekSeed = null;
+      return false;
+    }
+    const entry = blockSample / samplesPerEntry;
+    const seek = this.#getSeekData();
+    const histories = [];
+    for (let c = 0; c < this.metadata.numberChannels; c++) {
+      histories.push(seek[c][entry] || { yn1: 0, yn2: 0 });
+    }
+    this.#seekSeed = { block, histories };
+    for (let b = block; b < this.#cachedBlockResults.length; b++) {
+      this.#cachedBlockResults[b] = undefined;
+    }
+    return true;
+  }
+
+  #clearSeekSeed() {
+    this.#seekSeed = null;
   }
 
   #getSamplesAtBlock(block) {
@@ -518,6 +546,10 @@ export class Bfstm {
 
     const firstBlock = Math.floor(sampleStart / samplesPerBlock);
     const lastBlock = Math.floor((sampleEnd - 1) / samplesPerBlock);
+
+    // Random access: seed first block from seek table once, then carry.
+    const seeded = this.#seedHistoryFromSeek(firstBlock);
+
     for (let block = firstBlock; block <= lastBlock; block++) {
       const decoded = this.#getSamplesAtBlock(block);
       const blockSampleStart = block * samplesPerBlock;
@@ -531,6 +563,8 @@ export class Bfstm {
         );
       }
     }
+
+    if (seeded) this.#clearSeekSeed();
     return result;
   }
 
