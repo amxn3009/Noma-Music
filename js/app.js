@@ -11,7 +11,7 @@ const supabase =
     : null;
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = '19.11.26, fixed bugs especially for clicks and bfstm encoding, tried to fix i pad perfomance...';
+const APP_VERSION = '21.11.26, fix bugs, tried to fix ios lag again';
 
 let LIBRARY = [];
 
@@ -2171,6 +2171,11 @@ const durationCache = new Map(); // url → seconds
 // Decode cache (BFSTM / web audio). Cap is TRACK COUNT, not bytes.
 // Each entry ≈ 50–100 MB of PCM; keep this low on 3 GB iPads.
 const DECODE_CACHE_MAX = isIOS() ? 3 : 7;
+const DECODE_CACHE_MAX_BYTES = isIOS() ? 120 * 1024 * 1024 : 600 * 1024 * 1024;
+function decodeEntryBytes(e) {
+  const b = e && e.audioBuffer;
+  return b ? b.length * b.numberOfChannels * 4 : 0;
+}
 const decodeCache = new Map(); // url → { audioBuffer, loopStartSample, sampleRate, loopFlag? }
 
 function decodeCacheGet(url) {
@@ -2185,7 +2190,12 @@ function decodeCacheGet(url) {
 function decodeCacheSet(url, entry) {
   if (decodeCache.has(url)) decodeCache.delete(url);
   decodeCache.set(url, entry);
-  while (decodeCache.size > DECODE_CACHE_MAX) {
+  const totalBytes = () =>
+    [...decodeCache.values()].reduce((s, e) => s + decodeEntryBytes(e), 0);
+  while (
+    decodeCache.size > 1 &&
+    (decodeCache.size > DECODE_CACHE_MAX || totalBytes() > DECODE_CACHE_MAX_BYTES)
+  ) {
     const oldest = decodeCache.keys().next().value;
     decodeCache.delete(oldest);
   }
@@ -2404,6 +2414,10 @@ function stopSource(opts = {}) {
     } catch (_) {}
     currentSource.disconnect();
     currentSource = null;
+  }
+  if (currentGain) {
+    try { currentGain.disconnect(); } catch (_) {}
+    currentGain = null;
   }
 
   // dual stream always stops
@@ -9755,10 +9769,22 @@ async function playCurrent() {
   document.body.classList.add("is-playing");
   markPlayingTrack(track.id);
 
-  // Yield 1–2 frames so the browser can paint / start Kawarp texture upload
-  // before BFSTM decode saturates the main thread
-  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-  if (gen !== playGen) return;
+  // Yield frames only while visible — rAF is suspended in background and would
+  // stall nextTrack → playCurrent until the app is opened again.
+  if (document.visibilityState === "visible") {
+    await new Promise((r) => {
+      let done = false;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        r();
+      };
+      requestAnimationFrame(() => requestAnimationFrame(finish));
+      // Safety: never block more than ~50ms even if rAF is delayed
+      setTimeout(finish, 50);
+    });
+    if (gen !== playGen) return;
+  }
 
   // iOS mute switch: unlock HTMLAudio + set session to "playback"
   try {
