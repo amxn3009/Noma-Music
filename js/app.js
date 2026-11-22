@@ -68,6 +68,26 @@
 })();
 /* NOMA-DEBUG-END */
 
+/* NOMA-DEBUG2-START (remove later) */
+(() => {
+  let n = 0;
+  try {
+    const d = Object.getOwnPropertyDescriptor(MediaSession.prototype, "metadata");
+    Object.defineProperty(MediaSession.prototype, "metadata", {
+      ...d,
+      set(v) { n++; d.set.call(this, v); },
+    });
+  } catch (_) {}
+  const box = document.createElement("div");
+  box.style.cssText =
+    "position:fixed;left:6px;top:150px;z-index:2147483647;background:rgba(0,0,0,.75);" +
+    "color:#0f0;font:11px/1.35 monospace;padding:6px 8px;border-radius:6px;pointer-events:none";
+  const mount = () => document.body.appendChild(box);
+  if (document.body) mount(); else document.addEventListener("DOMContentLoaded", mount);
+  setInterval(() => { box.textContent = `metadata sets ${n}`; }, 500);
+})();
+/* NOMA-DEBUG2-END */
+
 
 import { Bfstm } from './bfstm.js';
 import { Kawarp } from 'https://cdn.jsdelivr.net/npm/@kawarp/core@1.3.1/+esm';
