@@ -1,3 +1,74 @@
+/* NOMA-DEBUG-START (remove later) */
+(() => {
+  const pendingRaf = new Set(), pendingTo = new Set(), pendingIv = new Set();
+  const alive = { buf: 0, src: 0, gain: 0 }, made = { buf: 0, src: 0, gain: 0 };
+  const _raf = window.requestAnimationFrame.bind(window);
+  const _caf = window.cancelAnimationFrame.bind(window);
+  const _st = window.setTimeout.bind(window), _si = window.setInterval.bind(window);
+  const _ct = window.clearTimeout.bind(window), _ci = window.clearInterval.bind(window);
+
+  window.requestAnimationFrame = (cb) => {
+    const id = _raf((t) => { pendingRaf.delete(id); cb(t); });
+    pendingRaf.add(id);
+    return id;
+  };
+  window.cancelAnimationFrame = (id) => { pendingRaf.delete(id); _caf(id); };
+  window.setTimeout = (cb, ms, ...a) => {
+    const id = _st((...x) => { pendingTo.delete(id); if (typeof cb === "function") cb(...x); }, ms, ...a);
+    pendingTo.add(id);
+    return id;
+  };
+  window.clearTimeout = (id) => { pendingTo.delete(id); _ct(id); };
+  window.setInterval = (cb, ms, ...a) => {
+    const id = _si(cb, ms, ...a);
+    pendingIv.add(id);
+    return id;
+  };
+  window.clearInterval = (id) => { pendingIv.delete(id); _ci(id); };
+
+  const fr = typeof FinalizationRegistry === "function"
+    ? new FinalizationRegistry((k) => { alive[k]--; }) : null;
+  const AC = window.AudioContext || window.webkitAudioContext;
+  const hook = (name, key) => {
+    const orig = AC.prototype[name];
+    if (!orig) return;
+    AC.prototype[name] = function (...a) {
+      const o = orig.apply(this, a);
+      made[key]++; alive[key]++;
+      if (fr) fr.register(o, key);
+      return o;
+    };
+  };
+  hook("createBuffer", "buf");
+  hook("createBufferSource", "src");
+  hook("createGain", "gain");
+
+  let last = performance.now(), worst = 0;
+  const loop = (t) => { worst = Math.max(worst, t - last); last = t; _raf(loop); };
+  _raf(loop);
+
+  const box = document.createElement("div");
+  box.style.cssText =
+    "position:fixed;left:6px;top:6px;z-index:2147483647;background:rgba(0,0,0,.75);" +
+    "color:#0f0;font:11px/1.35 monospace;padding:6px 8px;border-radius:6px;" +
+    "pointer-events:none;white-space:pre";
+  const mount = () => document.body.appendChild(box);
+  if (document.body) mount(); else document.addEventListener("DOMContentLoaded", mount);
+  _si(() => {
+    box.textContent =
+      `plays ${made.src}\n` +
+      `rAF pending ${pendingRaf.size}\n` +
+      `timeouts ${pendingTo.size}  intervals ${pendingIv.size}\n` +
+      `buffers alive ${alive.buf}/${made.buf}\n` +
+      `sources alive ${alive.src}/${made.src}\n` +
+      `gains alive ${alive.gain}/${made.gain}\n` +
+      `worst frame ${worst.toFixed(0)}ms`;
+    worst = 0;
+  }, 500);
+})();
+/* NOMA-DEBUG-END */
+
+
 import { Bfstm } from './bfstm.js';
 import { Kawarp } from 'https://cdn.jsdelivr.net/npm/@kawarp/core@1.3.1/+esm';
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
@@ -3199,6 +3270,7 @@ async function playMediaUrlStreamLoop(url, track, offsetSec = 0) {
 }
 
 function updateProgressUI() {
+  if (animFrame) { cancelAnimationFrame(animFrame); animFrame = null; }
   if (state.playing && listenClock.trackKey) {
     const _t = performance.now();
     if (_t - (updateProgressUI._lastFlush || 0) > 5000) {
@@ -13855,6 +13927,7 @@ function setMarqueeText(el, text) {
           wrap.style.setProperty("--mq-right", "0");
         }, ms * 0.90);
       };
+      if (wrap._mqTimer) clearInterval(wrap._mqTimer);
       beat();
       wrap._mqTimer = setInterval(beat, ms);
     });
