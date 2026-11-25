@@ -519,6 +519,83 @@ export class Bfstm {
     }
   }
 
+  /**
+   * Low-memory decode: writes the whole stream straight into Float32 arrays
+   * (one per channel), block by block. Unlike getAllSamples() it keeps no
+   * per-block or whole-song Int16 copies, so far less memory is allocated.
+   * Result is identical to getAllSamples()[c][i] * scale.
+   */
+  decodeIntoFloat32(outChannels, scale) {
+    const {
+      codec,
+      numberChannels,
+      totalBlocks,
+      totalSamplesInFinalBlock,
+      samplesPerBlock,
+    } = this.metadata;
+    const channelInfo = this.#getChannelInfo();
+    const samplesPerEntry = this.metadata.adpcTableSamplesPerEntry;
+    const tmp = new Int16Array(samplesPerBlock); // one block, reused for all blocks
+    const tail = [];
+    for (let c = 0; c < numberChannels; c++) tail.push({ yn1: 0, yn2: 0 });
+
+    for (let block = 0; block < totalBlocks; block++) {
+      const n =
+        block === totalBlocks - 1 ? totalSamplesInFinalBlock : samplesPerBlock;
+      const samples = n === samplesPerBlock ? tmp : tmp.subarray(0, n);
+      const base = block * samplesPerBlock;
+      const blockData = this.#getPartitionedBlockData(block);
+
+      for (let channel = 0; channel < numberChannels; channel++) {
+        const data = blockData[channel];
+        if (codec === 2) {
+          let history;
+          if (block === 0) {
+            history = {
+              yn1: channelInfo[channel].historySample1,
+              yn2: channelInfo[channel].historySample2,
+            };
+          } else {
+            const blockSample = block * samplesPerBlock;
+            const entry =
+              samplesPerEntry > 0 && blockSample % samplesPerEntry === 0
+                ? this.#getSeekData()[channel][blockSample / samplesPerEntry]
+                : null;
+            history = entry || tail[channel];
+          }
+          this.#decodeDspAdpcm(
+            data,
+            samples,
+            channelInfo[channel].adpcmCoefficients,
+            history
+          );
+        } else if (codec === 1) {
+          if (data.byteLength < n * 2) {
+            throw new Error('BFSTM PCM16 block is too short');
+          }
+          const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+          for (let s = 0; s < n; s++) {
+            samples[s] = view.getInt16(s * 2, this.#littleEndian);
+          }
+        } else {
+          if (data.byteLength < n) {
+            throw new Error('BFSTM PCM8 block is too short');
+          }
+          for (let s = 0; s < n; s++) {
+            const value = data[s];
+            samples[s] = (value < 0x80 ? value : value - 0x100) << 8;
+          }
+        }
+
+        tail[channel] = { yn1: samples[n - 1] ?? 0, yn2: samples[n - 2] ?? 0 };
+        const out = outChannels[channel];
+        if (out) {
+          for (let i = 0; i < n; i++) out[base + i] = samples[i] * scale;
+        }
+      }
+    }
+  }
+
   getAllSamples() {
     if (this.#cachedSamples) {
       return this.#cachedSamples;

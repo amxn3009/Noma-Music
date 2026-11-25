@@ -9048,3 +9048,24 @@ body.fs-closing-layout .fs-cover {
   visibility: hidden;
   pointer-events: none;
 }
+
+/* Match shuffle size when header is collapsed */
+.game-sticky-top.is-collapsed #pl-loops-btn,
+.game-sticky-top.is-collapsed #pl-loops-btn.circle-btn,
+.game-sticky-top.is-collapsed .pl-loops-btn {
+  width: 40px !important;
+  height: 40px !important;
+  min-width: 40px !important;
+  min-height: 40px !important;
+  padding: 0 !important;
+  border-radius: 50% !important;
+}
+
+/* Game-in-game / stack open */
+@keyframes gameDetailEnter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+#game-detail.game-detail-enter {
+  animation: gameDetailEnter 0.32s var(--ease) both;
+}

@@ -1,94 +1,3 @@
-/* NOMA-DEBUG-START (remove later) */
-(() => {
-  const pendingRaf = new Set(), pendingTo = new Set(), pendingIv = new Set();
-  const alive = { buf: 0, src: 0, gain: 0 }, made = { buf: 0, src: 0, gain: 0 };
-  const _raf = window.requestAnimationFrame.bind(window);
-  const _caf = window.cancelAnimationFrame.bind(window);
-  const _st = window.setTimeout.bind(window), _si = window.setInterval.bind(window);
-  const _ct = window.clearTimeout.bind(window), _ci = window.clearInterval.bind(window);
-
-  window.requestAnimationFrame = (cb) => {
-    const id = _raf((t) => { pendingRaf.delete(id); cb(t); });
-    pendingRaf.add(id);
-    return id;
-  };
-  window.cancelAnimationFrame = (id) => { pendingRaf.delete(id); _caf(id); };
-  window.setTimeout = (cb, ms, ...a) => {
-    const id = _st((...x) => { pendingTo.delete(id); if (typeof cb === "function") cb(...x); }, ms, ...a);
-    pendingTo.add(id);
-    return id;
-  };
-  window.clearTimeout = (id) => { pendingTo.delete(id); _ct(id); };
-  window.setInterval = (cb, ms, ...a) => {
-    const id = _si(cb, ms, ...a);
-    pendingIv.add(id);
-    return id;
-  };
-  window.clearInterval = (id) => { pendingIv.delete(id); _ci(id); };
-
-  const fr = typeof FinalizationRegistry === "function"
-    ? new FinalizationRegistry((k) => { alive[k]--; }) : null;
-  const AC = window.AudioContext || window.webkitAudioContext;
-  const hook = (name, key) => {
-    const orig = AC.prototype[name];
-    if (!orig) return;
-    AC.prototype[name] = function (...a) {
-      const o = orig.apply(this, a);
-      made[key]++; alive[key]++;
-      if (fr) fr.register(o, key);
-      return o;
-    };
-  };
-  hook("createBuffer", "buf");
-  hook("createBufferSource", "src");
-  hook("createGain", "gain");
-
-  let last = performance.now(), worst = 0;
-  const loop = (t) => { worst = Math.max(worst, t - last); last = t; _raf(loop); };
-  _raf(loop);
-
-  const box = document.createElement("div");
-  box.style.cssText =
-    "position:fixed;left:6px;top:6px;z-index:2147483647;background:rgba(0,0,0,.75);" +
-    "color:#0f0;font:11px/1.35 monospace;padding:6px 8px;border-radius:6px;" +
-    "pointer-events:none;white-space:pre";
-  const mount = () => document.body.appendChild(box);
-  if (document.body) mount(); else document.addEventListener("DOMContentLoaded", mount);
-  _si(() => {
-    box.textContent =
-      `plays ${made.src}\n` +
-      `rAF pending ${pendingRaf.size}\n` +
-      `timeouts ${pendingTo.size}  intervals ${pendingIv.size}\n` +
-      `buffers alive ${alive.buf}/${made.buf}\n` +
-      `sources alive ${alive.src}/${made.src}\n` +
-      `gains alive ${alive.gain}/${made.gain}\n` +
-      `worst frame ${worst.toFixed(0)}ms`;
-    worst = 0;
-  }, 500);
-})();
-/* NOMA-DEBUG-END */
-
-/* NOMA-DEBUG2-START (remove later) */
-(() => {
-  let n = 0;
-  try {
-    const d = Object.getOwnPropertyDescriptor(MediaSession.prototype, "metadata");
-    Object.defineProperty(MediaSession.prototype, "metadata", {
-      ...d,
-      set(v) { n++; d.set.call(this, v); },
-    });
-  } catch (_) {}
-  const box = document.createElement("div");
-  box.style.cssText =
-    "position:fixed;left:6px;top:150px;z-index:2147483647;background:rgba(0,0,0,.75);" +
-    "color:#0f0;font:11px/1.35 monospace;padding:6px 8px;border-radius:6px;pointer-events:none";
-  const mount = () => document.body.appendChild(box);
-  if (document.body) mount(); else document.addEventListener("DOMContentLoaded", mount);
-  setInterval(() => { box.textContent = `metadata sets ${n}`; }, 500);
-})();
-/* NOMA-DEBUG2-END */
-
-
 import { Bfstm } from './bfstm.js';
 import { Kawarp } from 'https://cdn.jsdelivr.net/npm/@kawarp/core@1.3.1/+esm';
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
@@ -102,7 +11,7 @@ const supabase =
     : null;
 
 /** Bump this every time you deploy so Settings shows you’re on the build you think. */
-const APP_VERSION = '21.11.26, fix bugs, tried to fix ios lag again';
+const APP_VERSION = '26.11.26, fixed bugs (still need to fix credits opus)';
 
 let LIBRARY = [];
 
@@ -131,6 +40,7 @@ const DEFAULT_SETTINGS = {
   volume: 0.5,          // 0-1
   normalizeVolume: true, // quieter tracks boosted toward same level
   queueLoop: true,      // after last track: restart queue vs stop
+  showTooltips: true,
   bgMode: "kawarp", // "kawarp" | "css" — switch later in settings
   autoCollapseAlbum: true, // collapse album header when scrolling down
     quickAddEnabled: false,
@@ -1534,6 +1444,19 @@ const albumViewMemory = new Map(); // gameId -> { scrollTop, query }
 let searchReturn = null; // { type: "games"|"game"|"playlists"|"category", ... }
 let globalSearchOpen = false;
 let gamesLocalQuery = "";
+let gamesSearchScrollY = null;
+
+/** Back stack when opening game→game (max 5 = 4 previous + current path). */
+const GAME_NAV_MAX = 5;
+let gameNavStack = []; // [{ gameId, ret }]
+
+function pushGameNav(entry) {
+  gameNavStack.push(entry);
+  while (gameNavStack.length > GAME_NAV_MAX) gameNavStack.shift();
+}
+function clearGameNavStack() {
+  gameNavStack = [];
+}
 
 const gsPrefs = {
   hideGames: false,
@@ -1629,6 +1552,10 @@ function loadSettings() {
       typeof parsed.lyricsAutoOpen === "boolean"
         ? parsed.lyricsAutoOpen
         : DEFAULT_SETTINGS.lyricsAutoOpen;
+    settings.showTooltips =
+      typeof parsed.showTooltips === "boolean"
+        ? parsed.showTooltips
+        : DEFAULT_SETTINGS.showTooltips;
   } catch (_) {}
 }
 
@@ -2217,6 +2144,11 @@ function resetPlayerToIdle() {
 function getTrackUrl(track) {
   if (!track) return "";
   if (isIOS() && track.fileIos) return track.fileIos;
+  const isSafari =
+    /^((?!chrome|android).)*safari/i.test(navigator.userAgent) ||
+    (/apple/i.test(navigator.vendor || "") &&
+      !/crios|fxios/i.test(navigator.userAgent));
+  if (isSafari && track.fileIos) return track.fileIos;
   return track.file;
 }
 
@@ -2945,41 +2877,77 @@ async function playMediaUrl(url, track, offsetSec = 0) {
   mediaEl.dataset.keepAlive = "0";
   mediaEl.loop = state.loopMode === "one" && !(mediaLoopStart > 0);
 
-  const abs = new URL(url, location.href).href;
-  const needLoad = mediaEl.getAttribute("src") !== abs && mediaEl.src !== abs;
-
-  if (needLoad) {
+  function toAbs(u) {
     try {
-      mediaEl.pause();
-    } catch (_) {}
-    try {
-      mediaEl.volume = 0;
-    } catch (_) {}
-    mediaEl.src = abs;
+      // Encode path segments so spaces / unicode in filenames work
+      const base = new URL(u, location.href);
+      base.pathname = base.pathname
+        .split("/")
+        .map((seg) => encodeURIComponent(decodeURIComponent(seg)))
+        .join("/");
+      return base.href;
+    } catch {
+      return u;
+    }
   }
 
-  await new Promise((resolve, reject) => {
-    // Only skip waiting if THIS file is already loaded
-    if (!needLoad && mediaEl.readyState >= 1) {
-      resolve();
-      return;
+  function altFormatUrl(u) {
+    // opus ↔ m4a (common iOS / desktop pair)
+    if (/\.opus($|\?)/i.test(u)) return u.replace(/\.opus(?=$|\?)/i, ".m4a");
+    if (/\.m4a($|\?)/i.test(u)) return u.replace(/\.m4a(?=$|\?)/i, ".opus");
+    return null;
+  }
+
+  async function loadSrc(srcUrl) {
+    const abs = toAbs(srcUrl);
+    const needLoad =
+      mediaEl.getAttribute("src") !== abs && mediaEl.src !== abs;
+    if (needLoad) {
+      try {
+        mediaEl.pause();
+      } catch (_) {}
+      try {
+        mediaEl.volume = 0;
+      } catch (_) {}
+      mediaEl.src = abs;
     }
-    const onMeta = () => {
-      cleanup();
-      resolve();
-    };
-    const onErr = () => {
-      cleanup();
-      reject(new Error("Media load failed"));
-    };
-    const cleanup = () => {
-      mediaEl.removeEventListener("loadedmetadata", onMeta);
-      mediaEl.removeEventListener("error", onErr);
-    };
-    mediaEl.addEventListener("loadedmetadata", onMeta);
-    mediaEl.addEventListener("error", onErr);
-    mediaEl.load();
-  });
+    await new Promise((resolve, reject) => {
+      if (!needLoad && mediaEl.readyState >= 1) {
+        resolve();
+        return;
+      }
+      const onMeta = () => {
+        cleanup();
+        resolve();
+      };
+      const onErr = () => {
+        const code = mediaEl.error?.code;
+        const msg = mediaEl.error?.message || "";
+        cleanup();
+        reject(
+          new Error(
+            `Media load failed (${code || "?"}): ${msg || abs}`
+          )
+        );
+      };
+      const cleanup = () => {
+        mediaEl.removeEventListener("loadedmetadata", onMeta);
+        mediaEl.removeEventListener("error", onErr);
+      };
+      mediaEl.addEventListener("loadedmetadata", onMeta);
+      mediaEl.addEventListener("error", onErr);
+      mediaEl.load();
+    });
+  }
+
+  try {
+    await loadSrc(url);
+  } catch (err1) {
+    const alt = altFormatUrl(url);
+    if (!alt) throw err1;
+    console.warn("[Noma] media load failed, trying alt format", url, "→", alt);
+    await loadSrc(alt);
+  }
 
   state.duration = resolveMediaDuration(mediaEl, track);
   decodedBuffer = null;
@@ -3760,10 +3728,7 @@ function computePeakGain(audioBuffer) {
 }
 
 function setTrackGainForPlay(track, audioBuffer) {
-  if (!settings.normalizeVolume) {
-    trackGain = 1;
-    return;
-  }
+  // Always on — setting removed from UI
   // Optional per-track override in games.json: "volume": 0.5–2
   const jsonVol = Number(track?.volume);
   if (Number.isFinite(jsonVol) && jsonVol > 0) {
@@ -4242,7 +4207,6 @@ async function decodeBfstm(url, isStale = () => false) {
   if (isStale()) throw new DOMException("stale", "AbortError");
   const bfstm = new Bfstm(arrayBuffer);
   const meta = bfstm.metadata;
-  const channels = bfstm.getAllSamples();
 
   const ctx = ensureAudioContext();
   // Native BFSTM rate — Web Audio resamples; manual 48k resample was the slowdown
@@ -4252,21 +4216,16 @@ async function decodeBfstm(url, isStale = () => false) {
     meta.sampleRate
   );
 
-  const scale = 0.98 / 32768;
+  // Decode straight into the AudioBuffer (no Int16 copies kept in memory)
+  const outChannels = [];
   for (let c = 0; c < meta.numberChannels; c++) {
-    const channelData = audioBuffer.getChannelData(c);
-    const src = channels[c];
-    if (!src) continue;
-    const n = src.length;
-    // tight loop — avoids repeated / 32768
-    for (let i = 0; i < n; i++) {
-      channelData[i] = src[i] * scale;
-    }
+    outChannels.push(audioBuffer.getChannelData(c));
   }
+  bfstm.decodeIntoFloat32(outChannels, 0.98 / 32768);
 
-  // Drop large intermediates AFTER the copy so GC can reclaim sooner (iPad)
+  // Free the downloaded file right away instead of waiting for GC (iPad)
   try {
-    for (let c = 0; c < channels.length; c++) channels[c] = null;
+    if (typeof arrayBuffer.transfer === "function") arrayBuffer.transfer(0);
   } catch (_) {}
 
   const out = {
@@ -4353,6 +4312,10 @@ function promoteTitleToDataTip(el) {
 }
 
 function placeNomaTip(anchor) {
+  if (settings.showTooltips === false) {
+    hideAllTips();
+    return;
+  }
   const tip = getNomaTipEl();
   const text = anchor.getAttribute("data-tip") || "";
   if (!text) {
@@ -4410,6 +4373,10 @@ function bindCustomTips() {
   document.addEventListener(
     "pointerover",
     (e) => {
+      if (settings.showTooltips === false) {
+        hideAllTips();
+        return;
+      }
       const raw = e.target?.closest?.("[data-tip], [title]");
       if (!raw) return;
       const el = promoteTitleToDataTip(raw) || (raw.hasAttribute("data-tip") ? raw : null);
@@ -5486,6 +5453,7 @@ function openPlaylistDetail(id) {
 
   state.currentPlaylist = pl;
   state.currentGame = null;
+  clearGameNavStack();
 
   // show detail panel (same shell as album)
   document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
@@ -5687,6 +5655,28 @@ function openPlaylistDetail(id) {
       if (e.target.closest("button, input, label, .pl-edit-drag, .q-drag, .pl-track-loops")) return;
       if (row.dataset.suppressClick === "1") {
         delete row.dataset.suppressClick;
+        return;
+      }
+      // ⋮ menu — same as game album track list
+      if (e.target.closest(".track-actions, [data-action='menu']")) {
+        e.preventDefault();
+        e.stopPropagation();
+        const idx = +row.dataset.index;
+        const it = items[idx];
+        if (!it) return;
+        const btn = e.target.closest(".track-actions, [data-action='menu']");
+        const rect = btn.getBoundingClientRect();
+        showContextMenu(
+          rect.left,
+          rect.bottom + 4,
+          {
+            game: it.game,
+            track: it.track,
+            fromPlaylistId: pl.id,
+            fromQueue: false,
+          },
+          btn
+        );
         return;
       }
       const idx = +row.dataset.index;
@@ -7829,10 +7819,25 @@ function bindLibraryUI() {
 
   const search = $("#lib-local-search");
   const clear = $("#lib-local-search-clear");
+  let libSearchScrollY = null;
   search?.addEventListener("input", () => {
     libPrefs.query = search.value || "";
     clear?.classList.toggle("hidden", !libPrefs.query);
+    const browse = $("#lib-browse");
+    if (libPrefs.query && libSearchScrollY == null) {
+      libSearchScrollY = browse?.scrollTop ?? 0;
+    }
+    const y = browse?.scrollTop ?? 0;
     renderLibrary({ animate: false });
+    requestAnimationFrame(() => {
+      if (!browse) return;
+      if (!libPrefs.query && libSearchScrollY != null) {
+        browse.scrollTop = libSearchScrollY;
+        libSearchScrollY = null;
+      } else {
+        browse.scrollTop = y;
+      }
+    });
   });
   clear?.addEventListener("click", () => {
     if (search) search.value = "";
@@ -8591,6 +8596,7 @@ function closeGlobalSearch() {
       gameDetail?.classList.add("hidden");
       gameDetail?.classList.remove("active");
       state.currentGame = null;
+  clearGameNavStack();
       renderLibrary({ animate: false });
     }
     return;
@@ -8637,6 +8643,21 @@ function closeGlobalSearch() {
   renderGames({ animate: true });
 }
 
+/** Higher = better match. "under" beats "underwear" when q is "under". */
+function matchScore(text, q) {
+  const n = norm(text || "");
+  if (!q || !n) return 0;
+  if (n === q) return 10000; // exact
+  if (n.startsWith(q)) return 5000 - Math.min(n.length - q.length, 400); // prefix
+  // word boundary (space / start)
+  const re = new RegExp(`(?:^|\\s)${q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`);
+  const wm = n.search(re);
+  if (wm >= 0) return 3000 - wm;
+  const idx = n.indexOf(q);
+  if (idx >= 0) return 1000 - idx; // substring
+  return 0;
+}
+
 function runGlobalSearch(raw) {
   const box = $("#global-search-results");
   if (!box) return;
@@ -8669,19 +8690,34 @@ function runGlobalSearch(raw) {
     );
   };
 
-  let gamesHit = LIBRARY.filter((g) => fieldHit(g, null));
+  let gamesHit = LIBRARY.filter((g) => fieldHit(g, null)).map((g) => ({
+    ...g,
+    _score: Math.max(
+      matchScore(g.title, q),
+      matchScore(g.short, q),
+      matchScore(g.composer, q)
+    ),
+  }));
   let tracksHit = [];
   for (const g of LIBRARY) {
     for (const t of g.tracks || []) {
+      const tScore = matchScore(t.title, q);
       if (gsPrefs.filter === "all") {
-        if (norm(t.title).includes(q) || fieldHit(g, t)) tracksHit.push({ game: g, track: t, score: norm(t.title).includes(q) ? 2 : 1 });
+        if (tScore > 0 || fieldHit(g, t)) {
+          tracksHit.push({
+            game: g,
+            track: t,
+            score: tScore || Math.max(matchScore(g.title, q) * 0.25, 1),
+          });
+        }
       } else if (gsPrefs.filter === "game") {
-        if (fieldHit(g, null) && norm(t.title).length >= 0) {
-          // show tracks of matching games only when filter is game + query matches game
-          if (fieldHit(g, null)) tracksHit.push({ game: g, track: t, score: 1 });
+        if (fieldHit(g, null)) {
+          tracksHit.push({ game: g, track: t, score: tScore || 1 });
         }
       } else {
-        if (fieldHit(g, t)) tracksHit.push({ game: g, track: t, score: 1 });
+        if (fieldHit(g, t)) {
+          tracksHit.push({ game: g, track: t, score: tScore || 1 });
+        }
       }
     }
   }
@@ -8704,13 +8740,11 @@ function runGlobalSearch(raw) {
     } else if (gsPrefs.sort === "year") {
       a.sort((x, y) => dirMul * (yearOf(x) - yearOf(y)));
     } else {
-      // relevance: earlier includes of title first
+      // relevance: exact / prefix / word / substring
       a.sort((x, y) => {
-        const sx = norm(x.title).indexOf(q);
-        const sy = norm(y.title).indexOf(q);
-        const rx = sx < 0 ? 999 : sx;
-        const ry = sy < 0 ? 999 : sy;
-        return rx - ry || norm(x.title).localeCompare(norm(y.title));
+        const sx = x._score ?? matchScore(x.title, q);
+        const sy = y._score ?? matchScore(y.title, q);
+        return (sy - sx) || norm(x.title).localeCompare(norm(y.title));
       });
       if (gsPrefs.dir === "asc") a.reverse();
     }
@@ -9128,6 +9162,10 @@ function applyGamesLocalFilter() {
   const browse = $("#games-browse");
   if (!browse) return;
   const q = norm(gamesLocalQuery);
+  if (q && gamesSearchScrollY == null) {
+    gamesSearchScrollY = browse.scrollTop;
+  }
+  const y = browse.scrollTop;
 
   // Category expanded view
   if (browse.dataset.catOpen) {
@@ -9152,6 +9190,12 @@ function applyGamesLocalFilter() {
     }
     empty.textContent = "Keine Treffer.";
     empty.classList.toggle("hidden", !q || visible > 0);
+    if (!q && gamesSearchScrollY != null) {
+      browse.scrollTop = gamesSearchScrollY;
+      gamesSearchScrollY = null;
+    } else {
+      browse.scrollTop = y;
+    }
     return;
   }
 
@@ -9207,12 +9251,33 @@ function applyGamesLocalFilter() {
   }
   empty.textContent = "Keine Treffer.";
   empty.classList.toggle("hidden", !q || anyVisible);
+  if (!q && gamesSearchScrollY != null) {
+    browse.scrollTop = gamesSearchScrollY;
+    gamesSearchScrollY = null;
+  } else {
+    browse.scrollTop = y;
+  }
 }
 
-function openGame(id) {
+function openGame(id, opts = {}) {
   const game = LIBRARY.find((g) => g.id === id);
   if (!game) return;
   cancelEditIfNeeded();
+
+  // Stack previous game so Back can return (game-in-game)
+  if (
+    !opts.fromStack &&
+    state.currentGame &&
+    state.currentGame.id !== id &&
+    gameDetail &&
+    !gameDetail.classList.contains("hidden")
+  ) {
+    pushGameNav({
+      gameId: state.currentGame.id,
+      ret: searchReturn ? { ...searchReturn } : null,
+    });
+  }
+
   state.currentPlaylist = null;
   gameDetail?.classList.remove("is-playlist-detail");
   trackListEl?.classList.remove("is-playlist");
@@ -9226,14 +9291,17 @@ function openGame(id) {
   const savedSearch = gsInput?.value?.trim() || "";
   // Preserve playlist/library even if search UI was just closed by the result click
   if (searchReturn?.type === "playlist" && searchReturn.playlistId) {
+    // Keep stayInSearch only if we actually came from search/+ Songs
     searchReturn = {
       type: "playlist",
       playlistId: searchReturn.playlistId,
-      stayInSearch: true,
-      fromPlaylistAdd: true,
+      stayInSearch: !!searchReturn.stayInSearch,
+      fromPlaylistAdd: !!searchReturn.fromPlaylistAdd,
       query: savedSearch || searchReturn.query || "",
     };
-    window.__forcePlaylistSelectId = searchReturn.playlistId;
+    if (searchReturn.stayInSearch) {
+      window.__forcePlaylistSelectId = searchReturn.playlistId;
+    }
   } else if (searchReturn?.type === "library") {
     searchReturn = {
       type: "library",
@@ -9278,8 +9346,18 @@ function openGame(id) {
 
   tabGames.classList.remove("active");
   tabPlaylists.classList.remove("active");
+
+  const wasAlreadyOpen = !gameDetail.classList.contains("hidden");
   gameDetail.classList.remove("hidden");
   gameDetail.classList.add("active");
+  if (wasAlreadyOpen) {
+    gameDetail.classList.remove("game-detail-enter");
+    void gameDetail.offsetWidth;
+    gameDetail.classList.add("game-detail-enter");
+    const stop = () => gameDetail.classList.remove("game-detail-enter");
+    gameDetail.addEventListener("animationend", stop, { once: true });
+    setTimeout(stop, 400);
+  }
   exitPlaylistEditMode?.(true);
   // Hide AFTER exit — exit used to un-hide + when pl was null
   $("#pl-add-songs-chip")?.classList.add("hidden");
@@ -9639,6 +9717,7 @@ document.querySelectorAll(".tab").forEach((tab) => {
       // Always leave album/playlist detail when switching tabs
       if (plEdit?.active) exitPlaylistEditMode(true);
       state.currentGame = null;
+  clearGameNavStack();
       state.currentPlaylist = null;
       gameDetail.classList.add("hidden");
       gameDetail.classList.remove("active", "is-playlist-detail");
@@ -9663,6 +9742,17 @@ document.querySelectorAll(".tab").forEach((tab) => {
   });
 
   $("#back-to-games").addEventListener("click", () => {
+        // Game→game stack: go to previous game
+    if (gameNavStack.length) {
+      const prev = gameNavStack.pop();
+      if (prev?.gameId) {
+        if (state.currentGame) saveAlbumViewState(state.currentGame.id);
+        searchReturn = prev.ret || searchReturn;
+        openGame(prev.gameId, { fromStack: true });
+        return;
+      }
+    }
+
     // From playlist detail → library
     if (state.currentPlaylist) {
       // In edit mode: back = cancel edit, stay on playlist
@@ -9672,6 +9762,7 @@ document.querySelectorAll(".tab").forEach((tab) => {
       }
       state.currentPlaylist = null;
       state.currentGame = null;
+  clearGameNavStack();
       gameDetail.classList.add("hidden");
       gameDetail.classList.remove("active", "is-playlist-detail");
       clearDetailHeroBg();
@@ -9694,6 +9785,7 @@ document.querySelectorAll(".tab").forEach((tab) => {
     // Opened from library → back to playlists tab
     if (searchReturn?.type === "library") {
       state.currentGame = null;
+  clearGameNavStack();
       gameDetail.classList.add("hidden");
       gameDetail.classList.remove("active");
       clearDetailHeroBg();
@@ -9708,6 +9800,7 @@ document.querySelectorAll(".tab").forEach((tab) => {
     }
 
     state.currentGame = null;
+  clearGameNavStack();
     gameDetail.classList.add("hidden");
     gameDetail.classList.remove("active");
     clearDetailHeroBg();
@@ -9934,39 +10027,69 @@ async function playCurrent() {
 
     if (typeof isWebAudioFile === "function" && isWebAudioFile(url)) {
       forceFullLoop = !!track.LoopFromStoE;
-      const mode = getPlaybackMode(track);
+      let mode = getPlaybackMode(track);
+
+      // opus/m4a/mp3/ogg: prefer HTMLMediaElement — decodeAudioData often fails
+      const preferStream = /\.(opus|m4a|mp3|ogg|wav)($|\?)/i.test(url || "");
+      if (preferStream) mode = "stream";
 
       if (mode === "buffer") {
-        const audioBuffer = await decodeWebAudio(url);
-        if (gen !== playGen) return;
-
-        decodedBuffer = audioBuffer;
-        sampleRate = audioBuffer.sampleRate;
-
-        if (forceFullLoop) {
-          loopStartSample = 0;
-        } else if (Number.isFinite(track.loopStart) && track.loopStart > 0) {
-          loopStartSample = Math.floor(track.loopStart * sampleRate);
-        } else {
-          loopStartSample = 0;
-        }
-
-        state.duration =
-          Number.isFinite(track.duration) && track.duration > 0
-            ? track.duration
-            : audioBuffer.duration;
-        state.currentTime = 0;
-
-        playBuffer(decodedBuffer, 0);
-      } else {
-        // Dual A/B is heavy + breaks auto-advance on iOS (NotAllowedError).
-        // Single element is faster and keeps the autoplay “session” more reliably.
-        if (isIOS() || isMobileLike()) {
-          await playMediaUrl(url, track, 0);
-        } else {
-          await playMediaUrlStreamLoop(url, track, 0);
+        try {
+          const audioBuffer = await decodeWebAudio(url);
           if (gen !== playGen) return;
+
+          decodedBuffer = audioBuffer;
+          sampleRate = audioBuffer.sampleRate;
+
+          if (forceFullLoop) {
+            loopStartSample = 0;
+          } else if (Number.isFinite(track.loopStart) && track.loopStart > 0) {
+            loopStartSample = Math.floor(track.loopStart * sampleRate);
+          } else {
+            loopStartSample = 0;
+          }
+
+          state.duration =
+            Number.isFinite(track.duration) && track.duration > 0
+              ? track.duration
+              : audioBuffer.duration;
+          state.currentTime = 0;
+
+          playBuffer(decodedBuffer, 0);
+        } catch (err) {
+          console.warn("[Noma] buffer decode failed → stream", url, err);
+          if (gen !== playGen) return;
+          try {
+            await playMediaUrl(url, track, 0);
+          } catch (err2) {
+            const alt =
+              track.fileIos && track.fileIos !== url
+                ? track.fileIos
+                : /\.opus($|\?)/i.test(url || "")
+                  ? (url || "").replace(/\.opus(?=$|\?)/i, ".m4a")
+                  : null;
+            if (!alt) throw err2;
+            await playMediaUrl(alt, track, 0);
+          }
         }
+      } else {
+        const tryPlay = async (u) => {
+          await playMediaUrl(u, track, 0);
+        };
+        try {
+          await tryPlay(url);
+        } catch (err1) {
+          const alt =
+            track.fileIos && track.fileIos !== url
+              ? track.fileIos
+              : /\.opus($|\?)/i.test(url || "")
+                ? (url || "").replace(/\.opus(?=$|\?)/i, ".m4a")
+                : null;
+          if (!alt) throw err1;
+          console.warn("[Noma] stream failed, trying alt", url, "→", alt);
+          await tryPlay(alt);
+        }
+        if (gen !== playGen) return;
       }
 
       if (!$("#queue-panel")?.classList.contains("hidden")) renderQueue();
@@ -10378,26 +10501,33 @@ function ensureLyricsCenterPadding() {
 
 /** Scroll every open queue list so the current row is in view. */
 function scrollQueuesToCurrent() {
+  if (typeof isQueueUserBusy === "function" && isQueueUserBusy()) return;
   requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      const sel = ".queue-item.current";
-      const floating = $("#queue-list")?.querySelector(sel);
-      const fs = $("#fs-queue-list")?.querySelector(sel);
-
-      const panel = $("#queue-panel");
-      if (
-        floating &&
-        panel &&
-        !panel.classList.contains("hidden") &&
-        !panel.classList.contains("is-closing")
-      ) {
-        floating.scrollIntoView({ block: "center", behavior: "smooth" });
+    if (typeof isQueueUserBusy === "function" && isQueueUserBusy()) return;
+    const panel = $("#queue-panel");
+    if (panel && !panel.classList.contains("hidden")) {
+      const current = $("#queue-list .queue-item.current");
+      current?.scrollIntoView({ block: "center", behavior: "smooth" });
+    }
+    if (document.body.classList.contains("fs-queue-open")) {
+      $("#fs-queue-list .queue-item.current")?.scrollIntoView({
+        block: "center",
+        behavior: "smooth",
+      });
+    }
+    // Album / playlist track list — skip while user is scrolling the album
+    if (!isAlbumUserScrolling()) {
+      const row =
+        document.querySelector("#track-list .track-row.playing") ||
+        document.querySelector(".track-list-scroll .track-row.playing");
+      if (row) {
+        try {
+          row.scrollIntoView({ block: "nearest", behavior: "smooth" });
+        } catch (_) {
+          row.scrollIntoView(false);
+        }
       }
-
-      if (fs && document.body.classList.contains("fs-queue-open")) {
-        fs.scrollIntoView({ block: "center", behavior: "smooth" });
-      }
-    });
+    }
   });
 }
 
@@ -12151,6 +12281,32 @@ function isFsQueueBusy() {
   );
 }
 
+/** True while user is dragging a queue row or recently scrolled a queue list. */
+let queueUserScrollUntil = 0;
+function isQueueUserBusy() {
+  if (performance.now() < queueUserScrollUntil) return true;
+  return !!(
+    document.querySelector(".queue-item.dragging") ||
+    document.querySelector(".queue-drag-ghost") ||
+    document.querySelector("#queue-list .dragging") ||
+    document.querySelector("#fs-queue-list .dragging") ||
+    document.querySelector("#queue-list.queue-is-scrolling") ||
+    document.querySelector("#fs-queue-list.queue-is-scrolling")
+  );
+}
+
+function armQueueUserScroll(ms = 1200) {
+  queueUserScrollUntil = performance.now() + ms;
+}
+
+let albumUserScrollUntil = 0;
+function armAlbumUserScroll(ms = 1200) {
+  albumUserScrollUntil = performance.now() + ms;
+}
+function isAlbumUserScrolling() {
+  return performance.now() < albumUserScrollUntil;
+}
+
 function setFsLyricsOpen(open, { fromUser = false } = {}) {
   if (open) {
     if (!document.body.classList.contains("fs-open")) open = false;
@@ -12608,6 +12764,25 @@ function bindQueuePanel() {
     e.stopPropagation();
     toggleFsQueueMode();
   });
+
+  function bindQueueScrollGuard(list) {
+  if (!list || list.dataset.scrollGuard === "1") return;
+  list.dataset.scrollGuard = "1";
+  let t = null;
+  list.addEventListener(
+    "scroll",
+    () => {
+      armQueueUserScroll(1200);
+      list.classList.add("queue-is-scrolling");
+      clearTimeout(t);
+      t = setTimeout(() => list.classList.remove("queue-is-scrolling"), 150);
+    },
+    { passive: true }
+  );
+  }
+// after lists exist:
+bindQueueScrollGuard(document.getElementById("queue-list"));
+bindQueueScrollGuard(document.getElementById("fs-queue-list"));
 }
 
 
@@ -12734,17 +12909,43 @@ function setupGameTrackSearch() {
   const emptyEl = document.getElementById("track-search-empty");
   const clearBtn = document.getElementById("game-track-search-clear");
 
+  let savedScrollBeforeSearch = null;
+
   function applyFilter() {
+    const sc = document.querySelector(".track-list-scroll");
     const q = clean.value.trim().toLowerCase();
     if (clearBtn) clearBtn.classList.toggle("hidden", !q);
+
+    if (!q) {
+      document.querySelectorAll("#track-list .track-row").forEach((row) => {
+        row.classList.remove("hidden");
+      });
+      if (emptyEl) emptyEl.classList.add("hidden");
+      if (sc && savedScrollBeforeSearch != null) {
+        sc.scrollTop = savedScrollBeforeSearch;
+        savedScrollBeforeSearch = null;
+      }
+      return;
+    }
+
+    if (savedScrollBeforeSearch == null && sc) {
+      savedScrollBeforeSearch = sc.scrollTop;
+    }
+
+    const y = sc?.scrollTop ?? 0;
     let visible = 0;
     document.querySelectorAll("#track-list .track-row").forEach((row) => {
       const name = (row.querySelector(".track-name")?.textContent || "").toLowerCase();
-      const show = !q || name.includes(q);
+      const sub = (row.querySelector(".track-sub")?.textContent || "").toLowerCase();
+      const show = name.includes(q) || sub.includes(q);
       row.classList.toggle("hidden", !show);
       if (show) visible++;
     });
-    if (emptyEl) emptyEl.classList.toggle("hidden", visible > 0 || !q);
+    if (emptyEl) emptyEl.classList.toggle("hidden", visible > 0);
+    if (sc) {
+      sc.style.overflowAnchor = "none";
+      sc.scrollTop = y;
+    }
   }
 
   clean.addEventListener("input", applyFilter);
@@ -12886,6 +13087,11 @@ function bindTrackListFade() {
     return;
   }
   scroller.dataset.fadeBound = "1";
+  scroller.addEventListener(
+    "scroll",
+    () => armAlbumUserScroll(1200),
+    { passive: true }
+  );
 
   const COLLAPSE_AT = 72;
   const EXPAND_AT = 8;
@@ -14362,33 +14568,40 @@ function rebuildQuickPlMenu(filter = "") {
 
 function updateQuickPlButtonLabel() {
   const label = document.getElementById("setting-quick-pl-label");
-  const cover = document.getElementById("setting-quick-pl-cover");
+  const host =
+    document.getElementById("setting-quick-pl-cover-wrap") ||
+    document.getElementById("setting-quick-pl-cover");
   const pl = getPlaylist(settings.quickAddPlaylistId || FAVORITES_ID);
   if (label) label.textContent = pl?.name || "Lieblingssongs";
-  if (!cover) return;
+  if (!host) return;
 
   const src = playlistCoverSrc(pl);
-  // If parent isn’t a wrap yet, keep simple img for non-mosaic
-  if (Array.isArray(src) && src.length > 1) {
-    const wrap =
-      cover.closest("#setting-quick-pl-cover-wrap") ||
-      (() => {
-        const w = document.createElement("span");
-        w.id = "setting-quick-pl-cover-wrap";
-        cover.replaceWith(w);
-        return w;
-      })();
-    wrap.innerHTML = playlistThumbHtml(pl, "pl-thumb-mosaic");
+  const isMosaic = Array.isArray(src) && src.length > 1;
+
+  if (isMosaic) {
+    let wrap = document.getElementById("setting-quick-pl-cover-wrap");
+    if (!wrap) {
+      wrap = document.createElement("span");
+      wrap.id = "setting-quick-pl-cover-wrap";
+      host.replaceWith(wrap);
+    }
+    wrap.innerHTML = playlistThumbHtml(pl, "pl-thumb-mosaic custom-select-cover");
   } else {
-    // ensure we have an <img id="setting-quick-pl-cover">
-    let img = cover;
-    if (img.tagName !== "IMG") {
+    // Always replace mosaic wrap with a plain <img>
+    let img = document.getElementById("setting-quick-pl-cover");
+    if (!img || img.tagName !== "IMG" || img.closest("#setting-quick-pl-cover-wrap")) {
       img = document.createElement("img");
       img.id = "setting-quick-pl-cover";
-      cover.replaceWith(img);
+      img.className = "custom-select-cover";
+      img.alt = "";
+      const old =
+        document.getElementById("setting-quick-pl-cover-wrap") ||
+        document.getElementById("setting-quick-pl-cover") ||
+        host;
+      old.replaceWith(img);
     }
-    img.src = playlistThumbUrl(pl);
     img.hidden = false;
+    img.src = playlistThumbUrl(pl);
     img.onerror = () => {
       img.src = PLACEHOLDER;
     };
@@ -14435,6 +14648,12 @@ function bindSettings() {
     saveSettings();
   });
 
+  $("#setting-show-tooltips")?.addEventListener("change", (e) => {
+    settings.showTooltips = !!e.target.checked;
+    saveSettings();
+    if (!settings.showTooltips) hideAllTips();
+  });
+
   const bindLoopStep = (id, key) => {
     const el = $(id);
     if (!el) return;
@@ -14450,18 +14669,6 @@ function bindSettings() {
   };
   bindLoopStep("#setting-loop-step-plus", "loopStepPlus");
   bindLoopStep("#setting-loop-step-minus", "loopStepMinus");
-
-  $("#setting-normalize-volume")?.addEventListener("change", (e) => {
-    settings.normalizeVolume = !!e.target.checked;
-    saveSettings();
-    if (decodedBuffer && state.playing) {
-      setTrackGainForPlay(state.queue[state.queueIndex]?.track, decodedBuffer);
-      setVolume(masterVolume);
-    } else if (useMediaEl) {
-      setTrackGainForPlay(state.queue[state.queueIndex]?.track, null);
-      setVolume(masterVolume);
-    }
-  });
 
   $("#setting-auto-collapse")?.addEventListener("change", (e) => {
     settings.autoCollapseAlbum = !!e.target.checked;
@@ -14570,9 +14777,6 @@ function syncSettingsForm() {
   const label = $("#setting-transition-label");
   if (label) label.textContent = `${settings.transitionSec} s`;
 
-  const norm = $("#setting-normalize-volume");
-  if (norm) norm.checked = !!settings.normalizeVolume;
-
   const autoCol = $("#setting-auto-collapse");
   if (autoCol) autoCol.checked = !!settings.autoCollapseAlbum;
 
@@ -14585,6 +14789,9 @@ function syncSettingsForm() {
 
   const la = $("#setting-lyrics-auto");
   if (la) la.checked = settings.lyricsAutoOpen !== false;
+
+  const tips = $("#setting-show-tooltips");
+  if (tips) tips.checked = settings.showTooltips !== false;
 
   $("#setting-transition-menu")?.querySelectorAll("li").forEach((li) => {
     li.setAttribute(
